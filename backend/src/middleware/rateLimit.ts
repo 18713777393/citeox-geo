@@ -16,6 +16,7 @@ export const apiRateLimit = rateLimit({
 export const loginRateLimit = rateLimit({
   windowMs: 15 * 60_000,
   limit: 10,
+  skipSuccessfulRequests: true,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: {
