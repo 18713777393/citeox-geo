@@ -1,0 +1,606 @@
+import bcrypt from "bcryptjs";
+import jwt, { type SignOptions } from "jsonwebtoken";
+import {
+  AuthSessionStatus,
+  LegalConsentType,
+  UserRole,
+  UserStatus,
+  VerificationCodePurpose,
+  type User
+} from "@prisma/client";
+import { randomBytes, randomUUID } from "node:crypto";
+import { env } from "../config/env.js";
+import { prisma } from "../lib/prisma.js";
+import { HttpError } from "../middleware/error.js";
+import {
+  ensureDefaultSubscription,
+  formatEntitlementsForClient,
+  getEntitlementSnapshotForUser
+} from "./entitlements.js";
+
+export type ApiRole = "user" | "business_user" | "admin" | "super_admin";
+export type AccountType = "personal" | "business";
+export type CodePurpose = "register" | "login" | "password_reset";
+
+export interface TokenContext {
+  userId: string;
+  sessionId: string;
+  tokenId: string;
+  organizationId: string;
+  role: ApiRole;
+}
+
+export interface RequestMetadata {
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+interface JwtPayload {
+  sub: string;
+  sid: string;
+  jti: string;
+  organizationId: string;
+  role: ApiRole;
+}
+
+const jwtIssuer = "zhiyin-geo-api";
+
+export function toApiRole(role: UserRole): ApiRole {
+  switch (role) {
+    case UserRole.BUSINESS_USER:
+      return "business_user";
+    case UserRole.ADMIN:
+      return "admin";
+    case UserRole.SUPER_ADMIN:
+      return "super_admin";
+    default:
+      return "user";
+  }
+}
+
+export function roleFromAccountType(accountType: AccountType): UserRole {
+  return accountType === "business" ? UserRole.BUSINESS_USER : UserRole.USER;
+}
+
+export function publicUser(user: Pick<User, "id" | "organizationId" | "email" | "phone" | "displayName" | "role" | "status" | "createdAt" | "lastLoginAt">) {
+  return {
+    id: user.id,
+    organizationId: user.organizationId,
+    name: user.displayName,
+    email: user.email,
+    phone: user.phone,
+    role: toApiRole(user.role),
+    status: user.status.toLowerCase(),
+    createdAt: user.createdAt.toISOString(),
+    lastLoginAt: user.lastLoginAt?.toISOString() ?? null
+  };
+}
+
+export async function registerUser(input: {
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+  industry: string;
+  inviteCode?: string;
+  accountType: AccountType;
+  companyName?: string;
+  legalConsentVersion: string;
+  smsCode?: string;
+  request: RequestMetadata;
+}) {
+  if (input.phone) {
+    await assertVerificationCode({
+      phone: input.phone,
+      purpose: "register",
+      code: input.smsCode
+    });
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: input.email }, ...(input.phone ? [{ phone: input.phone }] : [])]
+    }
+  });
+
+  if (existing) {
+    throw new HttpError(409, "ACCOUNT_EXISTS", "This email or phone is already registered.");
+  }
+
+  const passwordHash = await bcrypt.hash(input.password, env.BCRYPT_COST);
+  const organizationName =
+    input.accountType === "business"
+      ? input.companyName || input.name
+      : `${input.name} 的工作区`;
+
+  const created = await prisma.$transaction(async (tx) => {
+    const organization = await tx.organization.create({
+      data: {
+        name: organizationName,
+        slug: await uniqueOrganizationSlug(organizationName),
+        industry: input.industry,
+        settings: {
+          accountType: input.accountType,
+          inviteCode: input.inviteCode || null
+        }
+      }
+    });
+
+    const user = await tx.user.create({
+      data: {
+        organizationId: organization.id,
+        email: input.email,
+        phone: input.phone,
+        passwordHash,
+        displayName: input.name,
+        role: roleFromAccountType(input.accountType),
+        status: UserStatus.ACTIVE
+      }
+    });
+
+    await tx.organization.update({
+      where: { id: organization.id },
+      data: { ownerId: user.id }
+    });
+
+    await tx.legalConsent.createMany({
+      data: [LegalConsentType.TERMS, LegalConsentType.PRIVACY].map((consentType) => ({
+        userId: user.id,
+        organizationId: organization.id,
+        consentType,
+        version: input.legalConsentVersion,
+        ipAddress: input.request.ipAddress,
+        userAgent: input.request.userAgent,
+        metadata: {
+          scene: "register",
+          accountType: input.accountType
+        }
+      })),
+      skipDuplicates: true
+    });
+
+    return { organization, user };
+  });
+
+  await ensureDefaultSubscription(created.organization.id);
+  return createAuthResponse(created.user.id, input.request);
+}
+
+export async function loginUser(input: {
+  account: string;
+  password: string;
+  request: RequestMetadata;
+}) {
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: input.account }, { phone: input.account }]
+    }
+  });
+
+  if (!user?.passwordHash) {
+    throw new HttpError(401, "INVALID_CREDENTIALS", "Account or password is incorrect.");
+  }
+
+  const passwordOk = await bcrypt.compare(input.password, user.passwordHash);
+
+  if (!passwordOk) {
+    throw new HttpError(401, "INVALID_CREDENTIALS", "Account or password is incorrect.");
+  }
+
+  if (user.status !== UserStatus.ACTIVE) {
+    throw new HttpError(403, "ACCOUNT_DISABLED", "This account is not active.");
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() }
+  });
+
+  return createAuthResponse(user.id, input.request);
+}
+
+export async function logoutSession(context: TokenContext) {
+  await prisma.authSession.updateMany({
+    where: {
+      id: context.sessionId,
+      userId: context.userId,
+      status: AuthSessionStatus.ACTIVE
+    },
+    data: {
+      status: AuthSessionStatus.REVOKED,
+      revokedAt: new Date()
+    }
+  });
+}
+
+export async function createVerificationCode(input: {
+  phone?: string;
+  email?: string;
+  purpose: CodePurpose;
+  request: RequestMetadata;
+}) {
+  if (!input.phone && !input.email) {
+    throw new HttpError(400, "VALIDATION_ERROR", "Phone or email is required.");
+  }
+
+  const purpose = toVerificationPurpose(input.purpose);
+  const cooldownSince = new Date(Date.now() - env.AUTH_CODE_RESEND_SECONDS * 1000);
+  const recent = await prisma.verificationCode.findFirst({
+    where: {
+      purpose,
+      phone: input.phone,
+      email: input.email,
+      lastSentAt: { gt: cooldownSince },
+      consumedAt: null
+    },
+    orderBy: { lastSentAt: "desc" }
+  });
+
+  if (recent) {
+    throw new HttpError(429, "CODE_RATE_LIMITED", "Verification code was sent too frequently.");
+  }
+
+  const code = createNumericCode();
+  const codeHash = await bcrypt.hash(code, env.BCRYPT_COST);
+  const user = await findUserByAccount(input.email || input.phone || "");
+
+  await prisma.verificationCode.create({
+    data: {
+      userId: user?.id,
+      phone: input.phone,
+      email: input.email,
+      purpose,
+      codeHash,
+      expiresAt: minutesFromNow(env.AUTH_CODE_TTL_MINUTES),
+      metadata: {
+        smsProvider: env.SMS_PROVIDER || "placeholder",
+        delivery: "placeholder",
+        ipAddress: input.request.ipAddress
+      }
+    }
+  });
+
+  return {
+    sent: true,
+    expiresInSeconds: env.AUTH_CODE_TTL_MINUTES * 60,
+    provider: env.SMS_PROVIDER || "placeholder",
+    demoCode: env.NODE_ENV === "production" ? undefined : code
+  };
+}
+
+export async function requestPasswordReset(input: {
+  account: string;
+  request: RequestMetadata;
+}) {
+  const user = await findUserByAccount(input.account);
+
+  if (!user) {
+    return {
+      sent: true,
+      expiresInSeconds: env.PASSWORD_RESET_TTL_MINUTES * 60,
+      demoCode: env.NODE_ENV === "production" ? undefined : "not-created"
+    };
+  }
+
+  const code = createNumericCode();
+  const token = randomBytes(24).toString("hex");
+
+  await prisma.$transaction([
+    prisma.verificationCode.create({
+      data: {
+        userId: user.id,
+        phone: user.phone,
+        email: user.email,
+        purpose: VerificationCodePurpose.PASSWORD_RESET,
+        codeHash: await bcrypt.hash(code, env.BCRYPT_COST),
+        expiresAt: minutesFromNow(env.PASSWORD_RESET_TTL_MINUTES),
+        metadata: {
+          delivery: "placeholder",
+          ipAddress: input.request.ipAddress
+        }
+      }
+    }),
+    prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: await bcrypt.hash(token, env.BCRYPT_COST),
+        expiresAt: minutesFromNow(env.PASSWORD_RESET_TTL_MINUTES)
+      }
+    })
+  ]);
+
+  return {
+    sent: true,
+    expiresInSeconds: env.PASSWORD_RESET_TTL_MINUTES * 60,
+    demoCode: env.NODE_ENV === "production" ? undefined : code,
+    demoResetToken: env.NODE_ENV === "production" ? undefined : token
+  };
+}
+
+export async function resetPassword(input: {
+  account: string;
+  code?: string;
+  resetToken?: string;
+  newPassword: string;
+}) {
+  const user = await findUserByAccount(input.account);
+
+  if (!user) {
+    throw new HttpError(400, "RESET_INVALID", "Password reset request is invalid or expired.");
+  }
+
+  let verified = false;
+
+  if (input.code) {
+    verified = await verifyAndConsumeCode({
+      userId: user.id,
+      phone: user.phone ?? undefined,
+      email: user.email,
+      purpose: VerificationCodePurpose.PASSWORD_RESET,
+      code: input.code
+    });
+  }
+
+  if (!verified && input.resetToken) {
+    verified = await verifyAndConsumeResetToken(user.id, input.resetToken);
+  }
+
+  if (!verified) {
+    throw new HttpError(400, "RESET_INVALID", "Password reset request is invalid or expired.");
+  }
+
+  const passwordHash = await bcrypt.hash(input.newPassword, env.BCRYPT_COST);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash }
+    }),
+    prisma.authSession.updateMany({
+      where: { userId: user.id, status: AuthSessionStatus.ACTIVE },
+      data: { status: AuthSessionStatus.REVOKED, revokedAt: new Date() }
+    })
+  ]);
+
+  return { reset: true };
+}
+
+export async function verifyAuthToken(token: string): Promise<TokenContext> {
+  const payload = jwt.verify(token, jwtSecret(), {
+    issuer: jwtIssuer
+  }) as JwtPayload;
+
+  const session = await prisma.authSession.findUnique({
+    where: { tokenId: payload.jti },
+    include: { user: true }
+  });
+
+  if (
+    !session ||
+    session.id !== payload.sid ||
+    session.userId !== payload.sub ||
+    session.status !== AuthSessionStatus.ACTIVE ||
+    session.expiresAt <= new Date() ||
+    session.user.status !== UserStatus.ACTIVE ||
+    !session.user.organizationId
+  ) {
+    throw new HttpError(401, "UNAUTHENTICATED", "Authentication is required.");
+  }
+
+  return {
+    userId: session.user.id,
+    sessionId: session.id,
+    tokenId: session.tokenId,
+    organizationId: session.user.organizationId,
+    role: toApiRole(session.user.role)
+  };
+}
+
+export async function getCurrentUserPayload(userId: string) {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId }
+  });
+  const snapshot = await getEntitlementSnapshotForUser(user.id);
+
+  return {
+    user: publicUser(user),
+    role: toApiRole(user.role),
+    subscription: snapshot?.subscription ?? null,
+    entitlements: formatEntitlementsForClient(snapshot)
+  };
+}
+
+async function createAuthResponse(userId: string, request: RequestMetadata) {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId }
+  });
+
+  if (!user.organizationId) {
+    throw new HttpError(403, "ORGANIZATION_REQUIRED", "User organization is required.");
+  }
+
+  const tokenId = randomUUID();
+  const expiresAt = parseJwtExpiry(env.JWT_EXPIRES_IN);
+  const session = await prisma.authSession.create({
+    data: {
+      userId: user.id,
+      tokenId,
+      expiresAt,
+      ipAddress: request.ipAddress,
+      userAgent: request.userAgent
+    }
+  });
+  const payload: JwtPayload = {
+    sub: user.id,
+    sid: session.id,
+    jti: tokenId,
+    organizationId: user.organizationId,
+    role: toApiRole(user.role)
+  };
+  const options: SignOptions = {
+    expiresIn: env.JWT_EXPIRES_IN as SignOptions["expiresIn"],
+    issuer: jwtIssuer
+  };
+  const token = jwt.sign(payload, jwtSecret(), options);
+  const snapshot = await getEntitlementSnapshotForUser(user.id);
+
+  return {
+    token,
+    tokenType: "Bearer",
+    expiresAt: expiresAt.toISOString(),
+    user: publicUser(user),
+    role: toApiRole(user.role),
+    subscription: snapshot?.subscription ?? null,
+    entitlements: formatEntitlementsForClient(snapshot)
+  };
+}
+
+async function assertVerificationCode(input: {
+  phone?: string;
+  email?: string;
+  purpose: CodePurpose;
+  code?: string;
+}) {
+  if (!input.code) {
+    throw new HttpError(400, "VERIFICATION_REQUIRED", "SMS verification code is required.");
+  }
+
+  const verified = await verifyAndConsumeCode({
+    phone: input.phone,
+    email: input.email,
+    purpose: toVerificationPurpose(input.purpose),
+    code: input.code
+  });
+
+  if (!verified) {
+    throw new HttpError(400, "VERIFICATION_INVALID", "SMS verification code is invalid or expired.");
+  }
+}
+
+async function verifyAndConsumeCode(input: {
+  userId?: string;
+  phone?: string;
+  email?: string;
+  purpose: VerificationCodePurpose;
+  code: string;
+}) {
+  const code = await prisma.verificationCode.findFirst({
+    where: {
+      userId: input.userId,
+      phone: input.phone,
+      email: input.email,
+      purpose: input.purpose,
+      consumedAt: null,
+      expiresAt: { gt: new Date() }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  if (!code) {
+    return false;
+  }
+
+  const ok = await bcrypt.compare(input.code, code.codeHash);
+
+  if (!ok) {
+    return false;
+  }
+
+  await prisma.verificationCode.update({
+    where: { id: code.id },
+    data: { consumedAt: new Date() }
+  });
+
+  return true;
+}
+
+async function verifyAndConsumeResetToken(userId: string, resetToken: string) {
+  const tokens = await prisma.passwordResetToken.findMany({
+    where: {
+      userId,
+      consumedAt: null,
+      expiresAt: { gt: new Date() }
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5
+  });
+
+  for (const token of tokens) {
+    if (await bcrypt.compare(resetToken, token.tokenHash)) {
+      await prisma.passwordResetToken.update({
+        where: { id: token.id },
+        data: { consumedAt: new Date() }
+      });
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function findUserByAccount(account: string) {
+  return prisma.user.findFirst({
+    where: {
+      OR: [{ email: account }, { phone: account }]
+    }
+  });
+}
+
+async function uniqueOrganizationSlug(name: string) {
+  const base =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "org";
+  let slug = `${base}-${randomBytes(3).toString("hex")}`;
+
+  while (await prisma.organization.findUnique({ where: { slug } })) {
+    slug = `${base}-${randomBytes(3).toString("hex")}`;
+  }
+
+  return slug;
+}
+
+function createNumericCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function toVerificationPurpose(purpose: CodePurpose) {
+  switch (purpose) {
+    case "login":
+      return VerificationCodePurpose.LOGIN;
+    case "password_reset":
+      return VerificationCodePurpose.PASSWORD_RESET;
+    default:
+      return VerificationCodePurpose.REGISTER;
+  }
+}
+
+function minutesFromNow(minutes: number) {
+  return new Date(Date.now() + minutes * 60_000);
+}
+
+function parseJwtExpiry(value: string) {
+  const numeric = Number(value);
+
+  if (Number.isFinite(numeric)) {
+    return new Date(Date.now() + numeric * 1000);
+  }
+
+  const match = value.match(/^(\d+)([smhd])$/);
+
+  if (!match) {
+    return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  }
+
+  const amount = Number(match[1]);
+  const unit = match[2];
+  const multiplier =
+    unit === "s" ? 1000 : unit === "m" ? 60_000 : unit === "h" ? 3_600_000 : 86_400_000;
+  return new Date(Date.now() + amount * multiplier);
+}
+
+function jwtSecret() {
+  return env.JWT_SECRET || "dev-only-zhiyin-geo-jwt-secret-change-before-production";
+}

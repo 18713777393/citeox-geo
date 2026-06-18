@@ -1,0 +1,933 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  BUSINESS_USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AuthSessionStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum VerificationCodePurpose {
+  REGISTER
+  LOGIN
+  PASSWORD_RESET
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  DISABLED
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum MonitorStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum AssetStatus {
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum ContentStatus {
+  DRAFT
+  GENERATING
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum DistributionStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum TechnicalFileStatus {
+  DRAFT
+  GENERATED
+  EXPORTED
+}
+
+enum PlanInterval {
+  MONTH
+  YEAR
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum PaymentProvider {
+  WECHAT_PAY
+  ALIPAY
+  MANUAL
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CLOSED
+  REFUNDED
+}
+
+enum PaymentCallbackStatus {
+  RECEIVED
+  VERIFIED_REJECTED
+  PROCESSED
+  FAILED
+}
+
+enum ModelProviderStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum AuditSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum LegalConsentType {
+  TERMS
+  PRIVACY
+  PAYMENT
+  CONTENT
+  THIRD_PARTY
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum CollectionSourceType {
+  SEARCH_API
+  AI_PLATFORM
+  WEBSITE
+  SITEMAP
+  RSS
+  MANUAL_IMPORT
+  SOCIAL_PUBLIC
+}
+
+enum CollectionSourceStatus {
+  ACTIVE
+  PAUSED
+  ERROR
+}
+
+enum CollectionHealthStatus {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  DOWN
+}
+
+enum CollectionJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum CollectionJobTriggerType {
+  MANUAL
+  SCHEDULED
+  RETRY
+}
+
+enum CollectionItemStatus {
+  NEW
+  DEDUPED
+  ACCEPTED
+  REJECTED
+  CONVERTED_TO_QUESTION
+}
+
+model User {
+  id                     String          @id @default(uuid()) @db.Uuid
+  organizationId         String?         @map("organization_id") @db.Uuid
+  email                  String          @unique
+  phone                  String?         @unique
+  passwordHash           String?         @map("password_hash")
+  displayName            String?         @map("display_name")
+  role                   UserRole        @default(USER)
+  status                 UserStatus      @default(PENDING)
+  lastLoginAt            DateTime?       @map("last_login_at")
+  createdAt              DateTime        @default(now()) @map("created_at")
+  updatedAt              DateTime        @updatedAt @map("updated_at")
+
+  organization           Organization?   @relation("OrganizationUsers", fields: [organizationId], references: [id], onDelete: SetNull)
+  ownedOrganizations     Organization[]  @relation("OrganizationOwner")
+  ownedProjects          Project[]       @relation("ProjectOwner")
+  createdQuestions       Question[]      @relation("QuestionCreator")
+  uploadedAssets         Asset[]         @relation("AssetUploader")
+  createdContents        Content[]       @relation("ContentCreator")
+  uploadedTechnicalFiles TechnicalFile[] @relation("TechnicalFileUploader")
+  orders                 Order[]         @relation("OrderUser")
+  aiUsageLogs            AiUsageLog[]    @relation("AiUsageUser")
+  auditLogs              AuditLog[]      @relation("AuditActor")
+  legalConsents          LegalConsent[]
+  authSessions           AuthSession[]
+  verificationCodes      VerificationCode[]
+  passwordResetTokens    PasswordResetToken[]
+  sentInvites            InviteRecord[]  @relation("InviteInviter")
+  receivedInvites        InviteRecord[]  @relation("InviteInvitee")
+
+  @@index([organizationId])
+  @@index([role, status])
+  @@map("users")
+}
+
+model AuthSession {
+  id             String            @id @default(uuid()) @db.Uuid
+  userId         String            @map("user_id") @db.Uuid
+  tokenId        String            @unique @map("token_id")
+  status         AuthSessionStatus @default(ACTIVE)
+  ipAddress      String?           @map("ip_address")
+  userAgent      String?           @map("user_agent")
+  expiresAt      DateTime          @map("expires_at")
+  revokedAt      DateTime?         @map("revoked_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model VerificationCode {
+  id             String                  @id @default(uuid()) @db.Uuid
+  userId         String?                 @map("user_id") @db.Uuid
+  phone          String?
+  email          String?
+  purpose        VerificationCodePurpose
+  codeHash       String                  @map("code_hash")
+  sendCount      Int                     @default(1) @map("send_count")
+  lastSentAt     DateTime                @default(now()) @map("last_sent_at")
+  expiresAt      DateTime                @map("expires_at")
+  consumedAt     DateTime?               @map("consumed_at")
+  metadata       Json?
+  createdAt      DateTime                @default(now()) @map("created_at")
+
+  user           User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([phone, purpose, expiresAt])
+  @@index([email, purpose, expiresAt])
+  @@index([userId, purpose])
+  @@map("verification_codes")
+}
+
+model PasswordResetToken {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash")
+  expiresAt      DateTime  @map("expires_at")
+  consumedAt     DateTime? @map("consumed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model Organization {
+  id              String             @id @default(uuid()) @db.Uuid
+  ownerId         String?            @map("owner_id") @db.Uuid
+  name            String
+  slug            String             @unique
+  status          OrganizationStatus @default(ACTIVE)
+  industry        String?
+  settings        Json?
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  owner           User?              @relation("OrganizationOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  users           User[]             @relation("OrganizationUsers")
+  projects        Project[]
+  assets          Asset[]
+  collectionSources CollectionSource[]
+  collectionJobs  CollectionJob[]
+  collectionItems CollectionItem[]
+  collectionSourceHealth CollectionSourceHealth[]
+  questionSources QuestionSource[]
+  subscriptions   Subscription[]
+  orders          Order[]
+  aiUsageLogs     AiUsageLog[]
+  auditLogs       AuditLog[]
+  legalConsents   LegalConsent[]
+  inviteRecords   InviteRecord[]
+
+  @@index([ownerId])
+  @@map("organizations")
+}
+
+model Project {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid
+  ownerId        String?         @map("owner_id") @db.Uuid
+  name           String
+  brandName      String          @map("brand_name")
+  industry       String?
+  status         ProjectStatus   @default(ACTIVE)
+  settings       Json?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner          User?           @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  questions      Question[]
+  monitorResults MonitorResult[]
+  geoScores      GeoScore[]
+  gaps           Gap[]
+  strategies     Strategy[]
+  assets         Asset[]
+  contents       Content[]
+  distributions  Distribution[]
+  technicalFiles TechnicalFile[]
+  aiUsageLogs    AiUsageLog[]
+  collectionSources CollectionSource[]
+  collectionJobs CollectionJob[]
+  collectionItems CollectionItem[]
+  questionSources QuestionSource[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@map("projects")
+}
+
+model Question {
+  id             String          @id @default(uuid()) @db.Uuid
+  projectId      String          @map("project_id") @db.Uuid
+  createdById    String?         @map("created_by_id") @db.Uuid
+  title          String
+  prompt         String
+  category       String?
+  language       String          @default("zh-CN")
+  status         String          @default("active")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy      User?           @relation("QuestionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  monitorResults MonitorResult[]
+  collectionItems CollectionItem[] @relation("CollectionItemQuestion")
+  questionSources QuestionSource[]
+
+  @@index([projectId])
+  @@index([createdById])
+  @@map("questions")
+}
+
+model CollectionSource {
+  id               String                 @id @default(uuid()) @db.Uuid
+  organizationId   String                 @map("organization_id") @db.Uuid
+  projectId        String?                @map("project_id") @db.Uuid
+  name             String
+  code             String
+  type             CollectionSourceType
+  status           CollectionSourceStatus @default(ACTIVE)
+  config           Json?
+  secretRef        String?                @map("secret_ref")
+  rateLimitPerHour Int?                   @map("rate_limit_per_hour")
+  scheduleCron     String?                @map("schedule_cron")
+  lastRunAt        DateTime?              @map("last_run_at")
+  nextRunAt        DateTime?              @map("next_run_at")
+  healthStatus     CollectionHealthStatus @default(UNKNOWN) @map("health_status")
+  lastError        String?                @map("last_error")
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+
+  organization     Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project          Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  jobs             CollectionJob[]
+  items            CollectionItem[]
+  healthChecks     CollectionSourceHealth[]
+  questionSources  QuestionSource[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([type, status])
+  @@map("collection_sources")
+}
+
+model CollectionJob {
+  id             String                   @id @default(uuid()) @db.Uuid
+  organizationId String                   @map("organization_id") @db.Uuid
+  projectId      String?                  @map("project_id") @db.Uuid
+  sourceId       String                   @map("source_id") @db.Uuid
+  status         CollectionJobStatus      @default(PENDING)
+  triggerType    CollectionJobTriggerType @default(MANUAL) @map("trigger_type")
+  query          String?
+  input          Json?
+  startedAt      DateTime?                @map("started_at")
+  finishedAt     DateTime?                @map("finished_at")
+  lockedAt       DateTime?                @map("locked_at")
+  lockToken      String?                  @map("lock_token")
+  cancelledAt    DateTime?                @map("cancelled_at")
+  retryCount     Int                      @default(0) @map("retry_count")
+  maxRetries     Int                      @default(2) @map("max_retries")
+  errorCode      String?                  @map("error_code")
+  errorMessage   String?                  @map("error_message")
+  stats          Json?
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project?                 @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  source         CollectionSource         @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  items          CollectionItem[]
+
+  @@index([organizationId, status, createdAt])
+  @@index([projectId])
+  @@index([sourceId, status])
+  @@map("collection_jobs")
+}
+
+model CollectionItem {
+  id                String               @id @default(uuid()) @db.Uuid
+  organizationId    String               @map("organization_id") @db.Uuid
+  projectId         String?              @map("project_id") @db.Uuid
+  jobId             String?              @map("job_id") @db.Uuid
+  sourceId          String               @map("source_id") @db.Uuid
+  rawTitle          String               @map("raw_title")
+  rawText           String?              @map("raw_text")
+  url               String?
+  domain            String?
+  author            String?
+  publishedAt       DateTime?            @map("published_at")
+  language          String               @default("zh-CN")
+  contentHash       String               @map("content_hash")
+  intent            String?
+  keywords          Json?
+  qualityScore      Int                  @default(0) @map("quality_score")
+  trustScore        Int                  @default(0) @map("trust_score")
+  status            CollectionItemStatus @default(NEW)
+  metadata          Json?
+  createdQuestionId String?              @map("created_question_id") @db.Uuid
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project           Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  job               CollectionJob?       @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  source            CollectionSource     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  createdQuestion   Question?            @relation("CollectionItemQuestion", fields: [createdQuestionId], references: [id], onDelete: SetNull)
+  questionSources   QuestionSource[]
+
+  @@unique([organizationId, sourceId, contentHash])
+  @@index([organizationId, status, createdAt])
+  @@index([projectId])
+  @@index([jobId])
+  @@index([sourceId])
+  @@index([createdQuestionId])
+  @@map("collection_items")
+}
+
+model CollectionSourceHealth {
+  id             String                 @id @default(uuid()) @db.Uuid
+  organizationId String                 @map("organization_id") @db.Uuid
+  sourceId       String                 @map("source_id") @db.Uuid
+  status         CollectionHealthStatus @default(UNKNOWN)
+  latencyMs      Int?                   @map("latency_ms")
+  successCount   Int                    @default(0) @map("success_count")
+  failureCount   Int                    @default(0) @map("failure_count")
+  lastError      String?                @map("last_error")
+  checkedAt      DateTime               @default(now()) @map("checked_at")
+
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  source         CollectionSource       @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([sourceId, checkedAt])
+  @@map("collection_source_health")
+}
+
+model QuestionSource {
+  id               String            @id @default(uuid()) @db.Uuid
+  organizationId   String            @map("organization_id") @db.Uuid
+  projectId        String?           @map("project_id") @db.Uuid
+  questionId       String            @map("question_id") @db.Uuid
+  collectionItemId String?           @map("collection_item_id") @db.Uuid
+  sourceId         String?           @map("source_id") @db.Uuid
+  sourceName       String            @map("source_name")
+  sourceUrl        String?           @map("source_url")
+  confidence       Decimal?          @db.Decimal(5, 2)
+  createdAt        DateTime          @default(now()) @map("created_at")
+
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project          Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  question         Question          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  collectionItem   CollectionItem?   @relation(fields: [collectionItemId], references: [id], onDelete: SetNull)
+  source           CollectionSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([questionId])
+  @@index([collectionItemId])
+  @@index([sourceId])
+  @@map("question_sources")
+}
+
+model MonitorResult {
+  id              String          @id @default(uuid()) @db.Uuid
+  projectId       String          @map("project_id") @db.Uuid
+  questionId      String          @map("question_id") @db.Uuid
+  modelProviderId String?         @map("model_provider_id") @db.Uuid
+  status          MonitorStatus   @default(PENDING)
+  sourceModel     String?         @map("source_model")
+  answerSummary   String?         @map("answer_summary")
+  rawResponse     Json?           @map("raw_response")
+  visibilityScore Decimal?        @map("visibility_score") @db.Decimal(5, 2)
+  startedAt       DateTime?       @map("started_at")
+  completedAt     DateTime?       @map("completed_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  modelProvider   ModelProvider?  @relation(fields: [modelProviderId], references: [id], onDelete: SetNull)
+  geoScores       GeoScore[]
+  gaps            Gap[]
+
+  @@index([projectId])
+  @@index([questionId])
+  @@index([modelProviderId])
+  @@map("monitor_results")
+}
+
+model GeoScore {
+  id              String         @id @default(uuid()) @db.Uuid
+  projectId       String         @map("project_id") @db.Uuid
+  monitorResultId String?        @map("monitor_result_id") @db.Uuid
+  score           Decimal        @db.Decimal(5, 2)
+  visibility      Decimal?       @db.Decimal(5, 2)
+  credibility     Decimal?       @db.Decimal(5, 2)
+  relevance       Decimal?       @db.Decimal(5, 2)
+  freshness       Decimal?       @db.Decimal(5, 2)
+  grade           String?
+  explanation     String?
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  monitorResult   MonitorResult? @relation(fields: [monitorResultId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([monitorResultId])
+  @@map("geo_scores")
+}
+
+model Gap {
+  id              String         @id @default(uuid()) @db.Uuid
+  projectId       String         @map("project_id") @db.Uuid
+  monitorResultId String?        @map("monitor_result_id") @db.Uuid
+  title           String
+  category        String?
+  severity        Int            @default(1)
+  description     String?
+  evidence        Json?
+  status          String         @default("open")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  monitorResult   MonitorResult? @relation(fields: [monitorResultId], references: [id], onDelete: SetNull)
+  strategies      Strategy[]
+
+  @@index([projectId])
+  @@index([monitorResultId])
+  @@map("gaps")
+}
+
+model Strategy {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @map("project_id") @db.Uuid
+  gapId       String?   @map("gap_id") @db.Uuid
+  title       String
+  objective   String?
+  priority    Int       @default(0)
+  actions     Json?
+  status      String    @default("draft")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  gap         Gap?      @relation(fields: [gapId], references: [id], onDelete: SetNull)
+  contents    Content[]
+
+  @@index([projectId])
+  @@index([gapId])
+  @@map("strategies")
+}
+
+model Asset {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  projectId      String?       @map("project_id") @db.Uuid
+  uploadedById   String?       @map("uploaded_by_id") @db.Uuid
+  name           String
+  assetType      String        @map("asset_type")
+  mimeType       String?       @map("mime_type")
+  sizeBytes      BigInt?       @map("size_bytes")
+  storageKey     String        @map("storage_key")
+  source         String?
+  status         AssetStatus   @default(UPLOADED)
+  metadata       Json?
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  uploadedBy     User?         @relation("AssetUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([uploadedById])
+  @@map("assets")
+}
+
+model Content {
+  id               String          @id @default(uuid()) @db.Uuid
+  projectId        String          @map("project_id") @db.Uuid
+  strategyId       String?         @map("strategy_id") @db.Uuid
+  creatorId        String?         @map("creator_id") @db.Uuid
+  modelProviderId  String?         @map("model_provider_id") @db.Uuid
+  title            String
+  contentType      String          @map("content_type")
+  body             String?
+  status           ContentStatus   @default(DRAFT)
+  promptFingerprint String?        @map("prompt_fingerprint")
+  reviewNotes      String?         @map("review_notes")
+  metadata         Json?
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  strategy         Strategy?       @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  creator          User?           @relation("ContentCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  modelProvider    ModelProvider?  @relation(fields: [modelProviderId], references: [id], onDelete: SetNull)
+  distributions    Distribution[]
+
+  @@index([projectId])
+  @@index([strategyId])
+  @@index([creatorId])
+  @@index([modelProviderId])
+  @@map("contents")
+}
+
+model Distribution {
+  id            String             @id @default(uuid()) @db.Uuid
+  projectId     String             @map("project_id") @db.Uuid
+  contentId     String             @map("content_id") @db.Uuid
+  channel       String
+  externalId    String?            @map("external_id")
+  status        DistributionStatus @default(QUEUED)
+  scheduledAt   DateTime?          @map("scheduled_at")
+  publishedAt   DateTime?          @map("published_at")
+  resultPayload Json?              @map("result_payload")
+  errorMessage  String?            @map("error_message")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  content       Content            @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([contentId])
+  @@index([channel, status])
+  @@map("distributions")
+}
+
+model TechnicalFile {
+  id             String              @id @default(uuid()) @db.Uuid
+  projectId      String              @map("project_id") @db.Uuid
+  uploadedById   String?             @map("uploaded_by_id") @db.Uuid
+  filename       String
+  fileType       String              @map("file_type")
+  storageKey     String              @map("storage_key")
+  checksum       String?
+  status         TechnicalFileStatus @default(DRAFT)
+  parsedMetadata Json?               @map("parsed_metadata")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  project        Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedBy     User?               @relation("TechnicalFileUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([uploadedById])
+  @@map("technical_files")
+}
+
+model Plan {
+  id              String          @id @default(uuid()) @db.Uuid
+  code            String          @unique
+  name            String
+  description     String?
+  priceCents      Int             @default(0) @map("price_cents")
+  currency        String          @default("CNY")
+  interval        PlanInterval    @default(MONTH)
+  seatLimit       Int?            @map("seat_limit")
+  projectLimit    Int?            @map("project_limit")
+  questionLimit   Int?            @map("question_limit")
+  aiMonitorLimit  Int?            @map("ai_monitor_limit")
+  contentLimit    Int?            @map("content_limit")
+  reportLimit     Int?            @map("report_limit")
+  aiTokenLimit    Int?            @map("ai_token_limit")
+  modelDispatchLimit Int?         @map("model_dispatch_limit")
+  teamMemberLimit Int?            @map("team_member_limit")
+  distributionEnabled Boolean     @default(false) @map("distribution_enabled")
+  advancedCompetitorAnalysisEnabled Boolean @default(false) @map("advanced_competitor_analysis_enabled")
+  autoOptimizationEnabled Boolean @default(false) @map("auto_optimization_enabled")
+  featureFlags    Json?           @map("feature_flags")
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  subscriptions   Subscription[]
+  orders          Order[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                    String             @id @default(uuid()) @db.Uuid
+  organizationId        String             @map("organization_id") @db.Uuid
+  planId                String             @map("plan_id") @db.Uuid
+  status                SubscriptionStatus @default(TRIALING)
+  provider              PaymentProvider?   @default(MANUAL)
+  externalSubscriptionId String?            @map("external_subscription_id")
+  currentPeriodStart    DateTime?          @map("current_period_start")
+  currentPeriodEnd      DateTime?          @map("current_period_end")
+  trialEndsAt           DateTime?          @map("trial_ends_at")
+  usageCounters         Json?              @map("usage_counters")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                  Plan               @relation(fields: [planId], references: [id])
+  orders                Order[]
+
+  @@index([organizationId])
+  @@index([planId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Order {
+  id              String            @id @default(uuid()) @db.Uuid
+  organizationId  String            @map("organization_id") @db.Uuid
+  subscriptionId  String?           @map("subscription_id") @db.Uuid
+  planId          String?           @map("plan_id") @db.Uuid
+  userId          String?           @map("user_id") @db.Uuid
+  orderNo         String            @unique @map("order_no")
+  providerOrderNo String?           @unique @map("provider_order_no")
+  provider        PaymentProvider
+  status          OrderStatus       @default(PENDING)
+  amountCents     Int               @map("amount_cents")
+  currency        String            @default("CNY")
+  subject         String
+  metadata        Json?
+  paidAt          DateTime?         @map("paid_at")
+  expiresAt       DateTime?         @map("expires_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription    Subscription?     @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  plan            Plan?             @relation(fields: [planId], references: [id], onDelete: SetNull)
+  user            User?             @relation("OrderUser", fields: [userId], references: [id], onDelete: SetNull)
+  callbacks       PaymentCallback[]
+
+  @@index([organizationId])
+  @@index([subscriptionId])
+  @@index([planId])
+  @@index([userId])
+  @@index([provider, status])
+  @@map("orders")
+}
+
+model PaymentCallback {
+  id              String                @id @default(uuid()) @db.Uuid
+  orderId         String?               @map("order_id") @db.Uuid
+  provider        PaymentProvider
+  callbackId      String?               @unique @map("callback_id")
+  eventType       String                @map("event_type")
+  status          PaymentCallbackStatus @default(RECEIVED)
+  payload         Json
+  signatureDigest String?               @map("signature_digest")
+  receivedAt      DateTime              @default(now()) @map("received_at")
+  processedAt     DateTime?             @map("processed_at")
+  errorMessage    String?               @map("error_message")
+
+  order           Order?                @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([provider, status])
+  @@map("payment_callbacks")
+}
+
+model ModelProvider {
+  id                    String              @id @default(uuid()) @db.Uuid
+  code                  String              @unique
+  name                  String
+  baseUrl               String?             @map("base_url")
+  status                ModelProviderStatus @default(DISABLED)
+  priority              Int                 @default(100)
+  quotaTokensPerMinute  Int?                @map("quota_tokens_per_minute")
+  dailyTokenLimit       Int?                @map("daily_token_limit")
+  config                Json?
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  monitorResults        MonitorResult[]
+  contents              Content[]
+  aiUsageLogs           AiUsageLog[]
+
+  @@index([status, priority])
+  @@map("model_providers")
+}
+
+model AiUsageLog {
+  id              String         @id @default(uuid()) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  projectId       String?        @map("project_id") @db.Uuid
+  userId          String?        @map("user_id") @db.Uuid
+  modelProviderId String?        @map("model_provider_id") @db.Uuid
+  requestId       String?        @unique @map("request_id")
+  featureKey      String         @map("feature_key")
+  model           String?
+  promptTokens    Int            @default(0) @map("prompt_tokens")
+  completionTokens Int           @default(0) @map("completion_tokens")
+  totalTokens     Int            @default(0) @map("total_tokens")
+  costCents       Int?           @map("cost_cents")
+  status          String         @default("succeeded")
+  errorCode       String?        @map("error_code")
+  metadata        Json?
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project         Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user            User?          @relation("AiUsageUser", fields: [userId], references: [id], onDelete: SetNull)
+  modelProvider   ModelProvider? @relation(fields: [modelProviderId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([modelProviderId])
+  @@index([featureKey, createdAt])
+  @@map("ai_usage_logs")
+}
+
+model AuditLog {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
+  actorUserId    String?       @map("actor_user_id") @db.Uuid
+  action         String
+  resourceType   String?       @map("resource_type")
+  resourceId     String?       @map("resource_id")
+  severity       AuditSeverity @default(INFO)
+  ipAddress      String?       @map("ip_address")
+  userAgent      String?       @map("user_agent")
+  metadata       Json?
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor          User?         @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([actorUserId])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+model LegalConsent {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  organizationId String?          @map("organization_id") @db.Uuid
+  consentType    LegalConsentType @map("consent_type")
+  version        String
+  acceptedAt     DateTime         @default(now()) @map("accepted_at")
+  ipAddress      String?          @map("ip_address")
+  userAgent      String?          @map("user_agent")
+  metadata       Json?
+
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, consentType, version])
+  @@index([organizationId])
+  @@map("legal_consents")
+}
+
+model InviteRecord {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  inviterId      String?      @map("inviter_id") @db.Uuid
+  inviteeEmail   String       @map("invitee_email")
+  inviteeUserId  String?      @map("invitee_user_id") @db.Uuid
+  tokenHash      String       @unique @map("token_hash")
+  role           UserRole     @default(BUSINESS_USER)
+  status         InviteStatus @default(PENDING)
+  expiresAt      DateTime     @map("expires_at")
+  acceptedAt     DateTime?    @map("accepted_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviter        User?        @relation("InviteInviter", fields: [inviterId], references: [id], onDelete: SetNull)
+  invitee        User?        @relation("InviteInvitee", fields: [inviteeUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([inviterId])
+  @@index([inviteeUserId])
+  @@index([inviteeEmail, status])
+  @@map("invite_records")
+}
