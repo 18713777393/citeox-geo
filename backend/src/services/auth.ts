@@ -244,6 +244,16 @@ export async function createVerificationCode(input: {
   const codeHash = await bcrypt.hash(code, env.BCRYPT_COST);
   const user = await findUserByAccount(input.email || input.phone || "");
 
+  await prisma.verificationCode.updateMany({
+    where: {
+      purpose,
+      phone: input.phone,
+      email: input.email,
+      consumedAt: null
+    },
+    data: { consumedAt: new Date() }
+  });
+
   await prisma.verificationCode.create({
     data: {
       userId: user?.id,
