@@ -14,7 +14,7 @@ export function notFoundHandler(req: Request, res: Response) {
   res.status(404).json({
     error: {
       code: "NOT_FOUND",
-      message: `Route ${req.method} ${req.path} was not found.`
+      message: "请求的接口不存在或暂不可用。"
     }
   });
 }
@@ -39,7 +39,7 @@ export function errorHandler(
   res.status(500).json({
     error: {
       code: "INTERNAL_SERVER_ERROR",
-      message: "Unexpected server error."
+      message: "服务器临时异常，请稍后再试。"
     }
   });
 }
@@ -48,6 +48,6 @@ export function notImplemented(feature: string) {
   return new HttpError(
     501,
     "NOT_IMPLEMENTED",
-    `${feature} is reserved for a later production phase.`
+    `${feature} 正在接入中，请稍后再试。`
   );
 }

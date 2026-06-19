@@ -104,7 +104,7 @@ export async function registerUser(input: {
   });
 
   if (existing) {
-    throw new HttpError(409, "ACCOUNT_EXISTS", "This email or phone is already registered.");
+    throw new HttpError(409, "ACCOUNT_EXISTS", "该邮箱或手机号已注册，请直接登录。");
   }
 
   const passwordHash = await bcrypt.hash(input.password, env.BCRYPT_COST);
@@ -178,17 +178,17 @@ export async function loginUser(input: {
   });
 
   if (!user?.passwordHash) {
-    throw new HttpError(401, "INVALID_CREDENTIALS", "Account or password is incorrect.");
+    throw new HttpError(401, "INVALID_CREDENTIALS", "账号或密码不正确，请检查后重试。");
   }
 
   const passwordOk = await bcrypt.compare(input.password, user.passwordHash);
 
   if (!passwordOk) {
-    throw new HttpError(401, "INVALID_CREDENTIALS", "Account or password is incorrect.");
+    throw new HttpError(401, "INVALID_CREDENTIALS", "账号或密码不正确，请检查后重试。");
   }
 
   if (user.status !== UserStatus.ACTIVE) {
-    throw new HttpError(403, "ACCOUNT_DISABLED", "This account is not active.");
+    throw new HttpError(403, "ACCOUNT_DISABLED", "账号当前不可用，请联系管理员。");
   }
 
   await prisma.user.update({
@@ -220,7 +220,7 @@ export async function createVerificationCode(input: {
   request: RequestMetadata;
 }) {
   if (!input.phone && !input.email) {
-    throw new HttpError(400, "VALIDATION_ERROR", "Phone or email is required.");
+    throw new HttpError(400, "VALIDATION_ERROR", "请填写手机号或邮箱。");
   }
 
   const purpose = toVerificationPurpose(input.purpose);
@@ -237,7 +237,7 @@ export async function createVerificationCode(input: {
   });
 
   if (recent) {
-    throw new HttpError(429, "CODE_RATE_LIMITED", "Verification code was sent too frequently.");
+    throw new HttpError(429, "CODE_RATE_LIMITED", "验证码发送过于频繁，请稍后再试。");
   }
 
   const code = createNumericCode();
@@ -326,7 +326,7 @@ export async function resetPassword(input: {
   const user = await findUserByAccount(input.account);
 
   if (!user) {
-    throw new HttpError(400, "RESET_INVALID", "Password reset request is invalid or expired.");
+    throw new HttpError(400, "RESET_INVALID", "找回密码请求无效或已过期，请重新获取验证码。");
   }
 
   let verified = false;
@@ -346,7 +346,7 @@ export async function resetPassword(input: {
   }
 
   if (!verified) {
-    throw new HttpError(400, "RESET_INVALID", "Password reset request is invalid or expired.");
+    throw new HttpError(400, "RESET_INVALID", "找回密码请求无效或已过期，请重新获取验证码。");
   }
 
   const passwordHash = await bcrypt.hash(input.newPassword, env.BCRYPT_COST);
@@ -384,7 +384,7 @@ export async function verifyAuthToken(token: string): Promise<TokenContext> {
     session.user.status !== UserStatus.ACTIVE ||
     !session.user.organizationId
   ) {
-    throw new HttpError(401, "UNAUTHENTICATED", "Authentication is required.");
+    throw new HttpError(401, "UNAUTHENTICATED", "请先登录后再继续操作。");
   }
 
   return {
@@ -416,7 +416,7 @@ async function createAuthResponse(userId: string, request: RequestMetadata) {
   });
 
   if (!user.organizationId) {
-    throw new HttpError(403, "ORGANIZATION_REQUIRED", "User organization is required.");
+    throw new HttpError(403, "ORGANIZATION_REQUIRED", "账号组织信息缺失，请联系管理员。");
   }
 
   const tokenId = randomUUID();
@@ -462,7 +462,7 @@ async function assertVerificationCode(input: {
   code?: string;
 }) {
   if (!input.code) {
-    throw new HttpError(400, "VERIFICATION_REQUIRED", "SMS verification code is required.");
+    throw new HttpError(400, "VERIFICATION_REQUIRED", "请填写短信验证码。");
   }
 
   const verified = await verifyAndConsumeCode({
@@ -473,7 +473,7 @@ async function assertVerificationCode(input: {
   });
 
   if (!verified) {
-    throw new HttpError(400, "VERIFICATION_INVALID", "SMS verification code is invalid or expired.");
+    throw new HttpError(400, "VERIFICATION_INVALID", "验证码不正确或已过期，请重新获取。");
   }
 }
 

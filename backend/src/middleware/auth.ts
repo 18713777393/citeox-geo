@@ -23,7 +23,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       res.status(401).json({
         error: {
           code: "UNAUTHENTICATED",
-          message: "Authentication is required."
+          message: "请先登录后再继续操作。"
         }
       });
       return;
@@ -35,7 +35,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({
       error: {
         code: "UNAUTHENTICATED",
-        message: "Authentication is required."
+        message: "请先登录后再继续操作。"
       }
     });
   }
@@ -48,7 +48,7 @@ export function requireRole(...roles: UserRole[]) {
         res.status(403).json({
           error: {
             code: "FORBIDDEN",
-            message: "Required role is missing."
+            message: "当前账号没有权限访问该功能。"
           }
         });
         return;
@@ -71,7 +71,7 @@ export function requireEntitlement(featureKey: EntitlementKey) {
           res.status(401).json({
             error: {
               code: "UNAUTHENTICATED",
-              message: "Authentication is required."
+              message: "请先登录后再继续操作。"
             }
           });
           return;
@@ -83,7 +83,7 @@ export function requireEntitlement(featureKey: EntitlementKey) {
           res.status(403).json({
             error: {
               code: "ENTITLEMENT_REQUIRED",
-              message: decision.reason ?? "The current plan does not include this feature.",
+              message: decision.reason ?? "当前套餐暂未开通该功能，请升级套餐后使用。",
               featureKey,
               remaining: decision.remaining ?? 0,
               planCode: decision.planCode
