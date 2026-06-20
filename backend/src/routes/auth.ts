@@ -20,6 +20,12 @@ import { recordAuditEvent } from "../services/audit.js";
 
 export const authRouter = Router();
 
+const optionalCleanString = (schema: z.ZodString) =>
+  z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    schema.optional()
+  );
+
 const passwordSchema = z
   .string()
   .min(8)
@@ -29,12 +35,12 @@ const passwordSchema = z
 const registerSchema = z.object({
   name: z.string().trim().min(1).max(80),
   email: z.string().trim().email().max(160).transform((value) => value.toLowerCase()),
-  phone: z.string().trim().transform((value) => value || undefined).pipe(z.string().min(6).max(32).optional()),
+  phone: optionalCleanString(z.string().trim().min(6).max(32)),
   password: passwordSchema,
   industry: z.string().trim().min(1).max(80),
-  inviteCode: z.string().trim().transform((value) => value || undefined).pipe(z.string().max(80).optional()),
+  inviteCode: optionalCleanString(z.string().trim().max(80)),
   accountType: z.enum(["personal", "business"]),
-  companyName: z.string().trim().transform((value) => value || undefined).pipe(z.string().max(120).optional()),
+  companyName: optionalCleanString(z.string().trim().max(120)),
   legalConsentVersion: z.string().trim().min(1).max(40),
   smsCode: z.string().trim().length(6).optional()
 });
@@ -58,7 +64,7 @@ const loginSchema = z
   );
 
 const sendCodeSchema = z.object({
-  phone: z.string().trim().min(6).max(32).optional(),
+  phone: optionalCleanString(z.string().trim().min(6).max(32)),
   email: z.string().trim().email().max(160).optional(),
   purpose: z.enum(["register", "login", "password_reset"]).default("register")
 });
