@@ -560,10 +560,10 @@ function formatContentForClient(content: Content) {
     status: content.status === ContentStatus.APPROVED ? "approved" : content.status === ContentStatus.REJECTED ? "rejected" : content.status.toLowerCase(),
     reviewNote: content.reviewNotes,
     qualityScore: qualityScore(content),
-    channels: ["official knowledge base"],
+    channels: ["官网知识库"],
     body: content.body ?? "",
     seo: { metaTitle: content.title },
-    author: "backend",
+    author: "系统生成",
     createdAt: content.createdAt.toISOString()
   };
 }

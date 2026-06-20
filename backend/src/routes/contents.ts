@@ -50,10 +50,10 @@ contentsRouter.get(
       status: content.status === "PENDING_REVIEW" ? "review" : content.status.toLowerCase(),
       reviewNote: content.reviewNotes,
       qualityScore: 82,
-      channels: ["official knowledge base"],
+      channels: ["官网知识库"],
       body: content.body ?? "",
       seo: { metaTitle: content.title },
-      author: "backend",
+      author: "系统生成",
       createdAt: content.createdAt.toISOString()
     }));
 

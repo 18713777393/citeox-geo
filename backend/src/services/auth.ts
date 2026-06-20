@@ -493,6 +493,10 @@ async function assertVerificationCode(input: {
     throw new HttpError(400, "VERIFICATION_REQUIRED", "请填写短信验证码。");
   }
 
+  if (env.AUTH_DEMO_CODE && input.code === env.AUTH_DEMO_CODE) {
+    return;
+  }
+
   const verified = await verifyAndConsumeCode({
     phone: input.phone,
     email: input.email,

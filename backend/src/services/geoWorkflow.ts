@@ -85,11 +85,13 @@ export async function expandQuestions(
   const scenarios = normalizeList(input.scenarios).slice(0, 8);
   const seeds = keywords.length ? keywords : [project.brandName];
   const templates = [
-    { intent: "buying", title: "%s should I choose for a growing team?" },
-    { intent: "comparison", title: "How does %s compare with alternatives?" },
-    { intent: "implementation", title: "What is the safest way to roll out %s?" },
-    { intent: "pricing", title: "How should I evaluate %s pricing and value?" },
-    { intent: "faq", title: "What should buyers know before using %s?" }
+    { intent: "购买", title: "%s 适合什么样的团队或个人使用？" },
+    { intent: "对比", title: "%s 和同类工具相比有什么优势？" },
+    { intent: "落地", title: "%s 如何落地使用，第一步应该怎么做？" },
+    { intent: "价格", title: "怎么判断 %s 的价格和投入产出是否值得？" },
+    { intent: "常见问题", title: "使用 %s 前需要了解哪些关键问题？" },
+    { intent: "避坑", title: "选择 %s 时有哪些常见误区需要避免？" },
+    { intent: "案例", title: "%s 在真实业务场景里能解决什么问题？" }
   ];
 
   const requestedLimit = clamp(input.limit ?? 12, 1, 30);
@@ -103,8 +105,8 @@ export async function expandQuestions(
 
   for (const scenario of scenarios) {
     generated.push({
-      title: `What should ${project.brandName} answer when users ask about ${scenario}?`,
-      category: "scenario",
+      title: `用户搜索「${scenario}」时，${project.brandName} 应该怎样回答？`,
+      category: "场景",
       source: "phase3_ai_gateway"
     });
   }
@@ -136,7 +138,7 @@ export async function expandQuestions(
         intent: item.category,
         source: item.source,
         recommend: 90 - Math.min(index * 3, 35),
-        tags: [item.category, "backend"]
+        tags: [item.category, "系统生成"]
       }))
     )
   );
@@ -226,9 +228,9 @@ export async function runMonitor(
           modelProviderId: provider?.id,
           status: MonitorStatus.SUCCEEDED,
           sourceModel: platform,
-          answerSummary: `${project.brandName} visibility snapshot for ${question.title}`,
+          answerSummary: `${project.brandName} 在问题「${question.title}」中的 AI 可见度监控结果`,
           rawResponse: {
-            mode: "safe_summary",
+            mode: "安全摘要",
             requestId: ai.requestId,
             promptHidden: true
           },
@@ -281,7 +283,7 @@ export async function calculateScores(ctx: WorkflowContext, input: { projectId?:
       relevance: String(relevance),
       freshness: String(freshness),
       grade: gradeFor(score),
-      explanation: "Calculated from Phase 3 monitor snapshots and safe local scoring weights."
+      explanation: "根据 AI 回答监控、品牌出现率、引用覆盖和内容新鲜度计算。"
     }
   });
 
@@ -331,14 +333,14 @@ export async function analyzeGaps(ctx: WorkflowContext, input: { projectId?: str
         data: {
           projectId: project.id,
           monitorResultId: monitor?.id,
-          title: index % 2 === 0 ? "Brand answer coverage gap" : "Competitor source pressure",
-          category: index % 2 === 0 ? "coverage" : "competition",
+          title: index % 2 === 0 ? "品牌回答覆盖缺口" : "竞品内容压制风险",
+          category: index % 2 === 0 ? "覆盖缺口" : "竞品压制",
           severity: index < 2 ? 3 : 2,
           description: monitor
-            ? `Improve direct answer coverage for: ${monitor.question.title}`
-            : `Create structured source material for ${project.brandName}.`,
+            ? `补齐问题「${monitor.question.title}」的直接回答、可信来源和可引用内容。`
+            : `为 ${project.brandName} 建立结构化资料页、FAQ 或对比内容。`,
           evidence: {
-            mode: "safe_summary",
+            mode: "安全摘要",
             promptHidden: true,
             monitorResultId: monitor?.id ?? null
           },
@@ -398,15 +400,15 @@ export async function generateStrategies(ctx: WorkflowContext, input: { projectI
         data: {
           projectId: project.id,
           gapId: gap?.id,
-          title: `${project.brandName} ${gap?.category ?? "content"} action plan`,
-          objective: gap?.description ?? `Build source-ready answers for ${project.brandName}.`,
+          title: `${project.brandName} ${gap?.category ?? "内容"}优化方案`,
+          objective: gap?.description ?? `为 ${project.brandName} 建立可被 AI 理解和引用的中文答案资产。`,
           priority: Math.max(1, 5 - index),
           actions: {
-            mode: "safe_summary",
+            mode: "安全摘要",
             steps: [
-              "Create direct answer content",
-              "Add factual source references",
-              "Queue generated content for human review"
+              "生成直接回答型内容",
+              "补充事实依据和可信来源",
+              "进入人工审核后再发布"
             ]
           },
           status: "draft"
@@ -418,7 +420,7 @@ export async function generateStrategies(ctx: WorkflowContext, input: { projectI
   return {
     strategies,
     overview: {
-      name: `${project.brandName} Phase 3 strategy`,
+      name: `${project.brandName} GEO 优化策略`,
       status: "draft",
       objective: {
         target: strategies.length * 30,
@@ -436,7 +438,7 @@ export async function generateStrategies(ctx: WorkflowContext, input: { projectI
       text: strategy.keyword,
       category: strategy.asset,
       priority: strategy.priority,
-      metrics: { targetRank: index < 4 ? "Top 3" : "Top 10" },
+      metrics: { targetRank: index < 4 ? "前三位" : "前十位" },
       performance: { predictedImpact: strategy.predictedImpact }
     })),
     calendar: strategies.slice(0, 8).map((strategy, index) => ({
@@ -490,7 +492,7 @@ export async function generateContents(ctx: WorkflowContext, input: { projectId?
   const liveDraft = ai.output.mode === "live" ? ai.output.summary : "";
   const contents = await Promise.all(
     strategies.map((strategy, index) => {
-      const title = `${strategy.title} content draft`;
+      const title = `${strategy.title}内容草稿`;
       const body = liveDraft
         ? `${liveDraft}\n\n---\n审核提示：请人工确认事实、来源、品牌表述、竞品对比和平台合规后再发布。`
         : buildContentBody(project.brandName, strategy.title, strategy.objective);
@@ -507,7 +509,7 @@ export async function generateContents(ctx: WorkflowContext, input: { projectId?
           promptFingerprint: fingerprint(`${project.id}:${strategy.id}:${title}`),
           reviewNotes: ai.output.mode === "live"
             ? "由真实模型生成，已进入人工审核；系统不会自动发布。"
-            : "Generated by Phase 3 service and held for human review. It is not auto-published.",
+            : "由系统生成并进入人工审核；审核通过前不会自动发布。",
           metadata: {
             phase: "phase3",
             requestId: ai.requestId,
@@ -559,11 +561,11 @@ export async function generateReport(ctx: WorkflowContext, input: { projectId?: 
   const score = Number(latestScore?.score ?? 72);
   const report = {
     id: ai.requestId,
-    title: `${project.brandName} GEO Phase 3 report`,
+    title: `${project.brandName} GEO 优化报告`,
     brandName: project.brandName,
     period: input.period ?? "last_30_days",
     status: "generated",
-    summary: `Score ${score}; open gaps ${gapCount}; review queue ${contentCount}.`,
+    summary: `综合评分 ${score}；待处理缺口 ${gapCount} 个；待审核内容 ${contentCount} 篇。`,
     scorecard: {
       mentionRate: Number(latestScore?.visibility ?? score),
       competitorPressure: Math.max(0, 100 - score),
@@ -572,9 +574,9 @@ export async function generateReport(ctx: WorkflowContext, input: { projectId?: 
     },
     sections: {
       nextActions: [
-        "Review generated content before publication",
-        "Attach approved source materials",
-        "Rerun monitor after content changes"
+        "发布前人工审核生成内容",
+        "补充已确认的可信来源资料",
+        "内容更新后重新运行 AI 监控"
       ]
     },
     downloads: {
@@ -866,10 +868,10 @@ function formatMonitorResult(
     platform,
     question,
     mention,
-    competitors: mention ? [] : ["competitor"],
+    competitors: mention ? [] : ["竞品"],
     rank: mention ? 1 + ((qIndex + pIndex) % 5) : "-",
-    source: mention ? brandName : "competitor source",
-    risk: mention ? "low" : "high",
+    source: mention ? brandName : "竞品来源",
+    risk: mention ? "低" : "高",
     answerSnapshot: result.answerSummary ?? "",
     accuracyScore: Number(result.visibilityScore ?? 0),
     createdAt: result.createdAt.toISOString()
@@ -891,8 +893,8 @@ function formatGap(
     missing: gap.description,
     severity,
     impactScore: gap.severity * 10,
-    recommendations: ["Generate reviewable content", "Attach approved sources"],
-    asset: gap.category === "competition" ? "comparison page" : "faq page",
+    recommendations: ["生成可审核内容", "补充可信来源"],
+    asset: gap.category === "竞品压制" ? "对比页" : "FAQ 页面",
     status: gap.status
   };
 }
@@ -908,18 +910,18 @@ function formatStrategy(
     id: strategy.id,
     topic: gap?.description ?? strategy.title,
     title: strategy.title,
-    keyword: gap?.category ?? "brand answer",
+    keyword: gap?.category ?? "品牌回答",
     priority,
-    channel: "official knowledge base + source material",
-    frequency: priority === "high" ? "weekly" : "biweekly",
-    asset: gap?.category === "competition" ? "comparison page" : "faq page",
-    type: gap?.category ?? "coverage",
+    channel: "官网知识库 + AI 说明资料",
+    frequency: priority === "high" ? "每周复查" : "每两周复查",
+    asset: gap?.category === "竞品压制" ? "对比页" : "FAQ 页面",
+    type: gap?.category ?? "覆盖缺口",
     status: strategy.status,
     impactScore: (gap?.severity ?? 2) * 12,
     predictedImpact: Math.min(96, (gap?.severity ?? 2) * 24 + index * 2),
-    lifecycle: index < 3 ? "new opportunity" : "optimization",
-    calendarWeek: `week ${Math.floor(index / 3) + 1}`,
-    publishTiming: index % 2 === 0 ? "Tuesday AM" : "Thursday PM"
+    lifecycle: index < 3 ? "新增机会" : "持续优化",
+    calendarWeek: `第 ${Math.floor(index / 3) + 1} 周`,
+    publishTiming: index % 2 === 0 ? "周二上午" : "周四下午"
   };
 }
 
@@ -927,14 +929,14 @@ function buildContentBody(brandName: string, title: string, objective: string | 
   return [
     `# ${title}`,
     "",
-    `This draft helps ${brandName} answer a verified customer question with source-ready structure.`,
+    `这篇草稿用于帮助 ${brandName} 回答用户真实关心的问题，并整理成便于 AI 理解、引用和推荐的结构化内容。`,
     "",
-    `Objective: ${objective ?? "Improve AI-visible answer coverage."}`,
+    `优化目标：${objective ?? "提升品牌在 AI 回答中的可见度和回答覆盖率。"}`,
     "",
-    "Review checklist:",
-    "- Confirm factual claims and source references.",
-    "- Confirm brand and competitor wording.",
-    "- Approve compliance before any distribution."
+    "发布前审核清单：",
+    "- 核对事实、数据和来源是否准确。",
+    "- 核对品牌表述、竞品对比和推荐理由是否合规。",
+    "- 确认通过人工审核后，再进入分发流程。"
   ].join("\n");
 }
 
@@ -984,13 +986,13 @@ function formatContent(content: {
     status: content.status === ContentStatus.PENDING_REVIEW ? "review" : content.status.toLowerCase(),
     reviewNote: content.reviewNotes,
     qualityScore: 82,
-    channels: ["official knowledge base"],
+    channels: ["官网知识库"],
     body: content.body ?? "",
     seo: {
       metaTitle: content.title,
-      metaDescription: "Phase 3 generated draft waiting for human review."
+      metaDescription: "系统生成的内容草稿，等待人工审核后发布。"
     },
-    author: "backend",
+    author: "系统生成",
     createdAt: content.createdAt.toISOString()
   };
 }
