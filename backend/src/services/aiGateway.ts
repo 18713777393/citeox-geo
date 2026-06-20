@@ -34,6 +34,7 @@ type ProviderCode =
   | "xunfei"
   | "qianfan"
   | "zhipu"
+  | "yuanbao"
   | "perplexity";
 
 type ProviderApiStyle = "openai-compatible" | "gemini" | "claude";
@@ -82,13 +83,14 @@ const providerRegistry = [
   { code: "openai", name: "OpenAI", envKey: "OPENAI_API_KEY", modelEnvKey: "OPENAI_MODEL", features: ["text", "report"], apiStyle: "openai-compatible" },
   { code: "deepseek", name: "DeepSeek", envKey: "DEEPSEEK_API_KEY", modelEnvKey: "DEEPSEEK_MODEL", features: ["text", "analysis"], apiStyle: "openai-compatible" },
   { code: "kimi", name: "Kimi", envKey: "KIMI_API_KEY", modelEnvKey: "KIMI_MODEL", features: ["text", "long_context"], apiStyle: "openai-compatible" },
-  { code: "doubao", name: "Doubao", envKey: "DOUBAO_API_KEY", modelEnvKey: "DOUBAO_MODEL", features: ["text", "content"], apiStyle: "openai-compatible" },
+  { code: "doubao", name: "豆包", envKey: "DOUBAO_API_KEY", modelEnvKey: "DOUBAO_MODEL", features: ["text", "content"], apiStyle: "openai-compatible" },
   { code: "gemini", name: "Gemini", envKey: "GEMINI_API_KEY", modelEnvKey: "GEMINI_MODEL", features: ["text", "monitor"], apiStyle: "gemini" },
   { code: "claude", name: "Claude", envKey: "CLAUDE_API_KEY", modelEnvKey: "CLAUDE_MODEL", features: ["text", "report"], apiStyle: "claude" },
-  { code: "tongyi", name: "Tongyi", envKey: "TONGYI_API_KEY", modelEnvKey: "TONGYI_MODEL", features: ["text"], apiStyle: "openai-compatible" },
+  { code: "tongyi", name: "通义千问", envKey: "TONGYI_API_KEY", modelEnvKey: "TONGYI_MODEL", features: ["text"], apiStyle: "openai-compatible" },
   { code: "xunfei", name: "Xunfei", envKey: "XUNFEI_API_KEY", modelEnvKey: "XUNFEI_MODEL", features: ["text"], apiStyle: "openai-compatible" },
-  { code: "qianfan", name: "Qianfan", envKey: "QIANFAN_API_KEY", modelEnvKey: "QIANFAN_MODEL", features: ["text"], apiStyle: "openai-compatible" },
-  { code: "zhipu", name: "Zhipu", envKey: "ZHIPU_API_KEY", modelEnvKey: "ZHIPU_MODEL", features: ["text"], apiStyle: "openai-compatible" },
+  { code: "qianfan", name: "文心一言/千帆", envKey: "QIANFAN_API_KEY", modelEnvKey: "QIANFAN_MODEL", features: ["text"], apiStyle: "openai-compatible" },
+  { code: "zhipu", name: "智谱清言", envKey: "ZHIPU_API_KEY", modelEnvKey: "ZHIPU_MODEL", features: ["text"], apiStyle: "openai-compatible" },
+  { code: "yuanbao", name: "腾讯元宝/混元", envKey: "YUANBAO_API_KEY", modelEnvKey: "YUANBAO_MODEL", features: ["text"], apiStyle: "openai-compatible" },
   { code: "perplexity", name: "Perplexity", envKey: "PERPLEXITY_API_KEY", modelEnvKey: "PERPLEXITY_MODEL", features: ["monitor", "research"], apiStyle: "openai-compatible" }
 ] as const satisfies ReadonlyArray<{
   code: ProviderCode;
@@ -124,13 +126,13 @@ export function listAiProviders(): AiProviderInfo[] {
   });
 }
 
-export function allowedProvidersForPlan(planCode?: string) {
+export function allowedProvidersForPlan(planCode?: string): ProviderCode[] {
   switch (planCode) {
     case "admin":
     case "enterprise":
-      return providerRegistry.map((provider) => provider.code);
+      return ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao"] satisfies ProviderCode[];
     case "professional":
-      return ["deepseek", "doubao", "kimi", "tongyi", "zhipu", "perplexity"] satisfies ProviderCode[];
+      return ["deepseek", "doubao", "tongyi", "zhipu"] satisfies ProviderCode[];
     case "starter":
       return ["deepseek", "doubao"] satisfies ProviderCode[];
     case "free_trial":
@@ -142,12 +144,12 @@ export function allowedProvidersForPlan(planCode?: string) {
 export function providerLimitForPlan(planCode: string | undefined, featureKey: EntitlementKey) {
   if (planCode === "admin" || planCode === "enterprise") return null;
   if (featureKey === "content.generate") {
-    if (planCode === "professional") return 3;
-    if (planCode === "starter") return 1;
+    if (planCode === "professional") return 4;
+    if (planCode === "starter") return 2;
     return 1;
   }
   if (featureKey === "monitor.run") {
-    if (planCode === "professional") return 6;
+    if (planCode === "professional") return 4;
     if (planCode === "starter") return 2;
     return 1;
   }
@@ -289,12 +291,12 @@ function selectProvider(input: AiGatewayInput, planCode?: string): ProviderDefin
 
 function preferredProviderOrder(operation: string): ProviderCode[] {
   if (/content|article|draft|creative|image|copy/i.test(operation)) {
-    return ["doubao", "kimi", "claude", "openai", "deepseek", "tongyi", "zhipu", "gemini"];
+    return ["doubao", "zhipu", "tongyi", "deepseek", "qianfan", "yuanbao"];
   }
   if (/monitor|citation|search|research|source/i.test(operation)) {
-    return ["perplexity", "gemini", "deepseek", "openai", "doubao", "tongyi", "zhipu"];
+    return ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao"];
   }
-  return ["deepseek", "doubao", "kimi", "tongyi", "zhipu", "openai", "gemini", "claude", "perplexity"];
+  return ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao"];
 }
 
 async function upsertProvider(
@@ -592,6 +594,8 @@ function providerBaseUrl(definition: ProviderDefinition) {
       return "https://qianfan.baidubce.com/v2";
     case "zhipu":
       return "https://open.bigmodel.cn/api/paas/v4";
+    case "yuanbao":
+      return "https://api.hunyuan.cloud.tencent.com/v1";
     case "perplexity":
       return "https://api.perplexity.ai";
   }
@@ -622,6 +626,8 @@ function defaultModelFor(definition: ProviderDefinition) {
       return "ernie-4.0-turbo-8k";
     case "zhipu":
       return "glm-4-flash";
+    case "yuanbao":
+      return "hunyuan-lite";
     case "perplexity":
       return "sonar";
   }

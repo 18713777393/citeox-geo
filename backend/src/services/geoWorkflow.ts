@@ -9,9 +9,8 @@ import {
 import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../middleware/error.js";
 import type { AuthContext } from "../middleware/auth.js";
-import { filterProviderCodesForPlan, invokeAiGateway, listAiProviders } from "./aiGateway.js";
+import { invokeAiGateway, listAiProviders } from "./aiGateway.js";
 import { recordAuditEvent } from "./audit.js";
-import { getEntitlementSnapshotForUser } from "./entitlements.js";
 
 export interface WorkflowContext {
   auth: AuthContext;
@@ -71,37 +70,14 @@ export async function getQuestions(ctx: WorkflowContext, projectId?: string) {
 }
 
 export async function clearQuestions(ctx: WorkflowContext, input: { projectId?: string } = {}) {
-  if (input.projectId) {
-    const project = await findProject(ctx.auth, input.projectId);
+  const project = await findProject(ctx.auth, input.projectId);
 
-    if (!project) {
-      throw new HttpError(404, "PROJECT_NOT_FOUND", "项目不存在或无权访问。");
-    }
-
-    const result = await prisma.question.deleteMany({
-      where: { projectId: project.id }
-    });
-
-    await recordAuditEvent({
-      organizationId: ctx.auth.organizationId,
-      actorUserId: ctx.auth.userId,
-      action: "questions.clear",
-      resourceType: "question",
-      metadata: {
-        projectId: project.id,
-        deleted: result.count
-      }
-    });
-
-    return { deleted: result.count, scope: "project", projectId: project.id };
+  if (!project) {
+    return { deleted: 0, scope: input.projectId ? "project" : "organization" };
   }
 
   const result = await prisma.question.deleteMany({
-    where: {
-      project: {
-        organizationId: ctx.auth.organizationId
-      }
-    }
+    where: { projectId: project.id }
   });
 
   await recordAuditEvent({
@@ -110,12 +86,12 @@ export async function clearQuestions(ctx: WorkflowContext, input: { projectId?: 
     action: "questions.clear",
     resourceType: "question",
     metadata: {
-      scope: "organization",
+      projectId: project.id,
       deleted: result.count
     }
   });
 
-  return { deleted: result.count, scope: "organization" };
+  return { deleted: result.count, scope: "project", projectId: project.id };
 }
 
 export async function expandQuestions(
@@ -123,39 +99,77 @@ export async function expandQuestions(
   input: {
     projectId?: string;
     brandName?: string;
+    productIntro?: string;
+    industry?: string;
+    targetAudience?: string;
+    competitors?: string[];
     keywords?: string[];
     scenarios?: string | string[];
+    valueProps?: string | string[];
+    promotionGoal?: string;
+    targetAction?: string;
+    preferredPlatforms?: string[];
     limit?: number;
   }
 ) {
-  const project = await ensureProject(ctx.auth, input);
+﻿  const project = await ensureProject(ctx.auth, input);
   const keywords = normalizeList(input.keywords).slice(0, 12);
   const scenarios = normalizeList(input.scenarios).slice(0, 8);
+  const competitors = normalizeList(input.competitors).slice(0, 8);
+  const valueProps = normalizeList(input.valueProps).slice(0, 8);
+  const platforms = normalizeList(input.preferredPlatforms).slice(0, 6);
   const seeds = keywords.length ? keywords : [project.brandName];
-  const templates = [
-    { intent: "购买", title: "%s 适合什么样的团队或个人使用？" },
-    { intent: "对比", title: "%s 和同类工具相比有什么优势？" },
-    { intent: "落地", title: "%s 如何落地使用，第一步应该怎么做？" },
-    { intent: "价格", title: "怎么判断 %s 的价格和投入产出是否值得？" },
-    { intent: "常见问题", title: "使用 %s 前需要了解哪些关键问题？" },
-    { intent: "避坑", title: "选择 %s 时有哪些常见误区需要避免？" },
-    { intent: "案例", title: "%s 在真实业务场景里能解决什么问题？" }
-  ];
-
   const requestedLimit = clamp(input.limit ?? 12, 1, 30);
-  const generated = seeds.flatMap((keyword) =>
-    templates.map((template) => ({
-      title: template.title.replace("%s", keyword),
-      category: template.intent,
-      source: "phase3_ai_gateway"
-    }))
-  );
+  const templates = [
+    { intent: "buying", title: "{brand}\u662f\u5426\u503c\u5f97\u9009\u62e9\uff1f\u9002\u5408\u54ea\u4e9b\u7528\u6237\uff1f" },
+    { intent: "comparison", title: "{brand}\u548c{competitor}\u600e\u4e48\u9009\uff1f\u5404\u81ea\u4f18\u52bf\u662f\u4ec0\u4e48\uff1f" },
+    { intent: "tutorial", title: "{brand}\u5982\u4f55\u843d\u5730\u5230{scenario}\u573a\u666f\uff1f" },
+    { intent: "avoidance", title: "\u9009\u62e9{brand}\u524d\u9700\u8981\u6ce8\u610f\u54ea\u4e9b\u5751\uff1f" },
+    { intent: "faq", title: "\u5173\u4e8e{brand}\uff0cAI \u5e94\u8be5\u5982\u4f55\u56de\u7b54\u7528\u6237\u5e38\u89c1\u95ee\u9898\uff1f" },
+    { intent: "case", title: "{brand}\u5728{scenario}\u91cc\u6709\u54ea\u4e9b\u53ef\u53c2\u8003\u6848\u4f8b\uff1f" },
+    { intent: "list", title: "{industry}\u9886\u57df\u91cc\u6709\u54ea\u4e9b\u503c\u5f97\u5173\u6ce8\u7684\u5de5\u5177\u6216\u54c1\u724c\uff1f" },
+    { intent: "recommendation", title: "\u7528\u6237\u5728{platform}\u4e0a\u95ee{keyword}\u65f6\uff0cAI \u4f1a\u4e0d\u4f1a\u63a8\u8350{brand}\uff1f" }
+  ];
+  const context = {
+    brand: project.brandName,
+    industry: input.industry ?? project.industry ?? "GEO",
+    keyword: seeds[0] ?? project.brandName,
+    competitor: competitors[0] ?? "\u4e3b\u8981\u7ade\u54c1",
+    scenario: scenarios[0] ?? "\u5b9e\u9645\u4e1a\u52a1",
+    platform: platforms[0] ?? "AI \u5e73\u53f0"
+  };
+  const fill = (template: string) => template
+    .replace(/\{brand\}/g, context.brand)
+    .replace(/\{industry\}/g, context.industry)
+    .replace(/\{keyword\}/g, context.keyword)
+    .replace(/\{competitor\}/g, context.competitor)
+    .replace(/\{scenario\}/g, context.scenario)
+    .replace(/\{platform\}/g, context.platform);
+  const generated = templates.map((template) => ({
+    title: fill(template.title),
+    category: template.intent,
+    source: "diagnosis_question_seed"
+  }));
 
-  for (const scenario of scenarios) {
+  for (const keyword of seeds.slice(0, 6)) {
     generated.push({
-      title: `用户搜索「${scenario}」时，${project.brandName} 应该怎样回答？`,
-      category: "场景",
-      source: "phase3_ai_gateway"
+      title: project.brandName + "\u5728\u300c" + keyword + "\u300d\u76f8\u5173 AI \u95ee\u7b54\u4e2d\u7684\u63a8\u8350\u60c5\u51b5\u600e\u4e48\u6837\uff1f",
+      category: "monitor",
+      source: "keyword_monitor"
+    });
+  }
+  for (const competitor of competitors.slice(0, 5)) {
+    generated.push({
+      title: project.brandName + "\u548c" + competitor + "\u5728 AI \u7b54\u6848\u4e2d\u8c01\u66f4\u5bb9\u6613\u88ab\u63a8\u8350\uff1f",
+      category: "comparison",
+      source: "competitor_monitor"
+    });
+  }
+  for (const value of valueProps.slice(0, 4)) {
+    generated.push({
+      title: "AI \u662f\u5426\u7406\u89e3" + project.brandName + "\u7684\u4f18\u52bf\uff1a" + value + "\uff1f",
+      category: "positioning",
+      source: "value_prop_monitor"
     });
   }
 
@@ -186,7 +200,7 @@ export async function expandQuestions(
         intent: item.category,
         source: item.source,
         recommend: 90 - Math.min(index * 3, 35),
-        tags: [item.category, "系统生成"]
+        tags: [item.category, "backend"]
       }))
     )
   );
@@ -210,19 +224,7 @@ export async function runMonitor(
 ) {
   const project = await ensureProject(ctx.auth, input);
   const platforms = normalizeList(input.platforms);
-  const entitlementSnapshot = await getEntitlementSnapshotForUser(ctx.auth.userId);
-  const planCode = entitlementSnapshot?.plan.code ?? "free_trial";
-  const selectedCodes = filterProviderCodesForPlan(
-    platforms.map((platform) => providerCodeFromLabel(platform)).filter(Boolean) as string[],
-    planCode,
-    "monitor.run"
-  );
-  const fallbackCodes = selectedCodes.length
-    ? selectedCodes
-    : filterProviderCodesForPlan(undefined, planCode, "monitor.run");
-  const selectedPlatforms = fallbackCodes
-    .map((code) => listAiProviders().find((provider) => provider.code === code)?.name ?? code)
-    .slice(0, 8);
+  const selectedPlatforms = (platforms.length ? platforms : listAiProviders().slice(0, 5).map((provider) => provider.name)).slice(0, 8);
   let questions = await prisma.question.findMany({
     where: { projectId: project.id },
     orderBy: { createdAt: "desc" },
@@ -276,9 +278,9 @@ export async function runMonitor(
           modelProviderId: provider?.id,
           status: MonitorStatus.SUCCEEDED,
           sourceModel: platform,
-          answerSummary: `${project.brandName} 在问题「${question.title}」中的 AI 可见度监控结果`,
+          answerSummary: `${project.brandName} visibility snapshot for ${question.title}`,
           rawResponse: {
-            mode: "安全摘要",
+            mode: "safe_summary",
             requestId: ai.requestId,
             promptHidden: true
           },
@@ -331,7 +333,7 @@ export async function calculateScores(ctx: WorkflowContext, input: { projectId?:
       relevance: String(relevance),
       freshness: String(freshness),
       grade: gradeFor(score),
-      explanation: "根据 AI 回答监控、品牌出现率、引用覆盖和内容新鲜度计算。"
+      explanation: "Calculated from Phase 3 monitor snapshots and safe local scoring weights."
     }
   });
 
@@ -381,14 +383,14 @@ export async function analyzeGaps(ctx: WorkflowContext, input: { projectId?: str
         data: {
           projectId: project.id,
           monitorResultId: monitor?.id,
-          title: index % 2 === 0 ? "品牌回答覆盖缺口" : "竞品内容压制风险",
-          category: index % 2 === 0 ? "覆盖缺口" : "竞品压制",
+          title: index % 2 === 0 ? "Brand answer coverage gap" : "Competitor source pressure",
+          category: index % 2 === 0 ? "coverage" : "competition",
           severity: index < 2 ? 3 : 2,
           description: monitor
-            ? `补齐问题「${monitor.question.title}」的直接回答、可信来源和可引用内容。`
-            : `为 ${project.brandName} 建立结构化资料页、FAQ 或对比内容。`,
+            ? `Improve direct answer coverage for: ${monitor.question.title}`
+            : `Create structured source material for ${project.brandName}.`,
           evidence: {
-            mode: "安全摘要",
+            mode: "safe_summary",
             promptHidden: true,
             monitorResultId: monitor?.id ?? null
           },
@@ -419,13 +421,24 @@ export async function analyzeGaps(ctx: WorkflowContext, input: { projectId?: str
   };
 }
 
-export async function generateStrategies(ctx: WorkflowContext, input: { projectId?: string; limit?: number }) {
+﻿export async function generateStrategies(ctx: WorkflowContext, input: { projectId?: string; limit?: number }) {
   const project = await ensureProject(ctx.auth, input);
-  const gaps = await prisma.gap.findMany({
-    where: { projectId: project.id, status: "open" },
-    orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
-    take: clamp(input.limit ?? 12, 1, 30)
-  });
+  const limit = clamp(input.limit ?? 12, 1, 30);
+  const [gaps, latestScore] = await Promise.all([
+    prisma.gap.findMany({
+      where: { projectId: project.id, status: "open" },
+      include: { monitorResult: { include: { question: true, modelProvider: true } } },
+      orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
+      take: limit
+    }),
+    prisma.geoScore.findFirst({ where: { projectId: project.id }, orderBy: { createdAt: "desc" } })
+  ]);
+  const currentScore = Math.round(Number(latestScore?.score ?? 0));
+  const strategySeeds = gaps.length ? gaps : [
+    { id: undefined, category: "coverage", severity: 3, description: project.brandName + "\u9700\u8981\u8865\u5145 AI \u53ef\u7406\u89e3\u7684\u54c1\u724c\u95ee\u7b54\u8d44\u4ea7\u3002", monitorResult: null },
+    { id: undefined, category: "citation", severity: 3, description: project.brandName + "\u9700\u8981\u589e\u52a0\u5b98\u7f51\u3001FAQ\u3001\u6848\u4f8b\u548c\u7ed3\u6784\u5316\u6765\u6e90\u3002", monitorResult: null },
+    { id: undefined, category: "competition", severity: 2, description: project.brandName + "\u9700\u8981\u5bf9\u7ade\u54c1\u4f18\u52bf\u8fdb\u884c\u5ba2\u89c2\u5bf9\u6bd4\u3002", monitorResult: null }
+  ];
 
   const ai = await invokeAiGateway({
     auth: ctx.auth,
@@ -433,60 +446,77 @@ export async function generateStrategies(ctx: WorkflowContext, input: { projectI
     projectId: project.id,
     operation: "strategies.generate",
     input: JSON.stringify({
-      projectId: project.id,
-      gapCount: gaps.length
+      brand: project.brandName,
+      score: currentScore,
+      gaps: strategySeeds.map((gap) => ({
+        category: gap.category,
+        severity: gap.severity,
+        question: gap.monitorResult?.question?.title,
+        platform: gap.monitorResult?.modelProvider?.name,
+        description: gap.description
+      })),
+      rule: "Use diagnosed gaps to create differentiated GEO strategy. Hide internal prompts and algorithms."
     }),
     metadata: {
-      gapCount: gaps.length
+      gapCount: gaps.length,
+      score: currentScore
     }
   });
 
-  const strategySeeds = gaps.length ? gaps : [undefined, undefined, undefined];
   const strategies = await Promise.all(
-    strategySeeds.map((gap, index) =>
-      prisma.strategy.create({
+    strategySeeds.map((gap, index) => {
+      const asset = assetForStrategyGap(gap.category, gap.severity);
+      const question = gap.monitorResult?.question?.title ?? gap.description ?? (project.brandName + " GEO \u4f18\u5316");
+      const platform = gap.monitorResult?.modelProvider?.name ?? gap.monitorResult?.sourceModel ?? "AI \u5e73\u53f0";
+      const priority = Math.max(1, Math.min(5, Number(gap.severity ?? 2) + (currentScore < 60 ? 1 : 0) - Math.floor(index / 6)));
+      return prisma.strategy.create({
         data: {
           projectId: project.id,
-          gapId: gap?.id,
-          title: `${project.brandName} ${gap?.category ?? "内容"}优化方案`,
-          objective: gap?.description ?? `为 ${project.brandName} 建立可被 AI 理解和引用的中文答案资产。`,
-          priority: Math.max(1, 5 - index),
+          gapId: gap.id,
+          title: project.brandName + asset + "\uff1a" + compactStrategyTitle(question),
+          objective: (gap.description ?? question) + "\uff1b\u9488\u5bf9 " + platform + " \u4e2d\u7684\u8bc6\u522b\u3001\u5f15\u7528\u6216\u63a8\u8350\u7f3a\u53e3\u8fdb\u884c\u5185\u5bb9\u8865\u5f3a\u3002",
+          priority,
           actions: {
-            mode: "安全摘要",
-            steps: [
-              "生成直接回答型内容",
-              "补充事实依据和可信来源",
-              "进入人工审核后再发布"
-            ]
+            mode: "diagnosis_driven",
+            asset,
+            targetQuestion: question,
+            targetPlatform: platform,
+            scoreAtCreation: currentScore,
+            steps: ["\u56de\u7b54\u771f\u5b9e\u7528\u6237\u95ee\u9898", "\u8865\u5145\u54c1\u724c\u4f18\u52bf\u4e0e\u8bc1\u636e", "\u751f\u6210 FAQ \u4e0e\u7ed3\u6784\u5316\u7247\u6bb5", "\u4eba\u5de5\u5ba1\u6838\u540e\u518d\u5206\u53d1"]
           },
           status: "draft"
         }
-      }).then((strategy) => formatStrategy(strategy, gap, index))
-    )
+      }).then((strategy) => formatStrategy(strategy, gap, index));
+    })
   );
 
   return {
     strategies,
     overview: {
-      name: `${project.brandName} GEO 优化策略`,
+      name: project.brandName + " GEO \u8bca\u65ad\u9a71\u52a8\u7b56\u7565",
       status: "draft",
       objective: {
-        target: strategies.length * 30,
-        current: strategies.length * 12,
-        progress: 40
+        target: Math.max(60, strategies.length * 18),
+        current: currentScore,
+        progress: Math.min(100, Math.max(5, currentScore))
       },
       keyMetrics: {
         contentPlanned: strategies.length,
         avgPredictedImpact: average(strategies.map((strategy) => strategy.predictedImpact)),
         highPriority: strategies.filter((strategy) => strategy.priority === "high").length,
-        roi: 2.1
-      }
+        roi: Number((1.4 + strategies.filter((strategy) => strategy.priority === "high").length * 0.3).toFixed(1))
+      },
+      focusAreas: [
+        { topic: "AI \u7b54\u6848\u51fa\u73b0\u7387", weight: 30, status: currentScore >= 70 ? "\u7a33\u56fa\u6269\u5c55" : "\u4f18\u5148\u8865\u5f3a", progress: currentScore },
+        { topic: "\u5f15\u7528\u6765\u6e90\u4e0e\u5185\u5bb9\u8bc1\u636e", weight: 30, status: "\u91cd\u70b9\u63a8\u8fdb", progress: Math.min(95, currentScore + 15) },
+        { topic: "\u7ade\u54c1\u5bf9\u6bd4\u4e0e\u5dee\u5f02\u8868\u8fbe", weight: 20, status: "\u6301\u7eed\u76d1\u63a7", progress: Math.max(20, currentScore - 8) }
+      ]
     },
     keywordStrategy: strategies.slice(0, 8).map((strategy, index) => ({
       text: strategy.keyword,
       category: strategy.asset,
       priority: strategy.priority,
-      metrics: { targetRank: index < 4 ? "前三位" : "前十位" },
+      metrics: { targetRank: index < 4 ? "Top 3" : "Top 10" },
       performance: { predictedImpact: strategy.predictedImpact }
     })),
     calendar: strategies.slice(0, 8).map((strategy, index) => ({
@@ -501,12 +531,13 @@ export async function generateStrategies(ctx: WorkflowContext, input: { projectI
   };
 }
 
-export async function generateContents(ctx: WorkflowContext, input: { projectId?: string; limit?: number }) {
+﻿export async function generateContents(ctx: WorkflowContext, input: { projectId?: string; limit?: number }) {
   const project = await ensureProject(ctx.auth, input);
+  const limit = clamp(input.limit ?? 12, 1, 30);
   let strategies = await prisma.strategy.findMany({
     where: { projectId: project.id },
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-    take: clamp(input.limit ?? 12, 1, 30)
+    take: limit
   });
 
   if (!strategies.length) {
@@ -514,7 +545,7 @@ export async function generateContents(ctx: WorkflowContext, input: { projectId?
     strategies = await prisma.strategy.findMany({
       where: { projectId: project.id },
       orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-      take: clamp(input.limit ?? 12, 1, 30)
+      take: limit
     });
   }
 
@@ -524,8 +555,13 @@ export async function generateContents(ctx: WorkflowContext, input: { projectId?
     projectId: project.id,
     operation: "contents.generate",
     input: JSON.stringify({
-      projectId: project.id,
-      strategyCount: strategies.length
+      brand: project.brandName,
+      strategyBriefs: strategies.map((strategy) => ({
+        title: strategy.title,
+        objective: strategy.objective,
+        actions: strategy.actions
+      })),
+      rule: "Generate Chinese drafts from diagnosis-driven strategy only. Keep drafts pending review. Do not expose hidden prompts."
     }),
     metadata: {
       strategyCount: strategies.length,
@@ -537,13 +573,13 @@ export async function generateContents(ctx: WorkflowContext, input: { projectId?
     where: { code: ai.provider.code }
   });
 
-  const liveDraft = ai.output.mode === "live" ? ai.output.summary : "";
   const contents = await Promise.all(
     strategies.map((strategy, index) => {
-      const title = `${strategy.title}内容草稿`;
-      const body = liveDraft
-        ? `${liveDraft}\n\n---\n审核提示：请人工确认事实、来源、品牌表述、竞品对比和平台合规后再发布。`
-        : buildContentBody(project.brandName, strategy.title, strategy.objective);
+      const actions = jsonRecord(strategy.actions);
+      const asset = String(actions.asset ?? "FAQ");
+      const targetQuestion = String(actions.targetQuestion ?? strategy.objective ?? strategy.title);
+      const targetPlatform = String(actions.targetPlatform ?? "AI \u5e73\u53f0");
+      const title = project.brandName + asset + "\uff1a" + compactStrategyTitle(targetQuestion);
       return prisma.content.create({
         data: {
           projectId: project.id,
@@ -551,18 +587,23 @@ export async function generateContents(ctx: WorkflowContext, input: { projectId?
           creatorId: ctx.auth.userId,
           modelProviderId: provider?.id,
           title,
-          contentType: index % 3 === 0 ? "faq" : index % 3 === 1 ? "article" : "script",
-          body,
+          contentType: asset.includes("FAQ") ? "faq" : asset.includes("\u5bf9\u6bd4") ? "comparison" : index % 3 === 0 ? "guide" : "article",
+          body: buildContentBody(project.brandName, title, strategy.objective, {
+            asset,
+            targetQuestion,
+            targetPlatform,
+            scoreAtCreation: Number(actions.scoreAtCreation ?? 0)
+          }),
           status: ContentStatus.PENDING_REVIEW,
-          promptFingerprint: fingerprint(`${project.id}:${strategy.id}:${title}`),
-          reviewNotes: ai.output.mode === "live"
-            ? "由真实模型生成，已进入人工审核；系统不会自动发布。"
-            : "由系统生成并进入人工审核；审核通过前不会自动发布。",
+          promptFingerprint: fingerprint(project.id + ":" + strategy.id + ":" + title),
+          reviewNotes: "\u8bca\u65ad\u9a71\u52a8\u751f\u6210\uff0c\u5df2\u8fdb\u5165\u4eba\u5de5\u5ba1\u6838\uff1b\u53d1\u5e03\u524d\u9700\u786e\u8ba4\u4e8b\u5b9e\u3001\u6765\u6e90\u3001\u7ade\u54c1\u8868\u8ff0\u548c\u5e73\u53f0\u5408\u89c4\u3002",
           metadata: {
-            phase: "phase3",
+            phase: "diagnosis_driven_content",
             requestId: ai.requestId,
-            aiMode: ai.output.mode,
-            autoPublish: false
+            autoPublish: false,
+            targetQuestion,
+            targetPlatform,
+            asset
           }
         }
       }).then(formatContent)
@@ -609,11 +650,11 @@ export async function generateReport(ctx: WorkflowContext, input: { projectId?: 
   const score = Number(latestScore?.score ?? 72);
   const report = {
     id: ai.requestId,
-    title: `${project.brandName} GEO 优化报告`,
+    title: `${project.brandName} GEO Phase 3 report`,
     brandName: project.brandName,
     period: input.period ?? "last_30_days",
     status: "generated",
-    summary: `综合评分 ${score}；待处理缺口 ${gapCount} 个；待审核内容 ${contentCount} 篇。`,
+    summary: `Score ${score}; open gaps ${gapCount}; review queue ${contentCount}.`,
     scorecard: {
       mentionRate: Number(latestScore?.visibility ?? score),
       competitorPressure: Math.max(0, 100 - score),
@@ -622,9 +663,9 @@ export async function generateReport(ctx: WorkflowContext, input: { projectId?: 
     },
     sections: {
       nextActions: [
-        "发布前人工审核生成内容",
-        "补充已确认的可信来源资料",
-        "内容更新后重新运行 AI 监控"
+        "Review generated content before publication",
+        "Attach approved source materials",
+        "Rerun monitor after content changes"
       ]
     },
     downloads: {
@@ -916,10 +957,10 @@ function formatMonitorResult(
     platform,
     question,
     mention,
-    competitors: mention ? [] : ["竞品"],
+    competitors: mention ? [] : ["competitor"],
     rank: mention ? 1 + ((qIndex + pIndex) % 5) : "-",
-    source: mention ? brandName : "竞品来源",
-    risk: mention ? "低" : "高",
+    source: mention ? brandName : "competitor source",
+    risk: mention ? "low" : "high",
     answerSnapshot: result.answerSummary ?? "",
     accuracyScore: Number(result.visibilityScore ?? 0),
     createdAt: result.createdAt.toISOString()
@@ -941,10 +982,26 @@ function formatGap(
     missing: gap.description,
     severity,
     impactScore: gap.severity * 10,
-    recommendations: ["生成可审核内容", "补充可信来源"],
-    asset: gap.category === "竞品压制" ? "对比页" : "FAQ 页面",
+    recommendations: ["Generate reviewable content", "Attach approved sources"],
+    asset: gap.category === "competition" ? "comparison page" : "faq page",
     status: gap.status
   };
+}
+
+function jsonRecord(value: Prisma.JsonValue | null | undefined): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function assetForStrategyGap(category: string | null | undefined, severity: number | null | undefined) {
+  const value = (category ?? "").toLowerCase();
+  if (value.includes("competition") || value.includes("competitor")) return "\u5bf9\u6bd4\u9875";
+  if (value.includes("citation") || value.includes("source")) return "\u8bc1\u636e\u578b\u77e5\u8bc6\u9875";
+  if (value.includes("recommend")) return "\u9009\u578b\u6307\u5357";
+  return Number(severity ?? 1) >= 3 ? "\u6838\u5fc3 FAQ" : "\u957f\u5c3e\u95ee\u7b54";
+}
+
+function compactStrategyTitle(text: string) {
+  return text.replace(/[?？。！!]/g, "").replace(/\s+/g, " ").trim().slice(0, 36) || "\u54c1\u724c\u95ee\u9898\u4f18\u5316";
 }
 
 function formatStrategy(
@@ -958,64 +1015,63 @@ function formatStrategy(
     id: strategy.id,
     topic: gap?.description ?? strategy.title,
     title: strategy.title,
-    keyword: gap?.category ?? "品牌回答",
+    keyword: gap?.category ?? "\u54c1\u724c\u56de\u7b54",
     priority,
-    channel: "官网知识库 + AI 说明资料",
-    frequency: priority === "high" ? "每周复查" : "每两周复查",
-    asset: gap?.category === "竞品压制" ? "对比页" : "FAQ 页面",
-    type: gap?.category ?? "覆盖缺口",
+    channel: "\u5b98\u7f51\u77e5\u8bc6\u5e93 + AI \u8bf4\u660e\u6587\u4ef6 + \u591a\u7ad9\u70b9\u5206\u53d1",
+    frequency: priority === "high" ? "\u6bcf\u5468\u590d\u67e5" : "\u53cc\u5468\u590d\u67e5",
+    asset: assetForStrategyGap(gap?.category, gap?.severity),
+    type: gap?.category ?? "\u8986\u76d6\u7f3a\u53e3",
     status: strategy.status,
     impactScore: (gap?.severity ?? 2) * 12,
     predictedImpact: Math.min(96, (gap?.severity ?? 2) * 24 + index * 2),
-    lifecycle: index < 3 ? "新增机会" : "持续优化",
-    calendarWeek: `第 ${Math.floor(index / 3) + 1} 周`,
-    publishTiming: index % 2 === 0 ? "周二上午" : "周四下午"
+    lifecycle: index < 3 ? "\u65b0\u589e\u673a\u4f1a" : "\u6301\u7eed\u4f18\u5316",
+    calendarWeek: `\u7b2c ${Math.floor(index / 3) + 1} \u5468`,
+    publishTiming: index % 2 === 0 ? "\u5468\u4e8c\u4e0a\u5348" : "\u5468\u56db\u4e0b\u5348"
   };
 }
 
-function buildContentBody(brandName: string, title: string, objective: string | null) {
+function buildContentBody(
+  brandName: string,
+  title: string,
+  objective: string | null,
+  brief?: { asset: string; targetQuestion: string; targetPlatform: string; scoreAtCreation: number }
+) {
+  if (brief) {
+    return [
+      `# ${title}`,
+      "",
+      `\u672c\u6587\u56f4\u7ed5\u8bca\u65ad\u7f3a\u53e3\u300c${brief.targetQuestion}\u300d\u751f\u6210\uff0c\u7528\u4e8e\u5e2e\u52a9 ${brandName} \u5728 ${brief.targetPlatform} \u7b49 AI \u7b54\u6848\u4e2d\u66f4\u5bb9\u6613\u88ab\u7406\u89e3\u3001\u5f15\u7528\u548c\u63a8\u8350\u3002`,
+      "",
+      "\u6838\u5fc3\u56de\u7b54\uff1a",
+      `- \u5148\u76f4\u63a5\u56de\u7b54\u7528\u6237\u95ee\u9898\uff1a${brief.targetQuestion}`,
+      `- \u518d\u8bf4\u660e ${brandName} \u7684\u9002\u7528\u573a\u666f\u3001\u4f18\u52bf\u8fb9\u754c\u548c\u4e0b\u4e00\u6b65\u884c\u52a8\u3002`,
+      "- \u9700\u8865\u5145\u5b98\u7f51\u8bf4\u660e\u3001FAQ\u3001\u6848\u4f8b\u3001Schema \u548c llms.txt \u7b49\u53ef\u88ab\u6293\u53d6\u7684\u4fe1\u606f\u3002",
+      "",
+      "FAQ\uff1a",
+      `## ${brief.targetQuestion}`,
+      "\u5efa\u8bae\u7528\u5ba2\u89c2\u3001\u7b80\u6d01\u3001\u53ef\u6838\u9a8c\u7684\u65b9\u5f0f\u56de\u7b54\uff0c\u907f\u514d\u5938\u5927\u627f\u8bfa\u3002",
+      `## ${brandName}\u548c\u7ade\u54c1\u600e\u4e48\u9009\uff1f`,
+      "\u4ece\u4f7f\u7528\u573a\u666f\u3001\u6838\u5fc3\u80fd\u529b\u3001\u4ea4\u4ed8\u6210\u672c\u548c\u8bc1\u636e\u5145\u8db3\u5ea6\u505a\u5ba2\u89c2\u5bf9\u6bd4\u3002",
+      "",
+      "\u53d1\u5e03\u524d\u5ba1\u6838\u6e05\u5355\uff1a",
+      "- \u6838\u5bf9\u4e8b\u5b9e\u3001\u6570\u636e\u548c\u6765\u6e90\u662f\u5426\u51c6\u786e\u3002",
+      "- \u6838\u5bf9\u7ade\u54c1\u5bf9\u6bd4\u662f\u5426\u5ba2\u89c2\u5408\u89c4\u3002",
+      "- \u4eba\u5de5\u5ba1\u6838\u901a\u8fc7\u540e\u518d\u8fdb\u5165\u5206\u53d1\u3002"
+    ].join("\n");
+  }
+
   return [
     `# ${title}`,
     "",
-    `这篇草稿用于帮助 ${brandName} 回答用户真实关心的问题，并整理成便于 AI 理解、引用和推荐的结构化内容。`,
+    `\u8fd9\u7bc7\u8349\u7a3f\u7528\u4e8e\u5e2e\u52a9 ${brandName} \u56de\u7b54\u7528\u6237\u771f\u5b9e\u5173\u5fc3\u7684\u95ee\u9898\uff0c\u5e76\u6574\u7406\u6210\u4fbf\u4e8e AI \u7406\u89e3\u3001\u5f15\u7528\u548c\u63a8\u8350\u7684\u7ed3\u6784\u5316\u5185\u5bb9\u3002`,
     "",
-    `优化目标：${objective ?? "提升品牌在 AI 回答中的可见度和回答覆盖率。"}`,
+    `\u4f18\u5316\u76ee\u6807\uff1a${objective ?? "\u63d0\u5347\u54c1\u724c\u5728 AI \u7b54\u6848\u4e2d\u7684\u53ef\u89c1\u5ea6\u548c\u56de\u7b54\u8986\u76d6\u7387\u3002"}`,
     "",
-    "发布前审核清单：",
-    "- 核对事实、数据和来源是否准确。",
-    "- 核对品牌表述、竞品对比和推荐理由是否合规。",
-    "- 确认通过人工审核后，再进入分发流程。"
+    "\u53d1\u5e03\u524d\u5ba1\u6838\u6e05\u5355\uff1a",
+    "- \u6838\u5bf9\u4e8b\u5b9e\u3001\u6570\u636e\u548c\u6765\u6e90\u662f\u5426\u51c6\u786e\u3002",
+    "- \u6838\u5bf9\u54c1\u724c\u8868\u8ff0\u3001\u7ade\u54c1\u5bf9\u6bd4\u548c\u63a8\u8350\u7406\u7531\u662f\u5426\u5408\u89c4\u3002",
+    "- \u786e\u8ba4\u901a\u8fc7\u4eba\u5de5\u5ba1\u6838\u540e\uff0c\u518d\u8fdb\u5165\u5206\u53d1\u6d41\u7a0b\u3002"
   ].join("\n");
-}
-
-function providerCodeFromLabel(label: string) {
-  const normalized = label.trim().toLowerCase();
-  const direct: Record<string, string> = {
-    openai: "openai",
-    chatgpt: "openai",
-    deepseek: "deepseek",
-    kimi: "kimi",
-    moonshot: "kimi",
-    doubao: "doubao",
-    "豆包": "doubao",
-    gemini: "gemini",
-    claude: "claude",
-    tongyi: "tongyi",
-    qwen: "tongyi",
-    "通义": "tongyi",
-    xunfei: "xunfei",
-    spark: "xunfei",
-    "讯飞": "xunfei",
-    qianfan: "qianfan",
-    ernie: "qianfan",
-    "千帆": "qianfan",
-    zhipu: "zhipu",
-    glm: "zhipu",
-    "智谱": "zhipu",
-    perplexity: "perplexity",
-    sonar: "perplexity"
-  };
-  return direct[normalized] ?? "";
 }
 
 function formatContent(content: {
@@ -1034,13 +1090,13 @@ function formatContent(content: {
     status: content.status === ContentStatus.PENDING_REVIEW ? "review" : content.status.toLowerCase(),
     reviewNote: content.reviewNotes,
     qualityScore: 82,
-    channels: ["官网知识库"],
+    channels: ["\u5b98\u7f51\u77e5\u8bc6\u5e93"],
     body: content.body ?? "",
     seo: {
       metaTitle: content.title,
-      metaDescription: "系统生成的内容草稿，等待人工审核后发布。"
+      metaDescription: "\u8bca\u65ad\u9a71\u52a8\u751f\u6210\u7684\u5185\u5bb9\u8349\u7a3f\uff0c\u7b49\u5f85\u4eba\u5de5\u5ba1\u6838\u540e\u53d1\u5e03\u3002"
     },
-    author: "系统生成",
+    author: "\u7cfb\u7edf\u751f\u6210",
     createdAt: content.createdAt.toISOString()
   };
 }

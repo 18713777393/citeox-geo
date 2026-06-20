@@ -295,6 +295,7 @@ export async function getEntitlementSnapshotForUser(userId: string) {
     where: { id: userId },
     select: {
       id: true,
+      email: true,
       role: true,
       organizationId: true
     }
@@ -308,6 +309,10 @@ export async function getEntitlementSnapshotForUser(userId: string) {
     return adminEntitlementSnapshot();
   }
 
+  if (isFullAccessTestUser(user.email)) {
+    return fullAccessTestEntitlementSnapshot();
+  }
+
   const subscription = await ensureDefaultSubscription(user.organizationId);
   return snapshotFromSubscription(subscription);
 }
@@ -319,6 +324,7 @@ export async function checkEntitlement(
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      email: true,
       role: true,
       organizationId: true
     }
@@ -332,12 +338,12 @@ export async function checkEntitlement(
     };
   }
 
-  if (isAdminRole(user.role)) {
+  if (isAdminRole(user.role) || isFullAccessTestUser(user.email)) {
     return {
       allowed: true,
       featureKey,
       remaining: null,
-      planCode: "admin"
+      planCode: isAdminRole(user.role) ? "admin" : "enterprise"
     };
   }
 
@@ -542,6 +548,15 @@ function isAdminRole(role: UserRole) {
   return role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
 }
 
+function isFullAccessTestUser(email: string | null | undefined) {
+  const allowList = (process.env.FULL_ACCESS_TEST_EMAILS || "test@citeox.com")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  return Boolean(email && allowList.includes(email.toLowerCase()));
+}
+
 function adminEntitlementSnapshot(): EntitlementSnapshot {
   return {
     plan: {
@@ -570,6 +585,20 @@ function adminEntitlementSnapshot(): EntitlementSnapshot {
     },
     extraTokenPrice: "管理员不限额",
     usage: {}
+  };
+}
+
+function fullAccessTestEntitlementSnapshot(): EntitlementSnapshot {
+  return {
+    ...adminEntitlementSnapshot(),
+    plan: {
+      code: "enterprise",
+      name: "测试全权益版",
+      priceCents: 0,
+      currency: "CNY",
+      interval: "month"
+    },
+    extraTokenPrice: "测试账号不限额"
   };
 }
 
