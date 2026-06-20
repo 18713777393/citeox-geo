@@ -270,10 +270,21 @@ export async function createVerificationCode(input: {
     }
   });
 
+  if (input.email) {
+    await sendVerificationEmail({
+      to: input.email,
+      code,
+      purpose: input.purpose,
+      expiresInMinutes: env.AUTH_CODE_TTL_MINUTES
+    });
+  } else if (input.phone && env.NODE_ENV === "production") {
+    throw new HttpError(501, "SMS_NOT_CONFIGURED", "短信验证码暂未开通，请使用邮箱验证码。");
+  }
+
   return {
     sent: true,
     expiresInSeconds: env.AUTH_CODE_TTL_MINUTES * 60,
-    provider: env.SMS_PROVIDER || "placeholder",
+    provider: input.email ? env.EMAIL_PROVIDER || "email-placeholder" : env.SMS_PROVIDER || "placeholder",
     demoCode: env.NODE_ENV === "production" ? undefined : code
   };
 }
@@ -318,6 +329,15 @@ export async function requestPasswordReset(input: {
       }
     })
   ]);
+
+  if (user.email) {
+    await sendVerificationEmail({
+      to: user.email,
+      code,
+      purpose: "password_reset",
+      expiresInMinutes: env.PASSWORD_RESET_TTL_MINUTES
+    });
+  }
 
   return {
     sent: true,
@@ -573,7 +593,44 @@ async function uniqueOrganizationSlug(name: string) {
 }
 
 function createNumericCode() {
+  if (env.AUTH_DEMO_CODE) {
+    return env.AUTH_DEMO_CODE;
+  }
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function sendVerificationEmail(input: {
+  to: string;
+  code: string;
+  purpose: CodePurpose;
+  expiresInMinutes: number;
+}) {
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) {
+    if (env.NODE_ENV === "production") {
+      throw new HttpError(501, "EMAIL_NOT_CONFIGURED", "邮箱验证码服务暂未配置，请联系管理员。");
+    }
+    return;
+  }
+
+  const purposeText = input.purpose === "password_reset" ? "找回密码" : "注册验证";
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: env.EMAIL_FROM,
+      to: input.to,
+      subject: `CiteOX ${purposeText}验证码`,
+      text: `你的验证码是 ${input.code}，有效期 ${input.expiresInMinutes} 分钟。请勿泄露给他人。`,
+      html: `<div style="font-family:Arial,'Microsoft YaHei',sans-serif;line-height:1.7;color:#172033"><h2>CiteOX ${purposeText}</h2><p>你的验证码是：</p><p style="font-size:28px;font-weight:800;letter-spacing:4px">${input.code}</p><p>有效期 ${input.expiresInMinutes} 分钟，请勿泄露给他人。</p></div>`
+    })
+  });
+
+  if (!response.ok) {
+    throw new HttpError(502, "EMAIL_SEND_FAILED", "邮箱验证码发送失败，请稍后再试。");
+  }
 }
 
 function toVerificationPurpose(purpose: CodePurpose) {
