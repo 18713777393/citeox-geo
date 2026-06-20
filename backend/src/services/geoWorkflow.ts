@@ -70,6 +70,54 @@ export async function getQuestions(ctx: WorkflowContext, projectId?: string) {
   return { questions: questions.map(formatQuestion) };
 }
 
+export async function clearQuestions(ctx: WorkflowContext, input: { projectId?: string } = {}) {
+  if (input.projectId) {
+    const project = await findProject(ctx.auth, input.projectId);
+
+    if (!project) {
+      throw new HttpError(404, "PROJECT_NOT_FOUND", "项目不存在或无权访问。");
+    }
+
+    const result = await prisma.question.deleteMany({
+      where: { projectId: project.id }
+    });
+
+    await recordAuditEvent({
+      organizationId: ctx.auth.organizationId,
+      actorUserId: ctx.auth.userId,
+      action: "questions.clear",
+      resourceType: "question",
+      metadata: {
+        projectId: project.id,
+        deleted: result.count
+      }
+    });
+
+    return { deleted: result.count, scope: "project", projectId: project.id };
+  }
+
+  const result = await prisma.question.deleteMany({
+    where: {
+      project: {
+        organizationId: ctx.auth.organizationId
+      }
+    }
+  });
+
+  await recordAuditEvent({
+    organizationId: ctx.auth.organizationId,
+    actorUserId: ctx.auth.userId,
+    action: "questions.clear",
+    resourceType: "question",
+    metadata: {
+      scope: "organization",
+      deleted: result.count
+    }
+  });
+
+  return { deleted: result.count, scope: "organization" };
+}
+
 export async function expandQuestions(
   ctx: WorkflowContext,
   input: {

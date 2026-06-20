@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
-import { expandQuestions, getQuestions } from "../services/geoWorkflow.js";
+import { clearQuestions, expandQuestions, getQuestions } from "../services/geoWorkflow.js";
 import { asyncHandler, parseBody, parseQuery } from "./routeHelpers.js";
 
 export const questionsRouter = Router();
@@ -18,6 +18,10 @@ const expandSchema = z.object({
   limit: z.number().int().min(1).max(30).optional()
 });
 
+const clearSchema = z.object({
+  projectId: z.string().uuid().optional()
+});
+
 questionsRouter.use(requireAuth);
 
 questionsRouter.get(
@@ -25,6 +29,15 @@ questionsRouter.get(
   asyncHandler(async (req, res) => {
     const query = parseQuery(projectQuerySchema, req);
     res.json(await getQuestions({ auth: req.auth! }, query.projectId));
+  })
+);
+
+questionsRouter.delete(
+  "/",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(clearSchema, req);
+    const query = parseQuery(projectQuerySchema, req);
+    res.json(await clearQuestions({ auth: req.auth! }, { projectId: body.projectId ?? query.projectId }));
   })
 );
 
