@@ -89,13 +89,11 @@ export async function registerUser(input: {
   smsCode?: string;
   request: RequestMetadata;
 }) {
-  if (input.phone) {
-    await assertVerificationCode({
-      phone: input.phone,
-      purpose: "register",
-      code: input.smsCode
-    });
-  }
+  await assertVerificationCode({
+    email: input.email,
+    purpose: "register",
+    code: input.smsCode
+  });
 
   const existing = await prisma.user.findFirst({
     where: {

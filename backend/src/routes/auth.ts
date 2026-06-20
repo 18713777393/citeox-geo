@@ -29,12 +29,12 @@ const passwordSchema = z
 const registerSchema = z.object({
   name: z.string().trim().min(1).max(80),
   email: z.string().trim().email().max(160).transform((value) => value.toLowerCase()),
-  phone: z.string().trim().min(6).max(32).optional(),
+  phone: z.string().trim().transform((value) => value || undefined).pipe(z.string().min(6).max(32).optional()),
   password: passwordSchema,
   industry: z.string().trim().min(1).max(80),
-  inviteCode: z.string().trim().max(80).optional(),
+  inviteCode: z.string().trim().transform((value) => value || undefined).pipe(z.string().max(80).optional()),
   accountType: z.enum(["personal", "business"]),
-  companyName: z.string().trim().max(120).optional(),
+  companyName: z.string().trim().transform((value) => value || undefined).pipe(z.string().max(120).optional()),
   legalConsentVersion: z.string().trim().min(1).max(40),
   smsCode: z.string().trim().length(6).optional()
 });
