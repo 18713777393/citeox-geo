@@ -17,27 +17,16 @@ const adminRoles: UserRole[] = ["admin", "super_admin"];
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   try {
-    const authorization = req.header("authorization");
-
-    if (!authorization?.startsWith("Bearer ")) {
-      res.status(401).json({
-        error: {
-          code: "UNAUTHENTICATED",
-          message: "请先登录后再继续操作。"
-        }
-      });
+    const token = tokenFromRequest(req);
+    if (!token) {
+      unauthenticated(res);
       return;
     }
 
-    req.auth = await verifyAuthToken(authorization.slice("Bearer ".length).trim());
+    req.auth = await verifyAuthToken(token);
     next();
   } catch {
-    res.status(401).json({
-      error: {
-        code: "UNAUTHENTICATED",
-        message: "请先登录后再继续操作。"
-      }
-    });
+    unauthenticated(res);
   }
 }
 
@@ -66,36 +55,51 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 export function requireEntitlement(featureKey: EntitlementKey) {
   return (req: Request, res: Response, next: NextFunction) => {
     requireAuth(req, res, async () => {
-      try {
-        if (!req.auth) {
-          res.status(401).json({
-            error: {
-              code: "UNAUTHENTICATED",
-              message: "请先登录后再继续操作。"
-            }
-          });
-          return;
-        }
-
-        const decision = await checkEntitlement(req.auth.userId, featureKey);
-
-        if (!decision.allowed) {
-          res.status(403).json({
-            error: {
-              code: "ENTITLEMENT_REQUIRED",
-              message: decision.reason ?? "当前套餐暂未开通该功能，请升级套餐后使用。",
-              featureKey,
-              remaining: decision.remaining ?? 0,
-              planCode: decision.planCode
-            }
-          });
-          return;
-        }
-
-        next();
-      } catch (error) {
-        next(error);
+      if (!req.auth) {
+        unauthenticated(res);
+        return;
       }
+
+      const decision = await checkEntitlement(req.auth.userId, featureKey);
+      if (!decision.allowed) {
+        res.status(403).json({
+          error: {
+            code: "ENTITLEMENT_REQUIRED",
+            message: decision.reason ?? "当前套餐暂未开通该功能，或本周期额度已经用完。"
+          }
+        });
+        return;
+      }
+
+      next();
     });
   };
+}
+
+function tokenFromRequest(req: Request) {
+  const authorization = req.header("authorization");
+  if (authorization?.startsWith("Bearer ")) {
+    return authorization.slice("Bearer ".length).trim();
+  }
+
+  return getCookie(req, "citeox_access_token");
+}
+
+function getCookie(req: Request, name: string) {
+  const cookie = req.header("cookie") || "";
+  const item = cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`));
+
+  return item ? decodeURIComponent(item.slice(name.length + 1)) : null;
+}
+
+function unauthenticated(res: Response) {
+  res.status(401).json({
+    error: {
+      code: "UNAUTHENTICATED",
+      message: "请先登录后再继续操作。"
+    }
+  });
 }

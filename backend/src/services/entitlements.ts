@@ -8,6 +8,7 @@ import {
   type Subscription
 } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
+import { hashEmail } from "./authSecurity.js";
 
 export type EntitlementKey =
   | "projects.create"
@@ -66,23 +67,20 @@ export interface EntitlementSnapshot {
 
 type SubscriptionWithPlan = Subscription & { plan: Plan };
 
-const ACTIVE_SUBSCRIPTION_STATUSES = [
-  SubscriptionStatus.TRIALING,
-  SubscriptionStatus.ACTIVE
-];
+const activeSubscriptionStatuses = [SubscriptionStatus.TRIALING, SubscriptionStatus.ACTIVE];
 
-const planSeeds: Prisma.PlanUpsertArgs["create"][] = [
+const planSeeds: Prisma.PlanCreateInput[] = [
   {
     code: "free_trial",
     name: "免费试用版",
-    description: "用于注册后体验核心看板、问题库和少量报告预览。",
+    description: "适合首次体验核心看板、问题库和少量 AI 监控。",
     priceCents: 0,
     currency: "CNY",
     interval: PlanInterval.MONTH,
     seatLimit: 1,
     projectLimit: 1,
-    questionLimit: 10,
-    aiMonitorLimit: 10,
+    questionLimit: 20,
+    aiMonitorLimit: 20,
     contentLimit: 3,
     reportLimit: 3,
     aiTokenLimit: 20_000,
@@ -92,15 +90,16 @@ const planSeeds: Prisma.PlanUpsertArgs["create"][] = [
     advancedCompetitorAnalysisEnabled: false,
     autoOptimizationEnabled: false,
     featureFlags: {
-      inviteBonusMonitorRuns: 30,
-      sourceConnectors: 2
+      sourceConnectors: 1,
+      modelProviders: ["deepseek"],
+      inviteBonusMonitorRuns: 30
     },
     active: true
   },
   {
     code: "starter",
-    name: "入门版",
-    description: "适合个人创作者和小团队起步使用。",
+    name: "个人版",
+    description: "适合个人创作者和小团队起步使用，可监控更多问题和生成基础内容任务。",
     priceCents: 19_900,
     currency: "CNY",
     interval: PlanInterval.MONTH,
@@ -118,14 +117,15 @@ const planSeeds: Prisma.PlanUpsertArgs["create"][] = [
     autoOptimizationEnabled: false,
     featureFlags: {
       sourceConnectors: 4,
-      extraTokenPrice: "超额 10 元 / 10 万 Token"
+      modelProviders: ["deepseek", "doubao"],
+      extraTokenPrice: "超额按模型实际成本加服务费计费"
     },
     active: true
   },
   {
     code: "professional",
     name: "专业版",
-    description: "适合增长团队使用多平台监控、内容任务和自动优化。",
+    description: "适合增长团队使用多平台监控、竞品分析、内容任务和自动优化。",
     priceCents: 69_900,
     currency: "CNY",
     interval: PlanInterval.MONTH,
@@ -143,14 +143,15 @@ const planSeeds: Prisma.PlanUpsertArgs["create"][] = [
     autoOptimizationEnabled: true,
     featureFlags: {
       sourceConnectors: 8,
-      extraTokenPrice: "超额 8 元 / 10 万 Token"
+      modelProviders: ["deepseek", "doubao", "tongyi", "zhipu"],
+      extraTokenPrice: "超额按模型实际成本加服务费计费"
     },
     active: true
   },
   {
     code: "enterprise",
-    name: "企业套餐",
-    description: "适合企业和服务商管理多品牌、多成员和高额度任务。",
+    name: "企业版",
+    description: "适合企业和服务商管理多品牌、多成员、高频监控和多站点分发。",
     priceCents: 199_900,
     currency: "CNY",
     interval: PlanInterval.MONTH,
@@ -168,6 +169,7 @@ const planSeeds: Prisma.PlanUpsertArgs["create"][] = [
     autoOptimizationEnabled: true,
     featureFlags: {
       sourceConnectors: 20,
+      modelProviders: ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao"],
       extraTokenPrice: "超额可按企业合同加购"
     },
     active: true
@@ -239,6 +241,7 @@ export function formatPlanForClient(plan: Plan) {
     modelCalls: plan.modelDispatchLimit,
     teamMembers: plan.teamMemberLimit,
     sourceConnectors: numberFrom(flags.sourceConnectors, 0),
+    modelProviders: Array.isArray(flags.modelProviders) ? flags.modelProviders : [],
     multiPlatformDistribution: plan.distributionEnabled,
     advancedCompetitorAnalysis: plan.advancedCompetitorAnalysisEnabled,
     autoOptimizationTasks: plan.autoOptimizationEnabled,
@@ -255,9 +258,7 @@ export async function ensureDefaultSubscription(organizationId: string) {
     return existing;
   }
 
-  const freePlan = await prisma.plan.findUniqueOrThrow({
-    where: { code: "free_trial" }
-  });
+  const freePlan = await prisma.plan.findUniqueOrThrow({ where: { code: "free_trial" } });
   const now = new Date();
   const trialEndsAt = addDays(now, 14);
 
@@ -282,7 +283,7 @@ export async function getCurrentSubscription(organizationId: string) {
   return prisma.subscription.findFirst({
     where: {
       organizationId,
-      status: { in: ACTIVE_SUBSCRIPTION_STATUSES },
+      status: { in: activeSubscriptionStatuses },
       OR: [{ currentPeriodEnd: null }, { currentPeriodEnd: { gt: now } }]
     },
     include: { plan: true },
@@ -296,6 +297,7 @@ export async function getEntitlementSnapshotForUser(userId: string) {
     select: {
       id: true,
       email: true,
+      emailHash: true,
       role: true,
       organizationId: true
     }
@@ -309,7 +311,7 @@ export async function getEntitlementSnapshotForUser(userId: string) {
     return adminEntitlementSnapshot();
   }
 
-  if (isFullAccessTestUser(user.email)) {
+  if (isFullAccessTestUser(user.email, user.emailHash)) {
     return fullAccessTestEntitlementSnapshot();
   }
 
@@ -325,6 +327,7 @@ export async function checkEntitlement(
     where: { id: userId },
     select: {
       email: true,
+      emailHash: true,
       role: true,
       organizationId: true
     }
@@ -334,11 +337,11 @@ export async function checkEntitlement(
     return {
       allowed: false,
       featureKey,
-      reason: "User does not belong to an organization."
+      reason: "账号组织信息缺失，请重新登录。"
     };
   }
 
-  if (isAdminRole(user.role) || isFullAccessTestUser(user.email)) {
+  if (isAdminRole(user.role) || isFullAccessTestUser(user.email, user.emailHash)) {
     return {
       allowed: true,
       featureKey,
@@ -353,7 +356,7 @@ export async function checkEntitlement(
     return {
       allowed: false,
       featureKey,
-      reason: "No active subscription was found."
+      reason: "当前账号还没有有效套餐，请先开通套餐。"
     };
   }
 
@@ -380,28 +383,28 @@ export async function checkEntitlement(
         featureKey,
         subscription.plan.code,
         snapshot.features.multiPlatformDistribution,
-        "Multi-platform distribution is not included in the current plan."
+        "当前套餐暂未包含多平台分发能力。"
       );
     case "competitors.advanced":
       return booleanDecision(
         featureKey,
         subscription.plan.code,
         snapshot.features.advancedCompetitorAnalysis,
-        "Advanced competitor analysis is not included in the current plan."
+        "当前套餐暂未包含高级竞品分析能力。"
       );
     case "automation.run":
       return booleanDecision(
         featureKey,
         subscription.plan.code,
         snapshot.features.autoOptimizationTasks,
-        "Auto optimization tasks are not included in the current plan."
+        "当前套餐暂未包含自动优化任务。"
       );
     case "admin.access":
       return {
         allowed: false,
         featureKey,
         planCode: subscription.plan.code,
-        reason: "Administrator role is required."
+        reason: "该功能仅管理员可用。"
       };
   }
 }
@@ -487,23 +490,17 @@ function limitDecision(
   }
 
   const remaining = Math.max(limit - used, 0);
-
   if (remaining <= 0) {
     return {
       allowed: false,
       featureKey,
       remaining,
       planCode,
-      reason: "The current plan quota has been exhausted."
+      reason: "当前套餐额度已经用完，请升级套餐或等待下个周期重置。"
     };
   }
 
-  return {
-    allowed: true,
-    featureKey,
-    remaining,
-    planCode
-  };
+  return { allowed: true, featureKey, remaining, planCode };
 }
 
 function booleanDecision(
@@ -520,11 +517,9 @@ function booleanDecision(
 function normalizeUsage(value: Prisma.JsonValue | null): Record<string, number> {
   const raw = toRecord(value);
   const result: Record<string, number> = {};
-
   for (const [key, val] of Object.entries(raw)) {
     result[key] = numberFrom(val, 0);
   }
-
   return result;
 }
 
@@ -532,7 +527,6 @@ function toRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
   }
-
   return value as Record<string, unknown>;
 }
 
@@ -548,13 +542,13 @@ function isAdminRole(role: UserRole) {
   return role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN;
 }
 
-function isFullAccessTestUser(email: string | null | undefined) {
+function isFullAccessTestUser(email: string | null | undefined, emailHash: string | null | undefined) {
   const allowList = (process.env.FULL_ACCESS_TEST_EMAILS || "test@citeox.com")
     .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
 
-  return Boolean(email && allowList.includes(email.toLowerCase()));
+  return allowList.some((allowed) => email === allowed || emailHash === hashEmail(allowed));
 }
 
 function adminEntitlementSnapshot(): EntitlementSnapshot {
@@ -583,7 +577,7 @@ function adminEntitlementSnapshot(): EntitlementSnapshot {
       advancedCompetitorAnalysis: true,
       autoOptimizationTasks: true
     },
-    extraTokenPrice: "管理员不限额",
+    extraTokenPrice: "管理员不限制额度",
     usage: {}
   };
 }
@@ -598,7 +592,7 @@ function fullAccessTestEntitlementSnapshot(): EntitlementSnapshot {
       currency: "CNY",
       interval: "month"
     },
-    extraTokenPrice: "测试账号不限额"
+    extraTokenPrice: "测试账号不限制额度"
   };
 }
 

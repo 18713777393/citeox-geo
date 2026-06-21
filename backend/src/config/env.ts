@@ -17,8 +17,13 @@ const envSchema = z
     PORT: z.coerce.number().int().positive().default(8787),
     CORS_ORIGIN: z.string().default("http://127.0.0.1:5500"),
     DATABASE_URL: z.string().default("postgresql://geo:geo@127.0.0.1:5432/geo"),
+    REDIS_URL: z.string().optional(),
+    APP_URL: z.string().default("http://127.0.0.1:8765"),
     JWT_SECRET: z.string().optional(),
-    JWT_EXPIRES_IN: z.string().default("7d"),
+    JWT_REFRESH_SECRET: z.string().optional(),
+    JWT_EXPIRES_IN: z.string().default("2h"),
+    JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
+    ENCRYPTION_KEY: z.string().optional(),
     SESSION_SECRET: z.string().optional(),
     BCRYPT_COST: z.coerce.number().int().min(10).max(14).default(12),
     AUTH_CODE_TTL_MINUTES: z.coerce.number().int().positive().default(10),
@@ -56,5 +61,15 @@ export const env = parsed.data;
 
 if (env.NODE_ENV === "production" && !env.JWT_SECRET) {
   console.error("JWT_SECRET is required in production.");
+  process.exit(1);
+}
+
+if (env.NODE_ENV === "production" && !env.JWT_REFRESH_SECRET) {
+  console.error("JWT_REFRESH_SECRET is required in production.");
+  process.exit(1);
+}
+
+if (env.NODE_ENV === "production" && !env.ENCRYPTION_KEY) {
+  console.error("ENCRYPTION_KEY is required in production.");
   process.exit(1);
 }

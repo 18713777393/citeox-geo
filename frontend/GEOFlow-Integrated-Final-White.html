@@ -258,7 +258,7 @@ function questionMeta(text,idx=0,source="自动采集"){const intent=intentOf(te
 function normalizeQuestion(q){q=q||{};const text=q.q||q.text||q.question||"";return {id:q.id||("Q"+Date.now()),q:text,intent:q.intent||intentOf(text),category:q.category||q.type||"产品功能",source:q.source||"手动添加",priority:q.priority==="高"?1:q.priority==="中"?2:q.priority||2,tags:Array.isArray(q.tags)?q.tags:(q.tags?parseList(q.tags):[]),heat:Number(q.heat??q.hot??0)||0,trend:q.trend||"观察",coverage:Number(q.coverage??0)||0,status:q.status||"未覆盖",recommend:Number(q.recommend??q.recommendScore??0)||0,target:q.target||S.site.replace(/\/$/,"")+"/geo/"+encodeURIComponent(String(text).slice(0,24)),createdAt:q.createdAt||new Date().toISOString()}}
 function uniqueQuestions(items){const seen=new Set();return items.filter(x=>{let k=x.q.replace(/\s/g,"");if(seen.has(k))return false;seen.add(k);return true})}
 async function syncQuestionsFromServer(){try{await ensureApiToken();const data=await apiRequest("/api/questions");S.questions=(data.questions||[]).map(normalizeQuestion);S.questionBackend.status="已同步";S.questionBackend.lastSync=new Date().toLocaleString();S.questionBackend.error="";mark("questions");save();toastMsg("已同步服务端问题库")}catch(err){S.questionBackend.status="同步失败";S.questionBackend.error=err.message;save();toastMsg("问题库同步失败："+err.message)}}
-async function expandQuestions(show=true){syncProjectDraftFromFields();if(!projectSetupReady()){toastMsg("??????????");openSection("project");return}const progress=show?showProgress("AI 问题库自动采集中",["清理旧问题","分析品牌关键词","生成中文问题","写入问题库"]):{step(){},done(){},fail(){},close(){}};const localCollect=()=>{const patterns=[["购买","%s 哪个工具更值得购买？"],["对比","%s 和竞品怎么选？"],["教程","%s 怎么落地实施？"],["榜单","最好的 %s 工具有哪些？"],["常见问答","%s 常见问题有哪些？"],["避坑","选择 %s 有哪些坑？"],["案例","%s 有没有真实案例？"],["价格","%s 价格和套餐怎么判断是否划算？"],["效果","%s 真实效果如何验证？"]];let list=[];S.keywords.forEach(k=>patterns.forEach(([intent,t],i)=>list.push(questionMeta(t.replace("%s",k),list.length,"自动采集"))));parseList(S.scenarios).forEach((s,i)=>S.keywords.slice(0,2).forEach(k=>list.push(questionMeta(s+"时应该如何评估 "+k+"？",list.length,"场景扩展"))));return list};try{progress.step(0,"正在删除旧问题和相关历史结果...");await ensureApiToken();const projectId=S.projectBackend?.lastProjectId||undefined;try{await apiRequest("/api/questions",{method:"DELETE",body:JSON.stringify({projectId})})}catch(clearErr){S.logs.unshift("清理旧问题失败："+cnErrorMessage(clearErr.message,clearErr.code,clearErr.status))}progress.step(1,"正在分析品牌关键词、业务场景和用户意图...");progress.step(2,"正在生成中文 AI 搜索问题...");const data=await apiRequest("/api/questions/expand",{method:"POST",body:JSON.stringify({projectId,brandName:S.brand,productIntro:S.product,industry:S.industry,targetAudience:S.audience,competitors:S.competitors,keywords:S.keywords,scenarios:S.scenarios,valueProps:parseList(S.valueProps),promotionGoal:S.promotionGoal,targetAction:S.targetAction,preferredPlatforms:S.preferredPlatforms||[]})});progress.step(3,"正在写入问题库并更新看板...");S.questions=uniqueQuestions([...(data.added||[]).map(normalizeQuestion)]).sort((a,b)=>b.recommend-a.recommend);S.questionBackend.status="已同步";S.questionBackend.lastSync=new Date().toLocaleString();S.questionBackend.error="";S.logs.unshift("旧问题已清理，问题库已重新生成："+S.questions.length+" 条")}catch(err){progress.step(2,"服务连接较慢，正在为你生成中文问题...");S.questions=uniqueQuestions(localCollect()).sort((a,b)=>b.recommend-a.recommend);S.questionBackend.status="离线缓存";S.questionBackend.error=err.message}mark("questions");if(show){save();progress.done(S.questionBackend.status==="已同步"?"旧问题已清理，中文问题库已重新生成":"已生成本地中文问题库");toastMsg(S.questionBackend.status==="已同步"?"旧问题已清理，中文问题库已重新生成":"AI 问题库已本地重新生成")}else progress.close()}
+async function expandQuestions(show=true){syncProjectDraftFromFields();if(!projectSetupReady()){toastMsg("请先完成品牌推广目标配置");openSection("project");return}const progress=show?showProgress("AI 问题库自动采集中",["清理旧问题","分析品牌关键词","生成中文问题","写入问题库"]):{step(){},done(){},fail(){},close(){}};const localCollect=()=>{const patterns=[["购买","%s 哪个工具更值得购买？"],["对比","%s 和竞品怎么选？"],["教程","%s 怎么落地实施？"],["榜单","最好的 %s 工具有哪些？"],["常见问答","%s 常见问题有哪些？"],["避坑","选择 %s 有哪些坑？"],["案例","%s 有没有真实案例？"],["价格","%s 价格和套餐怎么判断是否划算？"],["效果","%s 真实效果如何验证？"]];let list=[];S.keywords.forEach(k=>patterns.forEach(([intent,t],i)=>list.push(questionMeta(t.replace("%s",k),list.length,"自动采集"))));parseList(S.scenarios).forEach((s,i)=>S.keywords.slice(0,2).forEach(k=>list.push(questionMeta(s+"时应该如何评估 "+k+"？",list.length,"场景扩展"))));return list};try{progress.step(0,"正在删除旧问题和相关历史结果...");await ensureApiToken();const projectId=S.projectBackend?.lastProjectId||undefined;try{await apiRequest("/api/questions",{method:"DELETE",body:JSON.stringify({projectId})})}catch(clearErr){S.logs.unshift("清理旧问题失败："+cnErrorMessage(clearErr.message,clearErr.code,clearErr.status))}progress.step(1,"正在分析品牌关键词、业务场景和用户意图...");progress.step(2,"正在生成中文 AI 搜索问题...");const data=await apiRequest("/api/questions/expand",{method:"POST",body:JSON.stringify({projectId,brandName:S.brand,productIntro:S.product,industry:S.industry,targetAudience:S.audience,competitors:S.competitors,keywords:S.keywords,scenarios:S.scenarios,valueProps:parseList(S.valueProps),promotionGoal:S.promotionGoal,targetAction:S.targetAction,preferredPlatforms:S.preferredPlatforms||[]})});progress.step(3,"正在写入问题库并更新看板...");S.questions=uniqueQuestions([...(data.added||[]).map(normalizeQuestion)]).sort((a,b)=>b.recommend-a.recommend);S.questionBackend.status="已同步";S.questionBackend.lastSync=new Date().toLocaleString();S.questionBackend.error="";S.logs.unshift("旧问题已清理，问题库已重新生成："+S.questions.length+" 条")}catch(err){progress.step(2,"服务连接较慢，正在为你生成中文问题...");S.questions=uniqueQuestions(localCollect()).sort((a,b)=>b.recommend-a.recommend);S.questionBackend.status="离线缓存";S.questionBackend.error=err.message}mark("questions");if(show){save();progress.done(S.questionBackend.status==="已同步"?"旧问题已清理，中文问题库已重新生成":"已生成本地中文问题库");toastMsg(S.questionBackend.status==="已同步"?"旧问题已清理，中文问题库已重新生成":"AI 问题库已本地重新生成")}else progress.close()}
 async function addManualQuestion(){const text=document.getElementById("manualQuestion")?.value.trim();if(!text){toastMsg("请先填写问题");return}const source=document.getElementById("questionSource")?.value||"手动添加";const tags=parseList(document.getElementById("questionTags")?.value||"");try{await ensureApiToken();const data=await apiRequest("/api/questions/add",{method:"POST",body:JSON.stringify({text,source,tags})});S.questions=uniqueQuestions([normalizeQuestion(data.data),...(S.questions||[])]);S.questionBackend.status="已同步";S.questionBackend.lastSync=new Date().toLocaleString();S.questionBackend.error=""}catch(err){S.questions=uniqueQuestions([questionMeta(text,0,source),...(S.questions||[])]);S.questions[0].tags=[...new Set([...S.questions[0].tags,...tags])];S.questionBackend.status="离线缓存";S.questionBackend.error=err.message}mark("questions");save();toastMsg(S.questionBackend.status==="已同步"?"问题已保存到服务端":"问题已本地保存")}
 async function importQuestions(){const raw=document.getElementById("questionBatch")?.value||"";const rows=raw.split(/\n/).map(x=>x.trim()).filter(Boolean);if(!rows.length){toastMsg("请粘贴要导入的问题，每行一个");return}const before=S.questions.length;try{await ensureApiToken();const data=await apiRequest("/api/questions/import",{method:"POST",body:JSON.stringify({questions:rows})});S.questions=uniqueQuestions([...(S.questions||[]),...(data.added||[]).map(normalizeQuestion)]).sort((a,b)=>b.recommend-a.recommend);S.questionBackend.status="已同步";S.questionBackend.lastSync=new Date().toLocaleString();S.questionBackend.error="";S.questionImports.unshift({total:data.total,added:(data.added||[]).length,time:new Date().toLocaleString(),status:"服务端已导入"})}catch(err){S.questions=uniqueQuestions([...(S.questions||[]),...rows.map((x,i)=>questionMeta(x,i,"批量导入"))]).sort((a,b)=>b.recommend-a.recommend);S.questionBackend.status="离线缓存";S.questionBackend.error=err.message;S.questionImports.unshift({total:rows.length,added:S.questions.length-before,time:new Date().toLocaleString(),status:"本地已导入"})}mark("questions");save();toastMsg(`批量导入完成：新增 ${S.questions.length-before} 条`)}
 async function exportQuestions(format){try{await ensureApiToken();const data=await apiRequest("/api/questions/export",{method:"POST",body:JSON.stringify({format})});S.questionExports.unshift({name:data.export.id,format:format.toUpperCase(),count:data.export.count,time:new Date(data.export.createdAt).toLocaleString(),status:"服务端已生成"});S.questionBackend.status="已同步";S.questionBackend.lastSync=new Date().toLocaleString();S.questionBackend.error=""}catch(err){S.questionExports.unshift({name:`AI问题库-${format.toUpperCase()}-${Date.now()}`,format:format.toUpperCase(),count:S.questions.length,time:new Date().toLocaleString(),status:"本地已生成"});S.questionBackend.status="离线缓存";S.questionBackend.error=err.message}S.questionExports=S.questionExports.slice(0,10);save();toastMsg(`问题库 ${format.toUpperCase()} 已生成`)}
@@ -384,7 +384,7 @@ function setDashboardCompare(){S.dashboardRuntime.compare=!S.dashboardRuntime.co
 function applyCustomRange(){S.dashboardRuntime.customStart=document.getElementById("dashStart")?.value||"";S.dashboardRuntime.customEnd=document.getElementById("dashEnd")?.value||"";S.timeRange="custom";S.dashboardRuntime.lastUpdate=new Date().toLocaleString();save();render();toastMsg("已应用自定义区间")}
 function refreshRealtime(){S.dashboardRuntime.lastUpdate=new Date().toLocaleString();save();render();toastMsg("实时数据已刷新")}
 function cellValue(c){return c===undefined||c===null||c==="undefined"||c===""?"-":c}
-function tableCell(c){c=cellValue(c);if(typeof c==="string"&&(c.startsWith("http://")||c.startsWith("https://"))){if(c.includes("example.com")||c.includes("/geo/"))return `<div class="linkCell"><span class="tag amber">????</span><small>??????????</small></div>`;const short=c.replace(/^https?:\/\//,"").slice(0,42);return `<div class="linkCell"><a href="${c}" target="_blank" rel="noopener">${short}${c.length>50?"...":""}</a><small>???</small></div>`}return c}
+function tableCell(c){c=cellValue(c);if(typeof c==="string"&&(c.startsWith("http://")||c.startsWith("https://"))){if(c.includes("example.com")||c.includes("/geo/"))return `<div class="linkCell"><span class="tag amber">待配置</span><small>请先填写官网或目标页面</small></div>`;const short=c.replace(/^https?:\/\//,"").slice(0,42);return `<div class="linkCell"><a href="${c}" target="_blank" rel="noopener">${short}${c.length>50?"...":""}</a><small>目标页面</small></div>`}return c}
 function table(headers,rows){return `<table class="table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${tableCell(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`}
 function shortText(v,n=28){v=String(cellValue(v));return v.length>n?v.slice(0,n)+"...":v}
 function safeUrl(url){url=String(cellValue(url));return /^https?:\/\//.test(url)?url:"#"}
@@ -764,6 +764,736 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
 
   addConfirmStrength(); addAuthSwitch();
   setTimeout(function(){ if(isAdminNow()) grantAdmin(); applyEntryFromUrl(); updatePasswordStrength(); renderSub && renderSub(); render && render(); scrubCommercialUi(); },0);
+})();
+</script>
+
+<script id="citeox-doc01-auth-final">
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var qs = function(sel){ return document.querySelector(sel); };
+  var storageKey = "citeox_auth_register_draft_v1";
+  var authTitleLogin = "登录";
+  var authTitleRegister = "注册体验";
+
+  function text(id, value){ var el = $(id); if(el) el.textContent = value; }
+  function placeholder(id, value){ var el = $(id); if(el) el.placeholder = value; }
+  function value(id){ return ($(id) && $(id).value || "").trim(); }
+  function rawValue(id){ return ($(id) && $(id).value || ""); }
+  function setValue(id, next){ var el = $(id); if(el) el.value = next || ""; }
+  function normalizePhone(v){ return String(v || "").replace(/\D/g, ""); }
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim()); }
+  function validPhone(v){ return /^1[3-9]\d{9}$/.test(normalizePhone(v)); }
+  function validCode(v){ return /^\d{6}$/.test(String(v || "").trim()); }
+  function scorePassword(v){
+    v = String(v || "");
+    var score = 0;
+    if(v.length >= 8) score++;
+    if(/[A-Za-z]/.test(v) && /\d/.test(v)) score++;
+    if(/[^A-Za-z0-9]/.test(v)) score++;
+    if(v.length >= 12) score++;
+    return score;
+  }
+  function cnError(error){
+    var msg = error && (error.message || error.error || error.code) || String(error || "");
+    var code = error && error.code || "";
+    var status = error && error.status;
+    var map = {
+      VALIDATION_ERROR:"填写内容不完整或格式不正确，请检查后重试。",
+      USERNAME_EXISTS:"账号名称已被使用，请换一个名称。",
+      ACCOUNT_EXISTS:"该邮箱或手机号已注册，请直接登录或更换信息。",
+      INVALID_CREDENTIALS:"账号或密码错误，请检查后重新输入。",
+      LOGIN_LOCKED:"登录尝试次数过多，请 15 分钟后再试。",
+      LOGIN_RATE_LIMITED:"登录尝试过于频繁，请 15 分钟后再试。",
+      CODE_RATE_LIMITED:"验证码发送过于频繁，请稍后再试。",
+      VERIFICATION_REQUIRED:"请填写邮箱验证码。",
+      VERIFICATION_INVALID:"验证码不正确或已过期，请重新获取。",
+      RESET_INVALID:"重置链接或验证码已失效，请重新申请。",
+      DISPOSABLE_EMAIL_NOT_ALLOWED:"请使用常用邮箱注册，暂不支持临时邮箱。",
+      WEAK_PASSWORD:"当前密码不够安全，请换一个更强的密码。",
+      EMAIL_NOT_CONFIGURED:"邮箱服务暂未配置，请联系管理员。",
+      UNAUTHENTICATED:"登录状态已失效，请重新登录。",
+      FORBIDDEN:"当前账号没有权限访问该功能。"
+    };
+    if(code && map[code]) return map[code];
+    if(status === 401) return map.UNAUTHENTICATED;
+    if(status === 403) return map.FORBIDDEN;
+    if(status === 429) return "操作过于频繁，请稍后再试。";
+    if(/Failed to fetch|NetworkError|Load failed|fetch/i.test(msg)) return "服务连接失败，请检查网络或稍后再试。";
+    if(/expired|invalid|验证码|verification/i.test(msg)) return map.VERIFICATION_INVALID;
+    return msg || "操作失败，请稍后再试。";
+  }
+  function toast(textValue, type){
+    if(window.toastMsg) return toastMsg(textValue);
+    var t = $("toast");
+    if(!t) return alert(textValue);
+    t.textContent = textValue;
+    t.style.display = "block";
+    t.style.background = type === "error" ? "#b42318" : type === "warning" ? "#9a6400" : "#111827";
+    setTimeout(function(){ t.style.display = "none"; }, type === "error" ? 5000 : 3200);
+  }
+  function setBusy(btn, label){
+    if(!btn) return function(){};
+    var old = btn.textContent;
+    btn.disabled = true;
+    btn.dataset.busy = "1";
+    btn.textContent = label || "处理中...";
+    return function(){ btn.disabled = false; btn.dataset.busy = ""; btn.textContent = old; };
+  }
+  function focusField(id, message){
+    var el = $(id);
+    if(el){
+      el.focus();
+      el.scrollIntoView({ block:"center", behavior:"smooth" });
+      el.classList.add("field-error-pulse");
+      setTimeout(function(){ el.classList.remove("field-error-pulse"); }, 900);
+    }
+    if(message) toast(message, "error");
+  }
+  function api(path, options){
+    return apiRequest(path, options).catch(function(error){
+      throw { status:error.status, code:error.code, message:cnError(error) };
+    });
+  }
+  function isAdminApiRole(role){
+    return /^(admin|super_admin)$/i.test(String(role || "")) || /管理员|超级管理员/.test(String(role || ""));
+  }
+  function grantAdminFinal(){
+    if(!window.S) return;
+    S.session.logged = true;
+    S.session.role = "超级管理员";
+    S.entitlements = Object.assign({}, S.entitlements || {}, {
+      plan:"管理员全功能版",
+      planCode:"admin",
+      status:"全部功能已开通",
+      brandProjects:null,
+      aiQuestions:null,
+      aiMonitorRuns:null,
+      contentTasks:null,
+      reports:null,
+      modelTokens:null,
+      modelCalls:null,
+      sourceConnectors:null,
+      teamMembers:null,
+      multiPlatformDistribution:true,
+      advancedCompetitorAnalysis:true,
+      autoOptimizationTasks:true,
+      extraTokenPrice:"管理员不限制额度"
+    });
+    document.body.classList.add("admin-full-access");
+  }
+  window.isAdminRole = function(){
+    var role = [S && S.session && S.session.role, S && S.session && S.session.user && S.session.user.role, S && S.entitlements && S.entitlements.planCode].join("|");
+    return isAdminApiRole(role) || /admin/.test(String(S && S.entitlements && S.entitlements.planCode || ""));
+  };
+  try{ isAdminRole = window.isAdminRole; }catch(e){}
+  window.unlockAdmin = function(){ grantAdminFinal(); if(window.save) save(); toast("管理员已开通全部功能"); };
+  try{ unlockAdmin = window.unlockAdmin; }catch(e){}
+
+  function injectAuthStyle(){
+    if($("doc01AuthStyle")) return;
+    var style = document.createElement("style");
+    style.id = "doc01AuthStyle";
+    style.textContent = [
+      ".modeTabs{display:none!important}",
+      ".loginCard.login-mode .registerOnly,.loginCard.login-mode #registerBtn{display:none!important}",
+      ".loginCard.login-mode #loginBtn{display:block!important}",
+      ".loginCard.register-mode #loginBtn{display:none!important}",
+      ".loginCard.reset-mode>.authForm,.loginCard.reset-mode>.remember,.loginCard.reset-mode>.legal,.loginCard.reset-mode>#loginBtn,.loginCard.reset-mode>#registerBtn,.loginCard.reset-mode>#commercialAuthSwitch{display:none!important}",
+      ".loginCard.reset-mode #resetPanel{display:block!important}",
+      ".auth-help-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0 12px;color:#5f6b80;font-size:13px}",
+      ".auth-link{border:0;background:transparent;color:#5969f3;font-weight:900;padding:0;box-shadow:none}",
+      ".auth-clear{border:0;background:#eef2ff;color:#4f5eea;border-radius:8px;padding:6px 8px;font-weight:900}",
+      ".auth-tip{margin-top:6px;font-size:12px;color:#647086;line-height:1.5}",
+      ".auth-tip.warning{color:#9a6400}.auth-tip.error{color:#b42318}.auth-tip.success{color:#15866d}",
+      ".email-suggestion{display:none;margin-top:8px;padding:9px 10px;border-radius:8px;background:#fff7e6;color:#805400;font-size:13px}",
+      ".email-suggestion button{margin-left:8px;border:0;background:#ffe8a3;border-radius:6px;padding:4px 7px;font-weight:900}",
+      ".code-boxes{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}",
+      ".code-boxes input{text-align:center;font-size:20px;font-weight:900;padding:10px!important}",
+      ".field-error-pulse{border-color:#b42318!important;box-shadow:0 0 0 4px rgba(180,35,24,.12)!important}",
+      ".legal.shake{animation:doc01Shake .5s ease;border:1px solid #f6b5ad;border-radius:8px;padding:8px}",
+      "@keyframes doc01Shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}30%,50%,70%{transform:translateX(-4px)}40%,60%{transform:translateX(4px)}}",
+      ".confirm-strength{height:8px;background:#edf1f7;border-radius:999px;overflow:hidden;margin-top:8px}",
+      ".confirm-strength i{display:block;height:100%;width:0;border-radius:999px;background:#d8a21c;transition:width .25s ease,background .25s ease}",
+      "@media(max-width:720px){.loginBox{grid-template-columns:1fr!important}.loginHero{display:none}.login{padding:14px!important}.loginCard{border-radius:8px!important}.auth-help-row{align-items:flex-start;flex-direction:column}.code-boxes{gap:4px}}"
+    ].join("");
+    document.head.appendChild(style);
+  }
+
+  function setupAuthDom(){
+    injectAuthStyle();
+    text("loginTitle", authTitleLogin);
+    text("loginHint", "已注册用户填写账号和密码即可进入系统。");
+    text("accountLabel", "账号");
+    placeholder("regName", "请输入账号、邮箱或手机号");
+    placeholder("regEmail", "用于接收验证码和找回账号");
+    placeholder("regPhone", "请输入 11 位手机号，便于后续服务联系");
+    placeholder("regIndustry", "请选择或输入行业，例如 SaaS、教育、本地生活");
+    placeholder("regInvite", "邀请码选填，没有可以跳过");
+    text("loginBtn", "登录");
+    text("registerBtn", "注册并进入系统");
+
+    var phoneLabel = $("regPhone") && $("regPhone").closest(".field")?.querySelector("label");
+    if(phoneLabel) phoneLabel.textContent = "手机号";
+    var remember = $("rememberPassword") && $("rememberPassword").closest(".remember");
+    if(remember){
+      remember.innerHTML = '<input id="rememberPassword" type="checkbox"> 记住登录状态，下次自动填充账号';
+    }
+    var legal = qs(".loginCard > .legal");
+    if(legal){
+      legal.innerHTML = '<input id="legalAgree" type="checkbox"> 我已阅读并同意《用户协议》《隐私政策》《付费服务协议》《内容合规规则》《数据安全说明》《第三方平台合规条款》，同意系统保存必要注册信息用于账号开通、套餐权益、订单审计和服务通知。';
+    }
+    if(!$("authHelpRow")){
+      var row = document.createElement("div");
+      row.id = "authHelpRow";
+      row.className = "auth-help-row";
+      row.innerHTML = '<label><input id="rememberMeFinal" type="checkbox"> 记住我</label><button class="auth-link" type="button" id="forgotPasswordFinal">忘记密码</button>';
+      var loginBtn = $("loginBtn");
+      loginBtn && loginBtn.parentNode.insertBefore(row, loginBtn);
+    }
+    var rememberFinal = $("rememberMeFinal");
+    if(rememberFinal){
+      rememberFinal.checked = !!(S && S.rememberedLogin && S.rememberedLogin.account);
+      rememberFinal.onchange = saveRememberedAccount;
+    }
+    var forgotFinal = $("forgotPasswordFinal");
+    if(forgotFinal) forgotFinal.onclick = forgotPassword;
+
+    if($("regName") && !$("clearAccountBtn")){
+      var clear = document.createElement("button");
+      clear.id = "clearAccountBtn";
+      clear.type = "button";
+      clear.className = "auth-clear";
+      clear.textContent = "清空";
+      clear.onclick = function(){ setValue("regName", ""); $("regName").focus(); };
+      $("regName").insertAdjacentElement("afterend", clear);
+    }
+    addFieldTip("regName", "usernameTip");
+    addFieldTip("regEmail", "emailTip");
+    addFieldTip("regIndustry", "industryTip");
+    addFieldTip("regInvite", "inviteTip");
+    addEmailSuggestion();
+    addCodeBoxes("smsCode", "registerCodeBoxes");
+    addCodeBoxes("resetCode", "resetCodeBoxes");
+    addConfirmStrength();
+    addIndustryDatalist();
+    bindAuthEvents();
+    restoreDraft();
+    setAuthVariantFinal(currentAuthVariantFromUrl());
+  }
+
+  function addFieldTip(inputId, tipId){
+    var input = $(inputId);
+    if(!input || $(tipId)) return;
+    var tip = document.createElement("div");
+    tip.id = tipId;
+    tip.className = "auth-tip";
+    input.closest(".field").appendChild(tip);
+  }
+  function setTip(id, textValue, type){
+    var el = $(id);
+    if(!el) return;
+    el.textContent = textValue || "";
+    el.className = "auth-tip" + (type ? " " + type : "");
+  }
+  function addEmailSuggestion(){
+    if($("emailSuggestion")) return;
+    var el = document.createElement("div");
+    el.id = "emailSuggestion";
+    el.className = "email-suggestion";
+    var field = $("regEmail") && $("regEmail").closest(".field");
+    field && field.appendChild(el);
+  }
+  function addCodeBoxes(hiddenId, boxId){
+    var hidden = $(hiddenId);
+    if(!hidden || $(boxId)) return;
+    hidden.style.display = "none";
+    var boxes = document.createElement("div");
+    boxes.id = boxId;
+    boxes.className = "code-boxes";
+    boxes.innerHTML = Array.from({length:6}, function(_, i){
+      return '<input inputmode="numeric" maxlength="1" aria-label="验证码第 '+(i+1)+' 位">';
+    }).join("");
+    hidden.insertAdjacentElement("afterend", boxes);
+    var inputs = Array.from(boxes.querySelectorAll("input"));
+    inputs.forEach(function(input, index){
+      input.addEventListener("input", function(){
+        input.value = input.value.replace(/\D/g, "").slice(0,1);
+        hidden.value = inputs.map(function(x){ return x.value; }).join("");
+        if(input.value && inputs[index+1]) inputs[index+1].focus();
+      });
+      input.addEventListener("keydown", function(e){
+        if(e.key === "Backspace" && !input.value && inputs[index-1]) inputs[index-1].focus();
+      });
+      input.addEventListener("paste", function(e){
+        e.preventDefault();
+        var pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0,6);
+        inputs.forEach(function(x, i){ x.value = pasted[i] || ""; });
+        hidden.value = pasted;
+        (inputs[Math.min(pasted.length, 5)] || input).focus();
+      });
+    });
+  }
+  function setCodeBoxes(boxId, code){
+    var boxes = $(boxId);
+    if(!boxes) return;
+    Array.from(boxes.querySelectorAll("input")).forEach(function(input, i){
+      input.value = String(code || "")[i] || "";
+    });
+  }
+  function addConfirmStrength(){
+    var input = $("regPasswordConfirm");
+    if(input && !$("confirmStrengthBar")){
+      var wrap = document.createElement("div");
+      wrap.className = "confirm-strength";
+      wrap.innerHTML = '<i id="confirmStrengthBar"></i>';
+      input.closest(".field").appendChild(wrap);
+      var tip = document.createElement("small");
+      tip.id = "confirmStrengthText";
+      tip.className = "hint";
+      tip.textContent = "请再次输入密码";
+      input.closest(".field").appendChild(tip);
+    }
+    ["regPassword","regPasswordConfirm","resetPassword","resetPasswordConfirm"].forEach(function(id){
+      var el = $(id);
+      if(el) el.addEventListener("input", updatePasswordStrengthFinal);
+    });
+    updatePasswordStrengthFinal();
+  }
+  function addIndustryDatalist(){
+    if($("industryList")) return;
+    var list = document.createElement("datalist");
+    list.id = "industryList";
+    list.innerHTML = ["SaaS","教育培训","本地生活","医疗健康","企业服务","零售电商","跨境电商","制造业","金融服务","内容运营","市场营销","咨询服务"].map(function(x){ return "<option value='"+x+"'>"; }).join("");
+    document.body.appendChild(list);
+    if($("regIndustry")) $("regIndustry").setAttribute("list", "industryList");
+  }
+  function bindAuthEvents(){
+    if($("regName")) $("regName").oninput = debounce(checkUsername, 300);
+    if($("regEmail")) $("regEmail").oninput = debounce(checkEmailSuggestion, 300);
+    if($("regPhone")) $("regPhone").oninput = function(){
+      var digits = normalizePhone(this.value).slice(0, 11);
+      this.value = digits.replace(/^(\d{3})(\d{0,4})(\d{0,4}).*/, function(_, a, b, c){ return [a,b,c].filter(Boolean).join(" "); });
+    };
+    if($("regIndustry")) $("regIndustry").onblur = validateIndustryRemote;
+    if($("regInvite")) $("regInvite").onblur = validateInviteRemote;
+    document.addEventListener("keydown", function(e){
+      if(!document.body.classList.contains("show-auth")) return;
+      if(e.key === "Enter" && !qs(".loginCard.reset-mode")){
+        e.preventDefault();
+        var variant = S.authVariant === "register" ? "register" : "login";
+        variant === "register" ? registerAndLogin() : quickLogin();
+      }
+      if(e.key === "Escape" && qs(".loginCard.reset-mode")){
+        showAuthForm();
+      }
+    });
+  }
+  function debounce(fn, delay){
+    var timer;
+    return function(){ var args = arguments; clearTimeout(timer); timer = setTimeout(function(){ fn.apply(null, args); }, delay); };
+  }
+  async function checkUsername(){
+    if(S.authVariant !== "register") return;
+    var username = value("regName");
+    if(!username){ setTip("usernameTip", "", ""); return; }
+    try{
+      var data = await api("/api/auth/check-username", { method:"POST", body:JSON.stringify({ username:username }) });
+      setTip("usernameTip", data.reason || (data.available ? "账号名称可用。" : "账号名称不可用。"), data.available ? (data.severity === "warning" ? "warning" : "success") : "error");
+      if(!data.available && Array.isArray(data.suggestions) && data.suggestions.length){
+        setTip("usernameTip", "账号已被占用，可尝试：" + data.suggestions.join("、"), "warning");
+      }
+    }catch(e){
+      setTip("usernameTip", cnError(e), "warning");
+    }
+  }
+  async function checkEmailSuggestion(){
+    var email = value("regEmail");
+    var box = $("emailSuggestion");
+    if(!box) return;
+    box.style.display = "none";
+    if(!email || !email.includes("@")) return;
+    if(!validEmail(email)){ setTip("emailTip", "邮箱格式不正确，请检查后重试。", "error"); return; }
+    setTip("emailTip", "邮箱格式正确。", "success");
+    try{
+      var data = await api("/api/auth/email-suggestion", { method:"POST", body:JSON.stringify({ email:email }) });
+      if(data.suggestion && data.suggestion !== email){
+        box.innerHTML = '你是不是想填写 <b>'+data.suggestion+'</b>？<button type="button">点击修正</button>';
+        box.style.display = "block";
+        box.querySelector("button").onclick = function(){ setValue("regEmail", data.suggestion); box.style.display = "none"; };
+      }
+    }catch(e){}
+  }
+  async function validateIndustryRemote(){
+    var industry = value("regIndustry");
+    if(!industry){ setTip("industryTip", "", ""); return; }
+    try{
+      var data = await api("/api/auth/validate-industry", { method:"POST", body:JSON.stringify({ industry:industry }) });
+      setTip("industryTip", data.message || "行业信息已识别。", data.valid ? (data.severity === "warning" ? "warning" : "success") : "error");
+    }catch(e){ setTip("industryTip", cnError(e), "warning"); }
+  }
+  async function validateInviteRemote(){
+    var code = value("regInvite");
+    if(!code){ setTip("inviteTip", "邀请码选填，没有可以跳过。", ""); return; }
+    try{
+      var data = await api("/api/auth/validate-invite-code", { method:"POST", body:JSON.stringify({ code:code }) });
+      setTip("inviteTip", data.valid ? ("邀请码可用：" + (data.benefit || "体验权益")) : (data.message || "邀请码不可用。"), data.valid ? "success" : "error");
+    }catch(e){ setTip("inviteTip", cnError(e), "warning"); }
+  }
+  function updatePasswordStrengthFinal(){
+    var pwd = rawValue("regPassword");
+    var confirm = rawValue("regPasswordConfirm");
+    var score = scorePassword(pwd);
+    var width = [0,30,60,85,100][score];
+    var color = score < 2 ? "#c34242" : score < 3 ? "#d8a21c" : "#20aa8a";
+    var bar = $("passwordStrengthBar");
+    var tip = $("passwordStrengthText");
+    if(bar){ bar.style.width = width + "%"; bar.style.background = color; }
+    if(tip) tip.textContent = score < 2 ? "密码强度：弱，至少 8 位并包含字母和数字。" : score < 3 ? "密码强度：中，建议加入特殊符号。" : "密码强度：强。";
+    var cbar = $("confirmStrengthBar");
+    var ctip = $("confirmStrengthText");
+    if(cbar){ cbar.style.width = confirm ? (confirm === pwd ? "100%" : "45%") : "0%"; cbar.style.background = confirm === pwd ? "#20aa8a" : "#d8a21c"; }
+    if(ctip) ctip.textContent = !confirm ? "请再次输入密码。" : confirm === pwd ? "两次密码一致。" : "两次密码不一致。";
+  }
+  window.updatePasswordStrength = updatePasswordStrengthFinal;
+  try{ updatePasswordStrength = updatePasswordStrengthFinal; }catch(e){}
+
+  function currentAuthVariantFromUrl(){
+    var q = new URLSearchParams(location.search);
+    var path = location.pathname.toLowerCase();
+    if(path.includes("register") || q.get("entry") === "register" || q.get("action") === "register") return "register";
+    return "login";
+  }
+  function setAuthVariantFinal(variant){
+    setupAuthDomShallow();
+    variant = variant === "register" ? "register" : "login";
+    S.authVariant = variant;
+    var card = qs(".loginCard");
+    if(card){ card.classList.remove("login-mode","register-mode","reset-mode"); card.classList.add(variant + "-mode"); }
+    text("loginTitle", variant === "register" ? authTitleRegister : authTitleLogin);
+    text("loginHint", variant === "register" ? "新用户填写名字、邮箱、手机号、验证码、密码和行业后即可进入系统。" : "已注册用户填写账号和密码即可进入系统。");
+    text("accountLabel", variant === "register" ? "名字" : "账号");
+    placeholder("regName", variant === "register" ? "请输入你的名字" : "请输入账号、邮箱或手机号");
+    if($("regPassword")) $("regPassword").autocomplete = variant === "register" ? "new-password" : "current-password";
+    var sw = $("commercialAuthSwitch");
+    if(!sw){
+      sw = document.createElement("div");
+      sw.id = "commercialAuthSwitch";
+      sw.className = "commercial-switch";
+      qs(".loginCard")?.appendChild(sw);
+    }
+    sw.textContent = variant === "register" ? "已有账号？直接登录" : "还没有账号？注册体验";
+    sw.onclick = function(){ setAuthVariantFinal(variant === "register" ? "login" : "register"); };
+    if(variant === "login") fillRememberedLoginFinal();
+    updatePasswordStrengthFinal();
+    saveDraft();
+  }
+  function setupAuthDomShallow(){ injectAuthStyle(); }
+  window.setAuthVariant = setAuthVariantFinal;
+  try{ setAuthVariant = setAuthVariantFinal; }catch(e){}
+  window.setLoginMode = function(){ S.loginMode = "personal"; setAuthVariantFinal(S.authVariant || currentAuthVariantFromUrl()); };
+  try{ setLoginMode = window.setLoginMode; }catch(e){}
+  window.showLogin = function(_mode, variant){
+    document.body.classList.add("show-auth");
+    document.body.classList.remove("logged-in","admin-entry");
+    setupAuthDom();
+    setAuthVariantFinal(variant || currentAuthVariantFromUrl());
+  };
+  try{ showLogin = window.showLogin; }catch(e){}
+  window.forgotPassword = function(){
+    setupAuthDom();
+    var card = qs(".loginCard");
+    if(card){ card.classList.remove("login-mode","register-mode"); card.classList.add("reset-mode"); }
+    text("loginTitle", "找回密码");
+    text("loginHint", "输入注册邮箱，接收验证码后设置新密码。");
+    setValue("resetPhone", value("regName").includes("@") ? value("regName") : value("regEmail"));
+  };
+  try{ forgotPassword = window.forgotPassword; }catch(e){}
+  window.showAuthForm = function(){ setAuthVariantFinal("login"); };
+  try{ showAuthForm = window.showAuthForm; }catch(e){}
+
+  function saveDraft(){
+    if(S.authVariant !== "register") return;
+    var draft = {
+      name:value("regName"),
+      email:value("regEmail"),
+      phone:value("regPhone"),
+      industry:value("regIndustry"),
+      inviteCode:value("regInvite")
+    };
+    localStorage.setItem(storageKey, JSON.stringify(draft));
+  }
+  function restoreDraft(){
+    try{
+      var draft = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      if(draft.name && !value("regName")) setValue("regName", draft.name);
+      if(draft.email && !value("regEmail")) setValue("regEmail", draft.email);
+      if(draft.phone && !value("regPhone")) setValue("regPhone", draft.phone);
+      if(draft.industry && !value("regIndustry")) setValue("regIndustry", draft.industry);
+      if(draft.inviteCode && !value("regInvite")) setValue("regInvite", draft.inviteCode);
+    }catch(e){}
+  }
+  setInterval(saveDraft, 3000);
+  ["regName","regEmail","regPhone","regIndustry","regInvite"].forEach(function(id){
+    setTimeout(function(){ if($(id)) $(id).addEventListener("input", debounce(saveDraft, 400)); }, 0);
+  });
+  function saveRememberedAccount(){
+    var remember = $("rememberMeFinal")?.checked || $("rememberPassword")?.checked;
+    S.rememberedLogin = remember ? { account:value("regName") } : {};
+    if(window.save) save(); else localStorage.setItem(key, JSON.stringify(S));
+  }
+  function fillRememberedLoginFinal(){
+    var account = S && S.rememberedLogin && S.rememberedLogin.account;
+    if(account && !value("regName")) setValue("regName", account);
+    if($("rememberMeFinal")) $("rememberMeFinal").checked = !!account;
+    if($("rememberPassword")) $("rememberPassword").checked = !!account;
+  }
+  window.fillRememberedLogin = fillRememberedLoginFinal;
+  window.updateRememberedLogin = saveRememberedAccount;
+  try{ fillRememberedLogin = fillRememberedLoginFinal; updateRememberedLogin = saveRememberedAccount; }catch(e){}
+
+  function assertLegal(){
+    var legal = $("legalAgree");
+    if(legal && !legal.checked){
+      var wrap = legal.closest(".legal");
+      if(wrap){ wrap.classList.add("shake"); setTimeout(function(){ wrap.classList.remove("shake"); }, 600); }
+      toast("请先勾选用户协议、隐私政策和平台合规条款。", "error");
+      return false;
+    }
+    return true;
+  }
+  function validateRegisterFinal(){
+    if(!value("regName")) return focusField("regName", "请填写名字。"), false;
+    if(!value("regEmail")) return focusField("regEmail", "请填写邮箱。"), false;
+    if(!validEmail(value("regEmail"))) return focusField("regEmail", "邮箱格式不正确，请检查后重试。"), false;
+    if(!value("regPhone")) return focusField("regPhone", "请填写手机号，便于后续服务联系。"), false;
+    if(!validPhone(value("regPhone"))) return focusField("regPhone", "手机号格式不正确，请填写 11 位大陆手机号。"), false;
+    if(!validCode(value("smsCode"))) return focusField("registerCodeBoxes", "请填写 6 位邮箱验证码。"), false;
+    if(!rawValue("regPassword")) return focusField("regPassword", "请设置密码。"), false;
+    if(scorePassword(rawValue("regPassword")) < 2) return focusField("regPassword", "密码强度不足，请至少 8 位并包含字母和数字。"), false;
+    if(!rawValue("regPasswordConfirm")) return focusField("regPasswordConfirm", "请再次输入确认密码。"), false;
+    if(rawValue("regPasswordConfirm") !== rawValue("regPassword")) return focusField("regPasswordConfirm", "两次输入的密码不一致。"), false;
+    if(!value("regIndustry")) return focusField("regIndustry", "请填写行业。"), false;
+    return true;
+  }
+  function validateLoginFinal(){
+    if(!value("regName")) return focusField("regName", "请输入账号、邮箱或手机号。"), false;
+    if(!rawValue("regPassword")) return focusField("regPassword", "请输入密码。"), false;
+    return true;
+  }
+  function startCountdown(btn, seconds, readyText){
+    if(!btn || btn.dataset.counting === "1") return;
+    var left = seconds || 60;
+    btn.dataset.counting = "1";
+    btn.disabled = true;
+    btn.textContent = left + " 秒后重发";
+    var timer = setInterval(function(){
+      left -= 1;
+      if(left <= 0){
+        clearInterval(timer);
+        btn.disabled = false;
+        btn.dataset.counting = "";
+        btn.textContent = readyText || "发送验证码";
+      }else{
+        btn.textContent = left + " 秒后重发";
+      }
+    }, 1000);
+  }
+  window.sendSmsCode = async function(){
+    var btn = $("smsCodeBtn");
+    if(btn && btn.dataset.counting === "1") return;
+    if(!value("regEmail")) return focusField("regEmail", "请先填写邮箱。");
+    if(!validEmail(value("regEmail"))) return focusField("regEmail", "邮箱格式不正确，请检查后重试。");
+    var done = setBusy(btn, "发送中...");
+    try{
+      var data = await api("/api/auth/send-code", { method:"POST", body:JSON.stringify({ email:value("regEmail"), purpose:"register" }) });
+      if(data.demoCode){ setValue("smsCode", data.demoCode); setCodeBoxes("registerCodeBoxes", data.demoCode); }
+      startCountdown(btn, data.resendAfterSeconds || 60, "发送邮箱验证码");
+      toast(data.demoCode ? "开发环境验证码已自动填入。" : "邮箱验证码已发送，请查看收件箱。", "success");
+    }catch(e){
+      toast(cnError(e), "error");
+    }finally{
+      if(!(btn && btn.dataset.counting === "1")) done(); else if(btn) btn.dataset.busy = "";
+    }
+  };
+  try{ sendSmsCode = window.sendSmsCode; }catch(e){}
+
+  window.sendResetCode = async function(){
+    var btn = $("resetCodeBtn");
+    if(btn && btn.dataset.counting === "1") return;
+    if(!value("resetPhone")) return focusField("resetPhone", "请先填写注册邮箱。");
+    if(!validEmail(value("resetPhone"))) return focusField("resetPhone", "邮箱格式不正确，请检查后重试。");
+    var done = setBusy(btn, "发送中...");
+    try{
+      var data = await api("/api/auth/request-password-reset", { method:"POST", body:JSON.stringify({ email:value("resetPhone") }) });
+      if(data.demoCode){ setValue("resetCode", data.demoCode); setCodeBoxes("resetCodeBoxes", data.demoCode); S.authDraft = Object.assign({}, S.authDraft || {}, { resetToken:data.demoResetToken || "" }); }
+      startCountdown(btn, 60, "发送邮箱验证码");
+      toast("如果账号存在，重置邮件会发送到对应邮箱。", "success");
+    }catch(e){
+      toast(cnError(e), "error");
+    }finally{
+      if(!(btn && btn.dataset.counting === "1")) done(); else if(btn) btn.dataset.busy = "";
+    }
+  };
+  try{ sendResetCode = window.sendResetCode; }catch(e){}
+
+  window.resetPasswordByPhone = async function(){
+    var btn = document.activeElement && document.activeElement.tagName === "BUTTON" ? document.activeElement : null;
+    if(!value("resetPhone")) return focusField("resetPhone", "请填写注册邮箱。");
+    if(!validEmail(value("resetPhone"))) return focusField("resetPhone", "邮箱格式不正确，请检查后重试。");
+    if(!validCode(value("resetCode"))) return focusField("resetCodeBoxes", "请填写 6 位验证码。");
+    if(scorePassword(rawValue("resetPassword")) < 2) return focusField("resetPassword", "新密码强度不足，请至少 8 位并包含字母和数字。");
+    if(rawValue("resetPassword") !== rawValue("resetPasswordConfirm")) return focusField("resetPasswordConfirm", "两次输入的新密码不一致。");
+    var done = setBusy(btn, "正在重置...");
+    try{
+      await api("/api/auth/reset-password", {
+        method:"POST",
+        body:JSON.stringify({
+          email:value("resetPhone"),
+          code:value("resetCode"),
+          resetToken:S.authDraft && S.authDraft.resetToken,
+          newPassword:rawValue("resetPassword"),
+          confirmPassword:rawValue("resetPasswordConfirm")
+        })
+      });
+      toast("密码已重置，请使用新密码登录。", "success");
+      setAuthVariantFinal("login");
+    }catch(e){
+      toast(cnError(e), "error");
+    }finally{ done(); }
+  };
+  try{ resetPasswordByPhone = window.resetPasswordByPhone; }catch(e){}
+
+  window.applyBackendAuth = function(data, message, preferredTarget){
+    data = data || {};
+    if(data.token || data.accessToken) S.api.token = data.token || data.accessToken;
+    S.api.status = "已连接服务端";
+    S.api.error = "";
+    S.api.lastSync = new Date().toLocaleString();
+    if(data.user) S.session.user = data.user;
+    S.session.logged = true;
+    var role = data.role || data.user && data.user.role;
+    S.session.role = isAdminApiRole(role) ? "超级管理员" : "运营用户";
+    if(data.entitlements && window.normalizeServerEntitlements) S.entitlements = normalizeServerEntitlements(data.entitlements);
+    if(isAdminApiRole(role)) grantAdminFinal();
+    finishAuthFinal(message || "登录成功，已进入系统。", preferredTarget || (isAdminApiRole(role) ? "adminHome" : (data.user && data.user.hasBrand ? "dashboard" : "project")));
+  };
+  try{ applyBackendAuth = window.applyBackendAuth; }catch(e){}
+  function finishAuthFinal(message, target){
+    current = target || "dashboard";
+    document.documentElement.classList.remove("auth-boot");
+    document.body.classList.remove("show-auth","admin-entry");
+    document.body.classList.add("logged-in");
+    try{ if(location.search || /\/(login|register|reset-password|admin)$/i.test(location.pathname)) history.replaceState(null, "", "/"); }catch(e){}
+    if(window.save) save(); else localStorage.setItem(key, JSON.stringify(S));
+    if(window.applySession) applySession();
+    if(window.openSection) openSection(current);
+    setTimeout(function(){ window.scrollTo({ top:0, left:0, behavior:"auto" }); }, 0);
+    toast(message, "success");
+  }
+  window.finishAuth = finishAuthFinal;
+  try{ finishAuth = finishAuthFinal; }catch(e){}
+
+  window.quickLogin = async function(){
+    setupAuthDom();
+    if(!validateLoginFinal()) return;
+    if(!assertLegal()) return;
+    saveRememberedAccount();
+    var done = setBusy($("loginBtn"), "正在登录...");
+    try{
+      var data = await api("/api/auth/login", {
+        method:"POST",
+        body:JSON.stringify({ account:value("regName"), password:rawValue("regPassword"), remember:Boolean($("rememberMeFinal") && $("rememberMeFinal").checked) })
+      });
+      applyBackendAuth(data, "登录成功。");
+    }catch(e){
+      toast(cnError(e), "error");
+    }finally{ done(); }
+  };
+  try{ quickLogin = window.quickLogin; }catch(e){}
+
+  window.registerAndLogin = async function(){
+    setupAuthDom();
+    if(!assertLegal()) return;
+    if(!validateRegisterFinal()) return;
+    var done = setBusy($("registerBtn"), "注册中...");
+    var timeout = setTimeout(function(){ toast("注册处理中，请稍候，不要重复提交。", "warning"); }, 15000);
+    try{
+      var data = await api("/api/auth/register", {
+        method:"POST",
+        body:JSON.stringify({
+          name:value("regName"),
+          username:value("regName"),
+          email:value("regEmail"),
+          phone:normalizePhone(value("regPhone")),
+          password:rawValue("regPassword"),
+          confirmPassword:rawValue("regPasswordConfirm"),
+          industry:value("regIndustry"),
+          inviteCode:value("regInvite") || undefined,
+          accountType:"personal",
+          legalConsentVersion:"v1.0.0",
+          smsCode:value("smsCode"),
+          verifyCode:value("smsCode")
+        })
+      });
+      localStorage.removeItem(storageKey);
+      applyBackendAuth(data, "注册成功，请先完善品牌项目。", "project");
+    }catch(e){
+      toast(cnError(e), "error");
+    }finally{
+      clearTimeout(timeout);
+      done();
+    }
+  };
+  try{ registerAndLogin = window.registerAndLogin; }catch(e){}
+
+  window.syncMeFromServer = async function(show){
+    if(!S.api.token) return;
+    try{
+      var data = await api("/api/auth/me");
+      if(data.user) S.session.user = data.user;
+      S.session.role = isAdminApiRole(data.role || data.user && data.user.role) ? "超级管理员" : "运营用户";
+      if(data.entitlements && window.normalizeServerEntitlements) S.entitlements = normalizeServerEntitlements(data.entitlements);
+      if(isAdminApiRole(data.role || data.user && data.user.role)) grantAdminFinal();
+      S.api.status = "已连接服务端";
+      S.api.lastSync = new Date().toLocaleString();
+      S.api.error = "";
+      if(window.save) save();
+      if(show) toast("账号与权益已同步。", "success");
+    }catch(e){
+      if(e.status === 401){ S.api.token = ""; S.session.logged = false; if(window.save) save(); }
+      if(show) toast(cnError(e), "error");
+    }
+  };
+  try{ syncMeFromServer = window.syncMeFromServer; }catch(e){}
+
+  window.logout = async function(){
+    try{ if(S.api && S.api.token) await api("/api/auth/logout", { method:"POST", body:JSON.stringify({}) }); }catch(e){}
+    S.api.token = "";
+    S.session.logged = false;
+    S.session.role = "运营用户";
+    S.session.user = null;
+    if(window.save) save(); else localStorage.setItem(key, JSON.stringify(S));
+    toast("已退出登录，正在返回官网首页。", "success");
+    setTimeout(function(){ if(/^https?:/.test(location.protocol)) location.href = "/"; else { document.body.classList.remove("logged-in","show-auth"); window.scrollTo(0,0); } }, 350);
+  };
+  try{ logout = window.logout; }catch(e){}
+
+  window.applyEntryFromUrl = function(){
+    setupAuthDom();
+    var q = new URLSearchParams(location.search);
+    var path = location.pathname.toLowerCase();
+    if(path.includes("reset-password") || q.get("token")){ showLogin("personal","login"); forgotPassword(); return; }
+    if(path.includes("register") || q.get("entry") === "register" || q.get("action") === "register"){ showLogin("personal","register"); return; }
+    if(path.includes("login") || q.get("entry") === "login" || q.get("entry") === "admin"){ showLogin("personal","login"); return; }
+  };
+  try{ applyEntryFromUrl = window.applyEntryFromUrl; }catch(e){}
+
+  setTimeout(function(){
+    setupAuthDom();
+    if(window.applyEntryFromUrl) applyEntryFromUrl();
+    if(S && S.session && S.session.logged && window.isAdminRole()) grantAdminFinal();
+    if(window.applyAccessControl) applyAccessControl();
+  }, 0);
 })();
 </script>
 

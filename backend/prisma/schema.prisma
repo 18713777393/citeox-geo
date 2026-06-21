@@ -189,17 +189,26 @@ enum CollectionItemStatus {
 model User {
   id                     String          @id @default(uuid()) @db.Uuid
   organizationId         String?         @map("organization_id") @db.Uuid
+  username               String?         @unique
   email                  String          @unique
+  emailHash              String?         @unique @map("email_hash")
   phone                  String?         @unique
+  phoneHash              String?         @unique @map("phone_hash")
   passwordHash           String?         @map("password_hash")
   displayName            String?         @map("display_name")
+  industry               String?
+  inviteCodeId           String?         @map("invite_code_id") @db.Uuid
+  apiBalance             Decimal         @default(0) @map("api_balance") @db.Decimal(10, 2)
+  hasBrand               Boolean         @default(false) @map("has_brand")
   role                   UserRole        @default(USER)
   status                 UserStatus      @default(PENDING)
   lastLoginAt            DateTime?       @map("last_login_at")
+  lastLoginIp            String?         @map("last_login_ip")
   createdAt              DateTime        @default(now()) @map("created_at")
   updatedAt              DateTime        @updatedAt @map("updated_at")
 
   organization           Organization?   @relation("OrganizationUsers", fields: [organizationId], references: [id], onDelete: SetNull)
+  inviteCode             InviteCode?      @relation("InviteCodeUsers", fields: [inviteCodeId], references: [id], onDelete: SetNull)
   ownedOrganizations     Organization[]  @relation("OrganizationOwner")
   ownedProjects          Project[]       @relation("ProjectOwner")
   createdQuestions       Question[]      @relation("QuestionCreator")
@@ -215,10 +224,33 @@ model User {
   passwordResetTokens    PasswordResetToken[]
   sentInvites            InviteRecord[]  @relation("InviteInviter")
   receivedInvites        InviteRecord[]  @relation("InviteInvitee")
+  createdInviteCodes     InviteCode[]     @relation("InviteCodeCreator")
 
   @@index([organizationId])
+  @@index([emailHash])
+  @@index([phoneHash])
   @@index([role, status])
   @@map("users")
+}
+
+model InviteCode {
+  id          String    @id @default(uuid()) @db.Uuid
+  code        String    @unique
+  maxUses     Int       @default(100) @map("max_uses")
+  usedCount   Int       @default(0) @map("used_count")
+  benefit     String?
+  expiresAt   DateTime? @map("expires_at")
+  createdById String?   @map("created_by") @db.Uuid
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  createdBy   User?     @relation("InviteCodeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  users       User[]    @relation("InviteCodeUsers")
+
+  @@index([createdById])
+  @@index([isActive, expiresAt])
+  @@map("invite_codes")
 }
 
 model AuthSession {

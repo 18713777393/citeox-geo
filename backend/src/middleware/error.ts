@@ -10,11 +10,11 @@ export class HttpError extends Error {
   }
 }
 
-export function notFoundHandler(req: Request, res: Response) {
+export function notFoundHandler(_req: Request, res: Response) {
   res.status(404).json({
     error: {
       code: "NOT_FOUND",
-      message: "请求的接口不存在或暂不可用。"
+      message: "请求的接口不存在或暂不可用，请检查地址后重试。"
     }
   });
 }
@@ -38,8 +38,8 @@ export function errorHandler(
   console.error(error);
   res.status(500).json({
     error: {
-      code: "INTERNAL_SERVER_ERROR",
-      message: "服务器临时异常，请稍后再试。"
+      code: "INTERNAL_ERROR",
+      message: "服务暂时不可用，请稍后重试。"
     }
   });
 }
