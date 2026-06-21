@@ -1,0 +1,14 @@
+{
+  "name": "citeox-geo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "cd backend && npm install && npm run prisma:generate && npm run build && npx prisma migrate deploy && npm run prisma:seed",
+    "start": "cd backend && npm run start:prod",
+    "start:prod": "cd backend && npm run start:prod"
+  }
+}

@@ -38,3 +38,48 @@ npm run dev
 - 域名、HTTPS、备份和监控
 
 不要把 `.env` 或真实密钥提交到 GitHub。
+
+## Render 后端部署设置
+
+推荐方式：在 Render 的 Web Service 设置里这样填：
+
+```text
+Root Directory: backend
+Runtime: Node
+Build Command: npm install && npm run prisma:generate && npm run build && npx prisma migrate deploy && npm run prisma:seed
+Start Command: npm run start:prod
+```
+
+如果你没有设置 Root Directory，也可以使用仓库根目录的 `package.json`：
+
+```text
+Build Command: npm install && npm run build
+Start Command: npm run start
+```
+
+注意：不要在根目录部署方式里额外再写 `npx prisma migrate deploy`，因为根目录没有 `prisma/schema.prisma`；迁移已经包含在根目录的 `npm run build` 里面。
+
+必须在 Render Environment Variables 里配置：
+
+```text
+NODE_ENV=production
+DATABASE_URL=你的 Render PostgreSQL Internal Database URL
+REDIS_URL=你的 Render Redis Internal URL
+JWT_SECRET=64位以上随机字符串
+JWT_REFRESH_SECRET=另一组64位以上随机字符串
+ENCRYPTION_KEY=32字节base64字符串
+RESEND_API_KEY=你的 Resend API Key
+EMAIL_FROM=Citeox <verify@citeox.com>
+CORS_ORIGIN=https://citeox.com,https://www.citeox.com
+APP_URL=https://citeox.com
+ADMIN_EMAIL=你的管理员邮箱
+ADMIN_INITIAL_PASSWORD=你的管理员初始密码
+ADMIN_NAME=平台管理员
+```
+
+生成随机密钥可在本地运行：
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
