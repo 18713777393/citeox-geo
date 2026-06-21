@@ -39,18 +39,27 @@ npm run dev
 
 不要把 `.env` 或真实密钥提交到 GitHub。
 
-## Render 后端部署设置
+## Render 后端部署设置：请使用 Node，不要使用 Docker
 
 推荐方式：在 Render 的 Web Service 设置里这样填：
 
 ```text
+Environment: Node
 Root Directory: backend
 Runtime: Node
 Build Command: npm install && npm run prisma:generate && npm run build && npx prisma migrate deploy && npm run prisma:seed
 Start Command: npm run start:prod
 ```
 
-如果你没有设置 Root Directory，也可以使用仓库根目录的 `package.json`：
+如果你的 Render 服务之前已经选成 Docker，最稳方式是新建一个 Web Service：
+
+```text
+New + → Web Service → 连接 GitHub 仓库 → Environment 选择 Node
+```
+
+然后填写上面的 Root Directory / Build Command / Start Command。
+
+如果你没有设置 Root Directory，也可以使用仓库根目录的 `package.json`，但不推荐：
 
 ```text
 Build Command: npm install && npm run build
