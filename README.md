@@ -47,7 +47,7 @@ npm run dev
 Environment: Node
 Root Directory: backend
 Runtime: Node
-Build Command: npm install && npm run prisma:generate && npm run build && npx prisma migrate deploy && npm run prisma:seed
+Build Command: npm install --include=dev && npm run prisma:generate && npm run build && npx prisma migrate deploy && npm run prisma:seed
 Start Command: npm run start:prod
 ```
 
@@ -62,7 +62,7 @@ New + → Web Service → 连接 GitHub 仓库 → Environment 选择 Node
 如果你没有设置 Root Directory，也可以使用仓库根目录的 `package.json`，但不推荐：
 
 ```text
-Build Command: npm install && npm run build
+Build Command: npm install --include=dev && npm run build
 Start Command: npm run start
 ```
 

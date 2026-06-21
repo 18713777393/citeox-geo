@@ -3,7 +3,7 @@ services:
     name: citeox-api
     runtime: node
     rootDir: backend
-    buildCommand: npm install && npm run prisma:generate && npm run build && npx prisma migrate deploy && npm run prisma:seed
+    buildCommand: npm install --include=dev && npm run prisma:generate && npm run build && npx prisma migrate deploy && npm run prisma:seed
     startCommand: npm run start:prod
     autoDeploy: true
     envVars:
