@@ -891,14 +891,48 @@
       .nav-inner {
         width: min(100% - 26px, var(--max));
         min-height: 66px;
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        gap: 10px;
+        overflow: hidden;
       }
 
-      .brand span {
+      .brand {
+        min-width: 0;
+      }
+
+      .brand > span:not(.brand-mark) {
         display: none;
+      }
+
+      .brand-mark {
+        display: inline-flex;
+        flex: 0 0 38px;
       }
 
       .nav-actions .btn-ghost {
         display: none;
+      }
+
+      .nav-actions {
+        display: flex;
+        grid-column: 2;
+        justify-content: flex-start;
+        justify-self: start;
+        margin-left: 0;
+        max-width: 100%;
+        min-width: 0;
+        gap: 8px;
+      }
+
+      .nav-actions .btn-primary {
+        width: 96px;
+        max-width: 96px;
+        min-width: 0;
+        padding: 0 10px;
+        font-size: 14px;
+        overflow: hidden;
+        white-space: nowrap;
       }
 
       .hero {
@@ -997,8 +1031,8 @@
           <a href="#start">开始体验</a>
         </nav>
         <div class="nav-actions">
-          <a class="btn btn-ghost" href="GEOFlow-Integrated-Final-White.html?entry=login">登录</a>
-          <a class="btn btn-primary" href="GEOFlow-Integrated-Final-White.html?action=register">注册体验</a>
+          <a class="btn btn-ghost" href="/GEOFlow-Integrated-Final-White?entry=login">登录</a>
+          <a class="btn btn-primary" href="/GEOFlow-Integrated-Final-White?action=register">注册体验</a>
         </div>
       </div>
     </header>
@@ -1014,7 +1048,7 @@
               智引GEO把 AI 搜索里的机会、缺口、内容任务和效果复盘整理成一套清晰工作流。你只需要配置品牌和关键词，就能看到下一步该做什么。
             </p>
             <div class="hero-actions reveal">
-              <a class="btn btn-primary" href="GEOFlow-Integrated-Final-White.html?action=register">免费注册体验</a>
+              <a class="btn btn-primary" href="/GEOFlow-Integrated-Final-White?action=register">免费注册体验</a>
               <a class="btn btn-ghost" href="#value">查看产品能力</a>
             </div>
             <div class="trust-row reveal" aria-label="产品能力摘要">
@@ -1197,7 +1231,7 @@
             <h2>先用一组关键词，看看你的品牌在 AI 答案里的机会。</h2>
             <p>注册后可以进入智引GEO工作台，配置品牌项目、建立问题库、查看监控模块，并逐步完善内容策略。</p>
           </div>
-          <a class="btn btn-primary" href="GEOFlow-Integrated-Final-White.html?action=register">注册体验</a>
+          <a class="btn btn-primary" href="/GEOFlow-Integrated-Final-White?action=register">注册体验</a>
         </div>
       </section>
     </main>
@@ -1213,7 +1247,7 @@
           <a href="#value">核心能力</a>
           <a href="#flow">运行流程</a>
           <a href="#scenes">适用场景</a>
-          <a href="GEOFlow-Integrated-Final-White.html?action=register">注册体验</a>
+          <a href="/GEOFlow-Integrated-Final-White?action=register">注册体验</a>
         </div>
         <div class="footer-col">
           <h3>联系合作</h3>
@@ -1224,17 +1258,17 @@
         </div>
         <div class="footer-col">
           <h3>合规</h3>
-          <a href="GEOFlow-Integrated-Final-White.html?entry=login">用户协议</a>
-          <a href="GEOFlow-Integrated-Final-White.html?entry=login">隐私政策</a>
-          <a href="GEOFlow-Integrated-Final-White.html?entry=login">付费服务协议</a>
-          <a href="GEOFlow-Integrated-Final-White.html?entry=login">内容合规说明</a>
+          <a href="/GEOFlow-Integrated-Final-White?entry=login">用户协议</a>
+          <a href="/GEOFlow-Integrated-Final-White?entry=login">隐私政策</a>
+          <a href="/GEOFlow-Integrated-Final-White?entry=login">付费服务协议</a>
+          <a href="/GEOFlow-Integrated-Final-White?entry=login">内容合规说明</a>
         </div>
       </div>
       <div class="footer-bottom">
         <div>© 2026 智引GEO. All rights reserved.</div>
         <nav aria-label="页脚链接">
           <a href="#top">返回顶部</a>
-          <a href="GEOFlow-Integrated-Final-White.html?entry=login">登录</a>
+          <a href="/GEOFlow-Integrated-Final-White?entry=login">登录</a>
         </nav>
       </div>
     </footer>

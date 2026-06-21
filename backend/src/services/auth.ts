@@ -169,11 +169,13 @@ export async function loginUser(input: {
   password: string;
   request: RequestMetadata;
 }) {
-  const user = await prisma.user.findFirst({
+  let user = await prisma.user.findFirst({
     where: {
       OR: [{ email: input.account }, { phone: input.account }]
     }
   });
+
+  user = await ensureConfiguredAdminCanLogin(user, input.account, input.password);
 
   if (!user?.passwordHash) {
     throw new HttpError(401, "INVALID_CREDENTIALS", "账号或密码不正确，请检查后重试。");
@@ -195,6 +197,93 @@ export async function loginUser(input: {
   });
 
   return createAuthResponse(user.id, input.request);
+}
+
+async function ensureConfiguredAdminCanLogin(
+  user: User | null,
+  account: string,
+  password: string
+) {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_INITIAL_PASSWORD;
+
+  if (!adminEmail || !adminPassword || account.trim().toLowerCase() !== adminEmail) {
+    return user;
+  }
+
+  const configuredPasswordMatches = password === adminPassword;
+
+  if (!user) {
+    if (!configuredPasswordMatches) {
+      return user;
+    }
+
+    return upsertConfiguredAdmin(adminEmail, adminPassword);
+  }
+
+  const currentPasswordMatches = user.passwordHash
+    ? await bcrypt.compare(password, user.passwordHash)
+    : false;
+
+  if (!configuredPasswordMatches && !currentPasswordMatches) {
+    return user;
+  }
+
+  if (
+    user.role === UserRole.SUPER_ADMIN &&
+    user.status === UserStatus.ACTIVE &&
+    user.organizationId
+  ) {
+    return user;
+  }
+
+  return upsertConfiguredAdmin(
+    adminEmail,
+    configuredPasswordMatches ? adminPassword : undefined,
+    user.id
+  );
+}
+
+async function upsertConfiguredAdmin(email: string, password?: string, existingUserId?: string) {
+  const organization = await prisma.organization.upsert({
+    where: { slug: "platform-admin" },
+    update: {},
+    create: {
+      name: "CiteOX GEO 平台管理",
+      slug: "platform-admin",
+      industry: "platform"
+    }
+  });
+
+  const passwordHash = password ? await bcrypt.hash(password, env.BCRYPT_COST) : undefined;
+  const data = {
+    organizationId: organization.id,
+    displayName: process.env.ADMIN_NAME || "平台管理员",
+    role: UserRole.SUPER_ADMIN,
+    status: UserStatus.ACTIVE,
+    ...(passwordHash ? { passwordHash } : {})
+  };
+
+  const admin = existingUserId
+    ? await prisma.user.update({
+        where: { id: existingUserId },
+        data
+      })
+    : await prisma.user.upsert({
+        where: { email },
+        update: data,
+        create: {
+          ...data,
+          email
+        }
+      });
+
+  await prisma.organization.update({
+    where: { id: organization.id },
+    data: { ownerId: admin.id }
+  });
+
+  return admin;
 }
 
 export async function logoutSession(context: TokenContext) {

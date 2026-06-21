@@ -223,8 +223,16 @@ export async function runMonitor(
   }
 ) {
   const project = await ensureProject(ctx.auth, input);
-  const platforms = normalizeList(input.platforms);
-  const selectedPlatforms = (platforms.length ? platforms : listAiProviders().slice(0, 5).map((provider) => provider.name)).slice(0, 8);
+  const requestedPlatforms = normalizeList(input.platforms);
+  const requestedProviderCodes = input.providerCode ? [input.providerCode] : requestedPlatforms;
+  const selectedProviders = listAiProviders()
+    .filter((provider) => provider.configured)
+    .filter((provider) =>
+      requestedProviderCodes.length
+        ? requestedProviderCodes.some((value) => matchesProvider(provider, value))
+        : true
+    )
+    .slice(0, 8);
   let questions = await prisma.question.findMany({
     where: { projectId: project.id },
     orderBy: { createdAt: "desc" },
@@ -244,62 +252,111 @@ export async function runMonitor(
     });
   }
 
-  const ai = await invokeAiGateway({
-    auth: ctx.auth,
-    featureKey: "monitor.run",
-    providerCode: input.providerCode,
-    projectId: project.id,
-    operation: "monitor.run",
-    input: JSON.stringify({
-      projectId: project.id,
-      questionCount: questions.length,
-      platforms: selectedPlatforms
-    }),
-    metadata: {
-      platforms: selectedPlatforms,
-      questionCount: questions.length
-    }
-  });
+  if (!selectedProviders.length) {
+    await recordAuditEvent({
+      organizationId: ctx.auth.organizationId,
+      actorUserId: ctx.auth.userId,
+      action: "monitor.skipped",
+      resourceType: "monitor_result",
+      metadata: {
+        projectId: project.id,
+        reason: "no_configured_provider",
+        requestedProviders: requestedProviderCodes
+      }
+    });
 
-  const provider = await prisma.modelProvider.findUnique({
-    where: { code: ai.provider.code }
-  });
+    return {
+      task: {
+        id: `monitor-skipped-${Date.now()}`,
+        status: "skipped",
+        provider: null,
+        message: "No configured AI provider was available, so no monitor result was generated."
+      },
+      results: [],
+      usage: {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        remaining: null
+      }
+    };
+  }
 
-  const pairs = questions.flatMap((question, qIndex) =>
-    selectedPlatforms.map((platform, pIndex) => ({ question, platform, qIndex, pIndex }))
+  const pairs = questions.flatMap((question) =>
+    selectedProviders.map((provider) => ({ question, provider }))
   ).slice(0, clamp(input.limit ?? 12, 1, 50));
+  const results = [];
+  const totalUsage = {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    remaining: null as number | null
+  };
 
-  const results = await Promise.all(
-    pairs.map(({ question, platform, qIndex, pIndex }) =>
-      prisma.monitorResult.create({
-        data: {
-          projectId: project.id,
-          questionId: question.id,
-          modelProviderId: provider?.id,
-          status: MonitorStatus.SUCCEEDED,
-          sourceModel: platform,
-          answerSummary: `${project.brandName} visibility snapshot for ${question.title}`,
-          rawResponse: {
-            mode: "safe_summary",
-            requestId: ai.requestId,
-            promptHidden: true
-          },
-          visibilityScore: String(65 + ((qIndex + pIndex) % 28)),
-          startedAt: new Date(),
-          completedAt: new Date()
-        }
-      }).then((result) => formatMonitorResult(result, question.title, platform, project.brandName, qIndex, pIndex))
-    )
-  );
+  for (const { question, provider } of pairs) {
+    const startedAt = new Date();
+    const ai = await invokeAiGateway({
+      auth: ctx.auth,
+      featureKey: "monitor.run",
+      providerCode: provider.code,
+      projectId: project.id,
+      operation: "monitor.run",
+      input: JSON.stringify({
+        brandName: project.brandName,
+        industry: project.industry,
+        question: question.title,
+        platform: provider.name,
+        rule: "Ask the real model to answer the user question as an AI answer engine would. Return concise Chinese observations about brand mention, recommendation, sources, competitor pressure, and missing evidence."
+      }),
+      metadata: {
+        provider: provider.code,
+        questionId: question.id
+      }
+    });
+
+    totalUsage.promptTokens += ai.usage.promptTokens;
+    totalUsage.completionTokens += ai.usage.completionTokens;
+    totalUsage.totalTokens += ai.usage.totalTokens;
+    totalUsage.remaining = ai.usage.remaining;
+
+    if (ai.output.mode !== "live") {
+      continue;
+    }
+
+    const signal = scoreMonitorAnswer(ai.output.summary, project.brandName, question.title);
+    const saved = await prisma.monitorResult.create({
+      data: {
+        projectId: project.id,
+        questionId: question.id,
+        modelProviderId: ai.provider.id,
+        status: MonitorStatus.SUCCEEDED,
+        sourceModel: ai.provider.name,
+        answerSummary: ai.output.summary.slice(0, 4000),
+        rawResponse: {
+          mode: "live_summary",
+          requestId: ai.requestId,
+          provider: ai.provider.code,
+          model: ai.model,
+          signal: signalJson(signal),
+          promptHidden: true
+        },
+        visibilityScore: String(signal.visibility),
+        startedAt,
+        completedAt: new Date()
+      }
+    });
+
+    results.push(formatMonitorResult(saved, question.title, ai.provider.name, project.brandName));
+  }
 
   return {
     task: {
-      id: ai.requestId,
-      status: "completed",
-      provider: ai.provider.code
+      id: `monitor-${Date.now()}`,
+      status: results.length ? "completed" : "skipped",
+      provider: selectedProviders.map((provider) => provider.code).join(",")
     },
     results,
-    usage: ai.usage
+    usage: totalUsage
   };
 }
 
@@ -310,30 +367,35 @@ export async function calculateScores(ctx: WorkflowContext, input: { projectId?:
     orderBy: { createdAt: "desc" },
     take: 80
   });
+  const realMonitorResults = monitorResults.filter(isRealMonitorResult);
 
-  const base = monitorResults.length
-    ? Math.round(
-        monitorResults.reduce((sum, result) => sum + Number(result.visibilityScore ?? 0), 0) /
-          monitorResults.length
-      )
-    : 72;
-  const visibility = clamp(base, 0, 100);
-  const credibility = clamp(base + 6, 0, 100);
-  const relevance = clamp(base + 3, 0, 100);
-  const freshness = clamp(70 + monitorResults.length, 0, 100);
+  if (!realMonitorResults.length) {
+    throw new HttpError(400, "NO_LIVE_MONITOR_RESULTS", "Run AI answer monitoring with a configured provider before calculating GEO scores.");
+  }
+
+  const signals = realMonitorResults.map((result) => signalFromMonitorResult(result, project.brandName, ""));
+  const visibility = average(realMonitorResults.map((result) => Number(result.visibilityScore ?? 0)));
+  const credibility = average(signals.map((signal) => signal.citationScore));
+  const relevance = average(signals.map((signal) => signal.relevance));
+  const freshness = average(signals.map((signal) => signal.freshness));
+  const competitorPressure = average(signals.map((signal) => signal.competitorPressure));
+  const questionCount = await prisma.question.count({ where: { projectId: project.id } });
+  const coverage = questionCount
+    ? clamp(Math.round((new Set(realMonitorResults.map((result) => result.questionId)).size / questionCount) * 100), 0, 100)
+    : 0;
   const score = Math.round((visibility + credibility + relevance + freshness) / 4);
 
   const saved = await prisma.geoScore.create({
     data: {
       projectId: project.id,
-      monitorResultId: monitorResults[0]?.id,
+      monitorResultId: realMonitorResults[0]?.id,
       score: String(score),
       visibility: String(visibility),
       credibility: String(credibility),
       relevance: String(relevance),
       freshness: String(freshness),
       grade: gradeFor(score),
-      explanation: "Calculated from Phase 3 monitor snapshots and safe local scoring weights."
+      explanation: "Calculated from live AI monitor answers, brand mention, citation evidence, relevance, freshness, and competitor pressure signals."
     }
   });
 
@@ -345,7 +407,7 @@ export async function calculateScores(ctx: WorkflowContext, input: { projectId?:
     resourceId: saved.id,
     metadata: {
       projectId: project.id,
-      monitorResults: monitorResults.length
+      monitorResults: realMonitorResults.length
     }
   });
 
@@ -354,11 +416,11 @@ export async function calculateScores(ctx: WorkflowContext, input: { projectId?:
       id: saved.id,
       metrics: {
         mention: visibility,
-        compete: Math.max(0, 100 - relevance),
+        compete: competitorPressure,
         recommend: credibility,
         sourceCoverage: freshness,
         accuracy: relevance,
-        coverage: monitorResults.length ? 100 : 70,
+        coverage,
         gaps: Math.max(0, 100 - score)
       },
       grade: saved.grade,
@@ -375,28 +437,35 @@ export async function analyzeGaps(ctx: WorkflowContext, input: { projectId?: str
     orderBy: { createdAt: "desc" },
     take: clamp(input.limit ?? 12, 1, 30)
   });
-  const sourceItems = latestMonitor.length ? latestMonitor : [];
+  const sourceItems = latestMonitor.filter(isRealMonitorResult);
 
+  if (!sourceItems.length) {
+    throw new HttpError(400, "NO_LIVE_MONITOR_RESULTS", "Run AI answer monitoring with a configured provider before diagnosing gaps.");
+  }
+
+  const gapSeeds = sourceItems.flatMap((monitor) => gapSeedsFromMonitor(monitor, project.brandName));
   const gaps = await Promise.all(
-    (sourceItems.length ? sourceItems : [null, null, null]).map((monitor, index) =>
+    gapSeeds.slice(0, clamp(input.limit ?? 12, 1, 30)).map((seed) =>
       prisma.gap.create({
         data: {
           projectId: project.id,
-          monitorResultId: monitor?.id,
-          title: index % 2 === 0 ? "Brand answer coverage gap" : "Competitor source pressure",
-          category: index % 2 === 0 ? "coverage" : "competition",
-          severity: index < 2 ? 3 : 2,
-          description: monitor
-            ? `Improve direct answer coverage for: ${monitor.question.title}`
-            : `Create structured source material for ${project.brandName}.`,
+          monitorResultId: seed.monitor.id,
+          title: seed.title,
+          category: seed.category,
+          severity: seed.severity,
+          description: seed.description,
           evidence: {
-            mode: "safe_summary",
+            mode: "live_summary",
+            monitorResultId: seed.monitor.id,
+            questionId: seed.monitor.questionId,
+            platform: seed.monitor.sourceModel,
+            score: Number(seed.monitor.visibilityScore ?? 0),
+            signal: signalJson(signalFromMonitorResult(seed.monitor, project.brandName, seed.monitor.question.title)),
             promptHidden: true,
-            monitorResultId: monitor?.id ?? null
           },
           status: "open"
         }
-      }).then((gap) => formatGap(gap, monitor?.question.title))
+      }).then((gap) => formatGap(gap, seed.monitor.question.title))
     )
   );
 
@@ -943,24 +1012,23 @@ function formatQuestion(question: { id: string; title: string; category: string 
 }
 
 function formatMonitorResult(
-  result: { id: string; answerSummary: string | null; visibilityScore: Prisma.Decimal | null; createdAt: Date },
+  result: { id: string; answerSummary: string | null; visibilityScore: Prisma.Decimal | null; rawResponse?: Prisma.JsonValue | null; createdAt: Date },
   question: string,
   platform: string,
-  brandName: string,
-  qIndex: number,
-  pIndex: number
+  brandName: string
 ) {
-  const mention = (qIndex + pIndex) % 3 !== 0;
+  const signal = signalFromMonitorResult(result, brandName, question);
+  const mention = signal.mentioned;
 
   return {
     id: result.id,
     platform,
     question,
     mention,
-    competitors: mention ? [] : ["competitor"],
-    rank: mention ? 1 + ((qIndex + pIndex) % 5) : "-",
-    source: mention ? brandName : "competitor source",
-    risk: mention ? "low" : "high",
+    competitors: signal.competitorPressure >= 60 ? ["发现竞品压力"] : [],
+    rank: mention ? 1 : "-",
+    source: signal.cited ? "可识别引用来源" : "未识别引用来源",
+    risk: signal.visibility >= 70 ? "low" : signal.visibility >= 45 ? "medium" : "high",
     answerSnapshot: result.answerSummary ?? "",
     accuracyScore: Number(result.visibilityScore ?? 0),
     createdAt: result.createdAt.toISOString()
@@ -982,14 +1050,192 @@ function formatGap(
     missing: gap.description,
     severity,
     impactScore: gap.severity * 10,
-    recommendations: ["Generate reviewable content", "Attach approved sources"],
-    asset: gap.category === "competition" ? "comparison page" : "faq page",
+    recommendations: ["生成可审核内容", "补充官网、案例或第三方来源"],
+    asset: gap.category === "competition" ? "对比页" : "FAQ / 证据页",
     status: gap.status
   };
 }
 
 function jsonRecord(value: Prisma.JsonValue | null | undefined): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function matchesProvider(provider: { code: string; name: string }, value: string) {
+  const normalized = value.trim().toLowerCase();
+  return provider.code.toLowerCase() === normalized || provider.name.toLowerCase() === normalized;
+}
+
+interface MonitorSignal {
+  mentioned: boolean;
+  recommended: boolean;
+  cited: boolean;
+  competitorMentioned: boolean;
+  visibility: number;
+  citationScore: number;
+  relevance: number;
+  freshness: number;
+  competitorPressure: number;
+}
+
+function signalJson(signal: MonitorSignal): Prisma.InputJsonObject {
+  return {
+    mentioned: signal.mentioned,
+    recommended: signal.recommended,
+    cited: signal.cited,
+    competitorMentioned: signal.competitorMentioned,
+    visibility: signal.visibility,
+    citationScore: signal.citationScore,
+    relevance: signal.relevance,
+    freshness: signal.freshness,
+    competitorPressure: signal.competitorPressure
+  };
+}
+
+function isRealMonitorResult(result: {
+  status: MonitorStatus;
+  answerSummary: string | null;
+  visibilityScore: Prisma.Decimal | null;
+  rawResponse: Prisma.JsonValue | null;
+}) {
+  const raw = jsonRecord(result.rawResponse);
+  return result.status === MonitorStatus.SUCCEEDED && raw.mode === "live_summary" && Boolean(result.answerSummary) && result.visibilityScore !== null;
+}
+
+function signalFromMonitorResult(
+  result: { answerSummary: string | null; rawResponse?: Prisma.JsonValue | null },
+  brandName: string,
+  question: string
+): MonitorSignal {
+  const raw = jsonRecord(result.rawResponse);
+  const saved = jsonRecord(raw.signal as Prisma.JsonValue | null | undefined);
+
+  if (typeof saved.visibility === "number") {
+    return {
+      mentioned: Boolean(saved.mentioned),
+      recommended: Boolean(saved.recommended),
+      cited: Boolean(saved.cited),
+      competitorMentioned: Boolean(saved.competitorMentioned),
+      visibility: clamp(Number(saved.visibility), 0, 100),
+      citationScore: clamp(Number(saved.citationScore ?? 0), 0, 100),
+      relevance: clamp(Number(saved.relevance ?? 0), 0, 100),
+      freshness: clamp(Number(saved.freshness ?? 0), 0, 100),
+      competitorPressure: clamp(Number(saved.competitorPressure ?? 0), 0, 100)
+    };
+  }
+
+  return scoreMonitorAnswer(result.answerSummary ?? "", brandName, question);
+}
+
+function scoreMonitorAnswer(answer: string, brandName: string, question: string): MonitorSignal {
+  const normalizedAnswer = answer.toLowerCase();
+  const normalizedBrand = brandName.trim().toLowerCase();
+  const compactBrand = normalizedBrand.replace(/\s+/g, "");
+  const compactAnswer = normalizedAnswer.replace(/\s+/g, "");
+  const mentioned = Boolean(normalizedBrand && (normalizedAnswer.includes(normalizedBrand) || compactAnswer.includes(compactBrand)));
+  const recommended = /推荐|建议|适合|值得|优先|首选|可以考虑|选择/.test(answer);
+  const cited = /(https?:\/\/|www\.|来源|引用|参考|官网|案例|报告|数据|白皮书)/i.test(answer);
+  const competitorMentioned = /竞品|替代|对比|相比|不如|优于|其他品牌|同类/.test(answer);
+  const questionTerms = question
+    .split(/[^\p{L}\p{N}]+/u)
+    .map((term) => term.trim().toLowerCase())
+    .filter((term) => term.length >= 2)
+    .slice(0, 12);
+  const overlap = questionTerms.length
+    ? questionTerms.filter((term) => normalizedAnswer.includes(term)).length / questionTerms.length
+    : 0;
+  const answerDepth = answer.length >= 300 ? 20 : answer.length >= 120 ? 12 : answer.length >= 40 ? 6 : 0;
+  const visibility = clamp((mentioned ? 62 : 18) + (recommended ? 14 : 0) + (cited ? 10 : 0) - (!mentioned && competitorMentioned ? 10 : 0), 0, 100);
+  const citationScore = clamp((cited ? 58 : 22) + (mentioned ? 18 : 0) + answerDepth, 0, 100);
+  const relevance = clamp((overlap ? Math.round(overlap * 55) : 25) + (mentioned ? 15 : 0) + answerDepth, 0, 100);
+  const freshness = clamp((/(2025|2026|最新|近期|当前|今年|更新)/.test(answer) ? 70 : 45) + (cited ? 15 : 0), 0, 100);
+  const competitorPressure = clamp(competitorMentioned ? (mentioned ? 45 : 75) : mentioned ? 20 : 45, 0, 100);
+
+  return {
+    mentioned,
+    recommended,
+    cited,
+    competitorMentioned,
+    visibility,
+    citationScore,
+    relevance,
+    freshness,
+    competitorPressure
+  };
+}
+
+function gapSeedsFromMonitor(
+  monitor: {
+    id: string;
+    questionId: string;
+    question: { title: string };
+    answerSummary: string | null;
+    rawResponse: Prisma.JsonValue | null;
+    sourceModel: string | null;
+    visibilityScore: Prisma.Decimal | null;
+    status: MonitorStatus;
+  },
+  brandName: string
+) {
+  const signal = signalFromMonitorResult(monitor, brandName, monitor.question.title);
+  const seeds: Array<{
+    monitor: typeof monitor;
+    title: string;
+    category: string;
+    severity: number;
+    description: string;
+  }> = [];
+
+  if (!signal.mentioned || signal.visibility < 50) {
+    seeds.push({
+      monitor,
+      title: `${brandName} 在该问题回答中未被稳定提及`,
+      category: "brand_visibility",
+      severity: 3,
+      description: `问题「${monitor.question.title}」的真实 AI 回答没有形成稳定品牌露出，需要补充直接回答、适用场景和品牌证据。`
+    });
+  }
+
+  if (!signal.cited || signal.citationScore < 60) {
+    seeds.push({
+      monitor,
+      title: "引用来源与证据不足",
+      category: "citation",
+      severity: signal.mentioned ? 2 : 3,
+      description: `回答中缺少可被 AI 采信的官网、案例、数据或结构化来源，建议补充 FAQ、案例页、llms.txt 和 Schema。`
+    });
+  }
+
+  if (!signal.recommended) {
+    seeds.push({
+      monitor,
+      title: "推荐理由不清晰",
+      category: "recommendation",
+      severity: 2,
+      description: `真实回答没有给出明确推荐 ${brandName} 的理由，需要补强目标用户、优势边界和行动建议。`
+    });
+  }
+
+  if (signal.competitorPressure >= 60) {
+    seeds.push({
+      monitor,
+      title: "竞品压制风险偏高",
+      category: "competition",
+      severity: 3,
+      description: `回答中存在较强竞品或替代方案压力，需要增加客观对比页和第三方证明材料。`
+    });
+  }
+
+  if (!seeds.length && signal.visibility < 75) {
+    seeds.push({
+      monitor,
+      title: "品牌回答质量仍可提升",
+      category: "coverage",
+      severity: 1,
+      description: `回答已提及品牌，但可继续提升引用、推荐理由和问题覆盖深度。`
+    });
+  }
+
+  return seeds;
 }
 
 function assetForStrategyGap(category: string | null | undefined, severity: number | null | undefined) {

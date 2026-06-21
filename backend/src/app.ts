@@ -10,6 +10,7 @@ import { aiRouter } from "./routes/ai.js";
 import { assetsRouter } from "./routes/assets.js";
 import { billingRouter } from "./routes/billing.js";
 import { contentsRouter } from "./routes/contents.js";
+import { compatibilityRouter } from "./routes/compat.js";
 import { gapsRouter } from "./routes/gaps.js";
 import { healthRouter } from "./routes/health.js";
 import { monitorRouter } from "./routes/monitor.js";
@@ -33,6 +34,7 @@ export function createApp() {
   app.use("/api/health", healthRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/projects", projectsRouter);
+  app.use("/api/project", projectsRouter);
   app.use("/api/billing", billingRouter);
   app.use("/api/ai", aiRouter);
   app.use("/api/questions", questionsRouter);
@@ -47,6 +49,7 @@ export function createApp() {
   app.use("/api/content", contentsRouter);
   app.use("/api/strategy", strategiesRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api", compatibilityRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
