@@ -1497,6 +1497,136 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
 })();
 </script>
 
+<script id="citeox-auth-password-polish-final">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function card(){ return document.querySelector(".loginCard"); }
+  function scorePasswordVisual(value){
+    var v = String(value || "");
+    var score = 0;
+    if(v.length >= 8) score++;
+    if(/[A-Za-z]/.test(v) && /\d/.test(v)) score++;
+    if(/[^A-Za-z0-9]/.test(v)) score++;
+    if(v.length >= 12) score++;
+    return score;
+  }
+  function visualState(score, filled){
+    if(!filled) return { width:"0%", color:"#c34242", level:"empty" };
+    if(score < 2) return { width:"34%", color:"#c34242", level:"weak" };
+    if(score < 3) return { width:"66%", color:"#d8a21c", level:"medium" };
+    return { width:"100%", color:"#20aa8a", level:"strong" };
+  }
+  function injectStyle(){
+    if($("citeoxAuthPasswordPolishStyle")) return;
+    var style = document.createElement("style");
+    style.id = "citeoxAuthPasswordPolishStyle";
+    style.textContent = [
+      ".loginCard.register-mode #passwordStrengthText,.loginCard.register-mode #confirmStrengthText{display:none!important}",
+      ".loginCard.reset-mode #passwordStrengthText,.loginCard.reset-mode #confirmStrengthText{display:none!important}",
+      ".loginCard.login-mode #passwordStrengthText{display:block!important;margin-top:8px!important;font-size:12px!important;line-height:1.4!important;color:#5969f3!important;font-weight:800!important;cursor:pointer!important;text-decoration:none!important}",
+      ".loginCard.login-mode #passwordStrengthText:hover{text-decoration:underline!important}",
+      ".loginCard.login-mode .strength{display:none!important}",
+      ".confirm-strength{height:8px;background:#edf1f7;border-radius:999px;overflow:hidden;margin-top:8px}",
+      ".confirm-strength i{display:block;height:100%;width:0;border-radius:999px;background:#c34242;transition:width .25s ease,background .25s ease}"
+    ].join("");
+    document.head.appendChild(style);
+  }
+  function ensureConfirmBar(){
+    var input = $("regPasswordConfirm");
+    if(input && !$("confirmStrengthBar")){
+      var wrap = document.createElement("div");
+      wrap.className = "confirm-strength";
+      wrap.innerHTML = '<i id="confirmStrengthBar"></i>';
+      var field = input.closest(".field");
+      if(field) field.appendChild(wrap);
+    }
+  }
+  function applyModeText(){
+    var c = card();
+    var tip = $("passwordStrengthText");
+    var confirmTip = $("confirmStrengthText");
+    if(confirmTip){
+      confirmTip.textContent = "";
+      confirmTip.style.display = "none";
+      confirmTip.setAttribute("aria-hidden", "true");
+    }
+    if(!tip) return;
+    if(c && c.classList.contains("login-mode")){
+      tip.textContent = "忘记密码";
+      tip.style.display = "block";
+      tip.removeAttribute("aria-hidden");
+      tip.onclick = function(){ if(window.forgotPassword) window.forgotPassword(); };
+    }else{
+      tip.textContent = "";
+      tip.style.display = "none";
+      tip.setAttribute("aria-hidden", "true");
+      tip.onclick = null;
+    }
+  }
+  function applyStrengthBars(){
+    ensureConfirmBar();
+    var pwd = $("regPassword") ? $("regPassword").value : "";
+    var confirm = $("regPasswordConfirm") ? $("regPasswordConfirm").value : "";
+    var state = visualState(scorePasswordVisual(pwd), !!pwd);
+    var bar = $("passwordStrengthBar");
+    if(bar){
+      bar.style.width = state.width;
+      bar.style.background = state.color;
+      bar.dataset.level = state.level;
+    }
+    var cbar = $("confirmStrengthBar");
+    if(cbar){
+      cbar.style.width = confirm ? state.width : "0%";
+      cbar.style.background = state.color;
+      cbar.dataset.level = confirm ? state.level : "empty";
+    }
+    applyModeText();
+  }
+  function bind(){
+    injectStyle();
+    ensureConfirmBar();
+    ["regPassword","regPasswordConfirm"].forEach(function(id){
+      var el = $(id);
+      if(el && el.dataset.passwordVisualFinal !== "1"){
+        el.dataset.passwordVisualFinal = "1";
+        el.addEventListener("input", applyStrengthBars);
+        el.addEventListener("blur", applyStrengthBars);
+      }
+    });
+    var previousSetAuthVariant = window.setAuthVariant;
+    if(previousSetAuthVariant && previousSetAuthVariant.__passwordPolishWrapped !== true){
+      var wrapped = function(){
+        var result = previousSetAuthVariant.apply(this, arguments);
+        setTimeout(applyStrengthBars, 0);
+        return result;
+      };
+      wrapped.__passwordPolishWrapped = true;
+      window.setAuthVariant = wrapped;
+      try{ setAuthVariant = wrapped; }catch(e){}
+    }
+    var previousShowAuthForm = window.showAuthForm;
+    if(previousShowAuthForm && previousShowAuthForm.__passwordPolishWrapped !== true){
+      var wrappedShow = function(){
+        var result = previousShowAuthForm.apply(this, arguments);
+        setTimeout(applyStrengthBars, 0);
+        return result;
+      };
+      wrappedShow.__passwordPolishWrapped = true;
+      window.showAuthForm = wrappedShow;
+      try{ showAuthForm = wrappedShow; }catch(e){}
+    }
+    applyStrengthBars();
+  }
+  window.updatePasswordStrength = applyStrengthBars;
+  try{ updatePasswordStrength = applyStrengthBars; }catch(e){}
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
+  else bind();
+  setTimeout(bind, 0);
+  setTimeout(applyStrengthBars, 250);
+  setTimeout(applyStrengthBars, 800);
+})();
+</script>
+
 </body>
 </html>
 
