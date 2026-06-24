@@ -971,6 +971,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }
     addFieldTip("regName", "usernameTip");
     addFieldTip("regEmail", "emailTip");
+    addFieldTip("regPassword", "passwordTip");
     addFieldTip("regIndustry", "industryTip");
     addFieldTip("regInvite", "inviteTip");
     addEmailSuggestion();
@@ -1263,6 +1264,11 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }
     return true;
   }
+  function guideLoginRecovery(message){
+    var next = message || "账号或密码不正确。如果你是第一次使用，请先点击下方“注册体验”创建账号。";
+    setTip("passwordTip", next, "error");
+    toast(next, "error");
+  }
   function validateRegisterFinal(){
     if(!value("regName")) return focusField("regName", "请填写名字。"), false;
     if(!value("regEmail")) return focusField("regEmail", "请填写邮箱。"), false;
@@ -1278,8 +1284,9 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     return true;
   }
   function validateLoginFinal(){
-    if(!value("regName")) return focusField("regName", "请输入账号、邮箱或手机号。"), false;
-    if(!rawValue("regPassword")) return focusField("regPassword", "请输入密码。"), false;
+    setTip("passwordTip", "", "");
+    if(!value("regName")) return focusField("regName", "请输入账号、邮箱或手机号；如果还没有账号，请先点击下方“注册体验”。"), false;
+    if(!rawValue("regPassword")) return focusField("regPassword", "请输入密码；如果还没有账号，请先点击下方“注册体验”。"), setTip("passwordTip", "请输入密码；如果还没有账号，请先点击下方“注册体验”。", "error"), false;
     return true;
   }
   function startCountdown(btn, seconds, readyText){
@@ -1408,6 +1415,10 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       });
       applyBackendAuth(data, "登录成功。");
     }catch(e){
+      if(e && (e.code === "INVALID_CREDENTIALS" || e.status === 401)){
+        guideLoginRecovery("账号或密码不正确。如果你是第一次使用，请先点击下方“注册体验”创建账号。");
+        return;
+      }
       toast(cnError(e), "error");
     }finally{ done(); }
   };

@@ -61,4 +61,13 @@ assert.ok(
   "DOC-01 setupAuthDom must restore legalAgree.checked after rewriting the legal consent markup."
 );
 
+assert.ok(
+  html.includes("如果你是第一次使用，请先点击下方“注册体验”创建账号。"),
+  "DOC-01 login errors must guide first-time users to registration instead of only saying the password is wrong."
+);
+assert.ok(
+  html.includes("请输入密码；如果还没有账号，请先点击下方“注册体验”。"),
+  "DOC-01 missing-password validation must include a clear registration path for first-time users."
+);
+
 console.log("DOC-01 frontend contract checks passed.");
