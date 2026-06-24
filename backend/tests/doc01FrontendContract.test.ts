@@ -108,4 +108,33 @@ assert.ok(
   "DOC-01 missing-password validation must include a clear registration path for first-time users."
 );
 
+const loginUsernameTip =
+  "\u8bf7\u8f93\u5165\u5df2\u6ce8\u518c\u8d26\u53f7\u3001\u90ae\u7bb1\u6216\u624b\u673a\u53f7\u3002\u65b0\u7528\u6237\u8bf7\u70b9\u51fb\u4e0b\u65b9\u201c\u6ce8\u518c\u4f53\u9a8c\u201d\u3002";
+assert.ok(
+  html.includes(`var loginUsernameTip = "${loginUsernameTip}";`),
+  "DOC-01 login mode must define a dedicated account helper instead of reusing registration availability text."
+);
+
+const checkUsernameStart = html.indexOf("async function checkUsername()");
+const checkUsernameEnd = html.indexOf("async function checkEmailSuggestion()", checkUsernameStart);
+assert.ok(checkUsernameStart >= 0 && checkUsernameEnd > checkUsernameStart, "DOC-01 final auth script must define checkUsername.");
+const checkUsernameBlock = html.slice(checkUsernameStart, checkUsernameEnd);
+assert.ok(
+  checkUsernameBlock.includes('if(S.authVariant !== "register"){ setTip("usernameTip", loginUsernameTip, ""); return; }'),
+  "DOC-01 login mode must clear registration username availability checks and show login-specific account guidance."
+);
+assert.ok(
+  !checkUsernameBlock.includes('if(S.authVariant !== "register") return;'),
+  "DOC-01 checkUsername must not silently leave stale registration availability text in login mode."
+);
+
+const setAuthVariantStart = html.indexOf("function setAuthVariantFinal(variant)");
+const setAuthVariantEnd = html.indexOf("function setupAuthDomShallow()", setAuthVariantStart);
+assert.ok(setAuthVariantStart >= 0 && setAuthVariantEnd > setAuthVariantStart, "DOC-01 final auth script must define setAuthVariantFinal.");
+const setAuthVariantBlock = html.slice(setAuthVariantStart, setAuthVariantEnd);
+assert.ok(
+  setAuthVariantBlock.includes('setTip("usernameTip", variant === "login" ? loginUsernameTip : "", "");'),
+  "DOC-01 switching auth variants must reset usernameTip so login never inherits registration availability state."
+);
+
 console.log("DOC-01 frontend contract checks passed.");

@@ -1,0 +1,38 @@
+CiteOX 最新源码清单 - 2026-06-25
+
+用途：
+- 这是给 GitHub / Render / Cloudflare 使用的最新源码基准。
+- Render 后端服务应使用仓库根目录的 render.yaml，rootDir 为 backend。
+- Cloudflare Pages 前端上传包保留官网宣传页根 index.html，只更新系统入口 GEOFlow-Integrated-Final-White.html。
+
+本次修复：
+- 修复登录态残留注册态“账号名称可用”提示的问题。
+- 登录模式现在显示独立账号提示：请输入已注册账号、邮箱或手机号。新用户请点击下方“注册体验”。
+- checkUsername 在登录态不再静默保留旧提示，避免登录/注册状态串线。
+- doc01FrontendContract 增加回归检查，防止后续再次出现登录态显示注册可用性提示。
+
+前面已包含的关键修复：
+- 前端 API base 指向 https://citeox-geo.onrender.com。
+- 前端认证接口使用 /api/v1/auth/*，不再使用旧 /api/auth/*。
+- setupAuthDom 重新渲染时保留用户已勾选的协议、记住登录状态、记住我。
+- 用户从注册页切换到登录后，提交时不会再被 URL 的 action=register 拉回注册态。
+- 确认密码进度条在两次密码一致时同步主密码强度颜色和宽度，只在不一致时显示错误色。
+- 登录失败会提示首次使用用户先点击“注册体验”创建账号，而不是只说密码错误。
+
+本地验证命令：
+- npm.cmd run test:doc01
+- npm.cmd run build
+- $env:DATABASE_URL='postgresql://user:pass@localhost:5432/citeox_validation'; npm.cmd run prisma:validate
+- npm.cmd run test:source-hub
+
+验证结果：
+- DOC-01 auth public route checks passed.
+- DOC-01 auth HTTP contract checks passed.
+- DOC-01 frontend contract checks passed.
+- TypeScript build succeeded.
+- Prisma schema is valid.
+- Source Hub config policy regression tests passed.
+
+线上说明：
+- citeox.com 前端只有在 Cloudflare Pages 上传并重新部署本次前端包后才会变化。
+- Render 后端当前接口 https://citeox-geo.onrender.com/api/v1/auth/login 可达；如果旧账号是在旧后端或旧数据库注册的，需要在当前 citeox-geo 后端重新注册，或迁移旧账号数据。
