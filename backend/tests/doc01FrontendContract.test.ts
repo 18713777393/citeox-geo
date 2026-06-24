@@ -60,6 +60,44 @@ assert.ok(
   setupAuthDomBlock.includes('if($("legalAgree")) $("legalAgree").checked = legalWasChecked;'),
   "DOC-01 setupAuthDom must restore legalAgree.checked after rewriting the legal consent markup."
 );
+assert.ok(
+  setupAuthDomBlock.includes("rememberPasswordWasChecked"),
+  "DOC-01 setupAuthDom must preserve the first remember-login checkbox when the form is re-rendered."
+);
+assert.ok(
+  setupAuthDomBlock.includes("rememberMeWasChecked"),
+  "DOC-01 setupAuthDom must preserve the final remember-me checkbox when the form is re-rendered."
+);
+assert.ok(
+  setupAuthDomBlock.includes("setAuthVariantFinal(S.authVariant || currentAuthVariantFromUrl());"),
+  "DOC-01 setupAuthDom must keep the user-selected auth variant instead of forcing the variant from the URL during submit."
+);
+assert.ok(
+  !setupAuthDomBlock.includes("setAuthVariantFinal(currentAuthVariantFromUrl());"),
+  "DOC-01 setupAuthDom must not send a user who switched to login back to register only because the URL has action=register."
+);
+
+const updatePasswordStart = html.indexOf("function updatePasswordStrengthFinal()");
+const updatePasswordEnd = html.indexOf("window.updatePasswordStrength = updatePasswordStrengthFinal;", updatePasswordStart);
+assert.ok(updatePasswordStart >= 0 && updatePasswordEnd > updatePasswordStart, "DOC-01 final auth script must define updatePasswordStrengthFinal.");
+const updatePasswordBlock = html.slice(updatePasswordStart, updatePasswordEnd);
+assert.ok(
+  updatePasswordBlock.includes('cbar.style.width = confirm ? (confirm === pwd ? width + "%" : "45%") : "0%";'),
+  "DOC-01 confirm password bar must mirror the password strength width when both passwords match."
+);
+assert.ok(
+  updatePasswordBlock.includes('cbar.style.background = confirm === pwd ? color : "#c34242";'),
+  "DOC-01 confirm password bar must mirror the password strength color when matching and use error color only when mismatched."
+);
+
+const polishStart = html.lastIndexOf("function applyStrengthBars()");
+const polishEnd = html.indexOf("function bind()", polishStart);
+assert.ok(polishStart >= 0 && polishEnd > polishStart, "DOC-01 password polish script must define applyStrengthBars.");
+const polishBlock = html.slice(polishStart, polishEnd);
+assert.ok(
+  polishBlock.includes("confirm && confirm !== pwd"),
+  "DOC-01 password polish must explicitly distinguish matched and mismatched confirm-password states."
+);
 
 assert.ok(
   html.includes("如果你是第一次使用，请先点击下方“注册体验”创建账号。"),

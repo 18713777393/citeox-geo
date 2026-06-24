@@ -921,6 +921,11 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
 
   function setupAuthDom(){
     var legalWasChecked = !!($("legalAgree") && $("legalAgree").checked);
+    var rememberPasswordExists = !!$("rememberPassword");
+    var rememberPasswordWasChecked = rememberPasswordExists && $("rememberPassword").checked;
+    var rememberMeExists = !!$("rememberMeFinal");
+    var rememberMeWasChecked = rememberMeExists && $("rememberMeFinal").checked;
+    var rememberedAccount = !!(S && S.rememberedLogin && S.rememberedLogin.account);
     injectAuthStyle();
     text("loginTitle", authTitleLogin);
     text("loginHint", "已注册用户填写账号和密码即可进入系统。");
@@ -944,6 +949,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       legal.innerHTML = '<input id="legalAgree" type="checkbox"> 我已阅读并同意《用户协议》《隐私政策》《付费服务协议》《内容合规规则》《数据安全说明》《第三方平台合规条款》，同意系统保存必要注册信息用于账号开通、套餐权益、订单审计和服务通知。';
     }
     if($("legalAgree")) $("legalAgree").checked = legalWasChecked;
+    if($("rememberPassword")) $("rememberPassword").checked = rememberPasswordExists ? rememberPasswordWasChecked : rememberedAccount;
     if(!$("authHelpRow")){
       var row = document.createElement("div");
       row.id = "authHelpRow";
@@ -954,7 +960,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }
     var rememberFinal = $("rememberMeFinal");
     if(rememberFinal){
-      rememberFinal.checked = !!(S && S.rememberedLogin && S.rememberedLogin.account);
+      rememberFinal.checked = rememberMeExists ? rememberMeWasChecked : rememberedAccount;
       rememberFinal.onchange = saveRememberedAccount;
     }
     var forgotFinal = $("forgotPasswordFinal");
@@ -981,7 +987,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     addIndustryDatalist();
     bindAuthEvents();
     restoreDraft();
-    setAuthVariantFinal(currentAuthVariantFromUrl());
+    setAuthVariantFinal(S.authVariant || currentAuthVariantFromUrl());
   }
 
   function addFieldTip(inputId, tipId){
@@ -1154,7 +1160,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     if(tip) tip.textContent = score < 2 ? "密码强度：弱，至少 8 位并包含字母和数字。" : score < 3 ? "密码强度：中，建议加入特殊符号。" : "密码强度：强。";
     var cbar = $("confirmStrengthBar");
     var ctip = $("confirmStrengthText");
-    if(cbar){ cbar.style.width = confirm ? (confirm === pwd ? "100%" : "45%") : "0%"; cbar.style.background = confirm === pwd ? "#20aa8a" : "#d8a21c"; }
+    if(cbar){ cbar.style.width = confirm ? (confirm === pwd ? width + "%" : "45%") : "0%"; cbar.style.background = confirm === pwd ? color : "#c34242"; }
     if(ctip) ctip.textContent = !confirm ? "请再次输入密码。" : confirm === pwd ? "两次密码一致。" : "两次密码不一致。";
   }
   window.updatePasswordStrength = updatePasswordStrengthFinal;
@@ -1589,9 +1595,10 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }
     var cbar = $("confirmStrengthBar");
     if(cbar){
-      cbar.style.width = confirm ? state.width : "0%";
-      cbar.style.background = state.color;
-      cbar.dataset.level = confirm ? state.level : "empty";
+      var confirmMismatch = confirm && confirm !== pwd;
+      cbar.style.width = confirm ? (confirmMismatch ? "45%" : state.width) : "0%";
+      cbar.style.background = confirmMismatch ? "#c34242" : state.color;
+      cbar.dataset.level = confirm ? (confirmMismatch ? "mismatch" : state.level) : "empty";
     }
     applyModeText();
   }
