@@ -1,0 +1,17 @@
+﻿Citeox DOC-01 hotfix upload package
+Generated: 2026-06-24
+
+Upload these paths to the GitHub repository root and overwrite existing files:
+- frontend/GEOFlow-Integrated-Final-White.html
+- backend/package.json
+- backend/package-lock.json
+- backend/tests/doc01AuthPublicRoutes.test.ts
+- backend/tests/doc01AuthHttpContract.test.ts
+- backend/tests/doc01FrontendContract.test.ts
+
+Expected online checks after deploy:
+- citeox.com/register contains /api/v1/auth/check-username
+- citeox.com/register does not contain /api/auth/
+- citeox.com/register contains 手机号（必填）
+- citeox.com/register contains citeox_register_draft
+- citeox-api.onrender.com/api/v1/auth/check-username no longer returns 401
