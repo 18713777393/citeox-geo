@@ -12,6 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:validate": "prisma validate --schema prisma/schema.prisma",
     "prisma:seed": "tsx prisma/seed.ts",
+    "test:doc01": "tsx tests/doc01AuthPublicRoutes.test.ts && tsx tests/doc01AuthHttpContract.test.ts && tsx tests/doc01FrontendContract.test.ts",
     "test:source-hub": "tsx tests/sourceHubConfigPolicy.test.ts"
   },
   "prisma": {
