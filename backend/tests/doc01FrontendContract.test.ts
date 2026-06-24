@@ -10,6 +10,16 @@ assert.ok(
   "DOC-01 requires frontend auth calls to use /api/v1/auth/*, not legacy /api/auth/*."
 );
 
+assert.ok(
+  html.includes('api:{base:"https://citeox-geo.onrender.com"'),
+  "DOC-01 frontend must point to the live Render service domain citeox-geo.onrender.com."
+);
+
+assert.ok(
+  !html.includes("https://citeox-api.onrender.com"),
+  "DOC-01 frontend must not call the old Render service domain citeox-api.onrender.com."
+);
+
 for (const endpoint of [
   "/api/v1/auth/check-username",
   "/api/v1/auth/email-suggestion",

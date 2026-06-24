@@ -15,6 +15,7 @@ CiteOX 最新源码清单 - 2026-06-24
 
 前端关键修复：
 - frontend/GEOFlow-Integrated-Final-White.html 使用 /api/v1/auth/*。
+- frontend/GEOFlow-Integrated-Final-White.html 的 API base 指向 https://citeox-geo.onrender.com。
 - 注册页手机号显示为“手机号（必填）”。
 - 注册草稿 key 为 citeox_register_draft。
 - frontend/智引GEO-官网宣传页.html 的注册/登录链接使用无斜杠系统页路径。
