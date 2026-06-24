@@ -920,6 +920,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   }
 
   function setupAuthDom(){
+    var legalWasChecked = !!($("legalAgree") && $("legalAgree").checked);
     injectAuthStyle();
     text("loginTitle", authTitleLogin);
     text("loginHint", "已注册用户填写账号和密码即可进入系统。");
@@ -942,6 +943,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     if(legal){
       legal.innerHTML = '<input id="legalAgree" type="checkbox"> 我已阅读并同意《用户协议》《隐私政策》《付费服务协议》《内容合规规则》《数据安全说明》《第三方平台合规条款》，同意系统保存必要注册信息用于账号开通、套餐权益、订单审计和服务通知。';
     }
+    if($("legalAgree")) $("legalAgree").checked = legalWasChecked;
     if(!$("authHelpRow")){
       var row = document.createElement("div");
       row.id = "authHelpRow";

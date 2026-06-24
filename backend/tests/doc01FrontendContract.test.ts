@@ -46,4 +46,19 @@ assert.ok(!html.includes("手机号可选填"), "DOC-01 requires phone to be pre
 assert.ok(!html.includes("可填写联系方式"), "DOC-01 phone helper text must not imply phone is optional.");
 assert.ok(html.includes("手机号（必填）"), "DOC-01 requires visible phone label to say 手机号（必填）.");
 
+const setupAuthDomStart = html.indexOf("function setupAuthDom()");
+const quickLoginStart = html.indexOf("window.quickLogin = async function()", setupAuthDomStart);
+assert.ok(setupAuthDomStart >= 0, "DOC-01 final auth script must define setupAuthDom.");
+assert.ok(quickLoginStart > setupAuthDomStart, "DOC-01 final auth script must define quickLogin after setupAuthDom.");
+
+const setupAuthDomBlock = html.slice(setupAuthDomStart, quickLoginStart);
+assert.ok(
+  setupAuthDomBlock.includes("legalWasChecked"),
+  "DOC-01 login must preserve the already-checked legal consent when setupAuthDom re-renders the auth form."
+);
+assert.ok(
+  setupAuthDomBlock.includes('if($("legalAgree")) $("legalAgree").checked = legalWasChecked;'),
+  "DOC-01 setupAuthDom must restore legalAgree.checked after rewriting the legal consent markup."
+);
+
 console.log("DOC-01 frontend contract checks passed.");
