@@ -775,6 +775,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   var authTitleLogin = "登录";
   var authTitleRegister = "注册体验";
   var loginUsernameTip = "请输入已注册账号、邮箱或手机号。新用户请点击下方“注册体验”。";
+  var filePreviewLoginMessage = "当前是本地 file:// 预览，浏览器会拦截登录请求。请部署到 citeox.com 后测试登录；如需本地服务器测试，需先把本地地址加入 Render CORS_ORIGIN。";
 
   function text(id, value){ var el = $(id); if(el) el.textContent = value; }
   function placeholder(id, value){ var el = $(id); if(el) el.placeholder = value; }
@@ -1278,6 +1279,10 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     setTip("passwordTip", next, "error");
     toast(next, "error");
   }
+  function loginConnectionMessage(error){
+    if(error && error.code === "NETWORK_ERROR" && location.protocol === "file:") return filePreviewLoginMessage;
+    return cnError(error);
+  }
   function validateRegisterFinal(){
     if(!value("regName")) return focusField("regName", "请填写名字。"), false;
     if(!value("regEmail")) return focusField("regEmail", "请填写邮箱。"), false;
@@ -1428,7 +1433,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
         guideLoginRecovery("账号或密码不正确。如果你是第一次使用，请先点击下方“注册体验”创建账号。");
         return;
       }
-      toast(cnError(e), "error");
+      guideLoginRecovery(loginConnectionMessage(e));
     }finally{ done(); }
   };
   try{ quickLogin = window.quickLogin; }catch(e){}

@@ -137,4 +137,28 @@ assert.ok(
   "DOC-01 switching auth variants must reset usernameTip so login never inherits registration availability state."
 );
 
+const filePreviewLoginMessage =
+  "\u5f53\u524d\u662f\u672c\u5730 file:// \u9884\u89c8\uff0c\u6d4f\u89c8\u5668\u4f1a\u62e6\u622a\u767b\u5f55\u8bf7\u6c42\u3002\u8bf7\u90e8\u7f72\u5230 citeox.com \u540e\u6d4b\u8bd5\u767b\u5f55\uff1b\u5982\u9700\u672c\u5730\u670d\u52a1\u5668\u6d4b\u8bd5\uff0c\u9700\u5148\u628a\u672c\u5730\u5730\u5740\u52a0\u5165 Render CORS_ORIGIN\u3002";
+assert.ok(
+  html.includes(`var filePreviewLoginMessage = "${filePreviewLoginMessage}";`),
+  "DOC-01 login must explain file:// preview CORS failures instead of looking like the button did nothing."
+);
+assert.ok(
+  html.includes('function loginConnectionMessage(error){'),
+  "DOC-01 login must centralize network/CORS guidance for visible inline feedback."
+);
+assert.ok(
+  html.includes('if(error && error.code === "NETWORK_ERROR" && location.protocol === "file:") return filePreviewLoginMessage;'),
+  "DOC-01 login must detect local file preview network failures."
+);
+
+const finalQuickLoginStart = html.indexOf("window.quickLogin = async function()");
+const finalQuickLoginEnd = html.indexOf("try{ quickLogin = window.quickLogin; }catch(e){}", finalQuickLoginStart);
+assert.ok(finalQuickLoginStart >= 0 && finalQuickLoginEnd > finalQuickLoginStart, "DOC-01 final auth script must define quickLogin.");
+const finalQuickLoginBlock = html.slice(finalQuickLoginStart, finalQuickLoginEnd);
+assert.ok(
+  finalQuickLoginBlock.includes("guideLoginRecovery(loginConnectionMessage(e));"),
+  "DOC-01 non-credential login failures must be shown inline near the password field, not only as a transient toast."
+);
+
 console.log("DOC-01 frontend contract checks passed.");

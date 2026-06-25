@@ -10,6 +10,7 @@ CiteOX 最新源码清单 - 2026-06-25
 - 登录模式现在显示独立账号提示：请输入已注册账号、邮箱或手机号。新用户请点击下方“注册体验”。
 - checkUsername 在登录态不再静默保留旧提示，避免登录/注册状态串线。
 - doc01FrontendContract 增加回归检查，防止后续再次出现登录态显示注册可用性提示。
+- 修复本地 file:// 打开系统页时登录看起来“没反应”的反馈问题；现在会在密码下方明确提示本地 file 预览会被浏览器 CORS 拦截，应部署到 citeox.com 后测试。本地服务器测试需要先把本地地址加入 Render CORS_ORIGIN。
 
 前面已包含的关键修复：
 - 前端 API base 指向 https://citeox-geo.onrender.com。
@@ -36,3 +37,4 @@ CiteOX 最新源码清单 - 2026-06-25
 线上说明：
 - citeox.com 前端只有在 Cloudflare Pages 上传并重新部署本次前端包后才会变化。
 - Render 后端当前接口 https://citeox-geo.onrender.com/api/v1/auth/login 可达；如果旧账号是在旧后端或旧数据库注册的，需要在当前 citeox-geo 后端重新注册，或迁移旧账号数据。
+- 直接双击 HTML 以 file:// 方式预览时，浏览器会把请求来源设为 null，生产后端会拒绝该 CORS 预检；这不是数据库迁移问题。线上 citeox.com 来源预检已验证可返回 204。
