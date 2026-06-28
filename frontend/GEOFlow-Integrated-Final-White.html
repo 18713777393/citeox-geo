@@ -1836,6 +1836,133 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
 })();
 </script>
 
+<script id="citeox-auth-login-polish-final">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function qs(selector){ return document.querySelector(selector); }
+  function card(){ return qs(".loginCard"); }
+  function saveState(){
+    try{
+      if(window.save) window.save();
+      else if(window.S && window.key) localStorage.setItem(window.key, JSON.stringify(window.S));
+    }catch(e){}
+  }
+  function hideLoginPasswordStrengthHint(){
+    var c = card();
+    var isLogin = !!(c && c.classList.contains("login-mode"));
+    var tip = $("passwordStrengthText");
+    var bar = $("passwordStrengthBar");
+    var strength = bar && bar.closest(".strength");
+    if(isLogin){
+      if(tip){
+        tip.textContent = "";
+        tip.style.display = "none";
+        tip.setAttribute("aria-hidden", "true");
+        tip.setAttribute("data-login-polish-hidden", "1");
+        tip.onclick = null;
+      }
+      if(strength){
+        strength.style.display = "none";
+        strength.setAttribute("data-login-polish-hidden", "1");
+      }
+      return;
+    }
+    if(tip && tip.getAttribute("data-login-polish-hidden") === "1"){
+      tip.style.display = "";
+      tip.removeAttribute("aria-hidden");
+      tip.removeAttribute("data-login-polish-hidden");
+    }
+    if(strength && strength.getAttribute("data-login-polish-hidden") === "1"){
+      strength.style.display = "";
+      strength.removeAttribute("data-login-polish-hidden");
+    }
+  }
+  function returnHomeFromAuth(){
+    document.documentElement.classList.remove("auth-boot");
+    document.body.classList.remove("show-auth", "admin-entry", "logged-in");
+    if(window.S && S.session && !(S.api && S.api.token)) S.session.logged = false;
+    try{ if(/^https?:/.test(location.protocol)) history.replaceState(null, "", "/"); }catch(e){}
+    try{ window.scrollTo({ top:0, left:0, behavior:"auto" }); }catch(e){ window.scrollTo(0, 0); }
+  }
+  function ensureAuthBackHomeButton(){
+    if(!$("authBackHomeFinal")){
+      var anchor = $("commercialAuthSwitch") || $("registerBtn") || $("loginBtn");
+      var html = '<button id="authBackHomeFinal" class="btn soft auth-back-home-final" type="button">返回首页</button>';
+      if(anchor) anchor.insertAdjacentHTML("afterend", html);
+      else if(card()) card().insertAdjacentHTML("beforeend", html);
+    }
+    var btn = $("authBackHomeFinal");
+    if(btn){
+      btn.onclick = returnHomeFromAuth;
+      btn.style.width = "100%";
+      btn.style.padding = "13px";
+      btn.style.marginTop = "10px";
+      btn.setAttribute("aria-label", "返回首页");
+    }
+  }
+  async function logoutToLoginPage(){
+    try{
+      if(window.S && S.api && S.api.token){
+        if(typeof window.api === "function") await window.api("/api/v1/auth/logout", { method:"POST", body:JSON.stringify({}) });
+        else if(typeof window.apiRequest === "function") await window.apiRequest("/api/v1/auth/logout", { method:"POST", body:JSON.stringify({}) });
+      }
+    }catch(e){
+      if(window.S && S.api) S.api.error = e.message || "";
+    }
+    window.S = window.S || {};
+    S.api = S.api || {};
+    S.session = S.session || {};
+    S.api.token = "";
+    S.session.logged = false;
+    S.session.user = null;
+    document.documentElement.classList.add("auth-boot");
+    document.body.classList.remove("logged-in", "admin-entry");
+    document.body.classList.add("show-auth");
+    if(window.showLogin) showLogin("personal","login");
+    else if(window.setAuthVariant) setAuthVariant("login");
+    try{ if(/^https?:/.test(location.protocol)) history.replaceState(null, "", "/login"); }catch(e){}
+    saveState();
+    ensureAuthBackHomeButton();
+    setTimeout(hideLoginPasswordStrengthHint, 0);
+    if(window.toastMsg) window.toastMsg("已退出登录，请重新登录。");
+  }
+  function afterAuthModeChange(){
+    ensureAuthBackHomeButton();
+    hideLoginPasswordStrengthHint();
+  }
+  function wrapFunction(name){
+    var previous = window[name];
+    if(typeof previous !== "function" || previous.__loginPolishWrapped === true) return;
+    var wrapped = function(){
+      var result = previous.apply(this, arguments);
+      setTimeout(afterAuthModeChange, 0);
+      return result;
+    };
+    wrapped.__loginPolishWrapped = true;
+    window[name] = wrapped;
+    try{ if(name === "showLogin") showLogin = wrapped; }catch(e){}
+    try{ if(name === "setAuthVariant") setAuthVariant = wrapped; }catch(e){}
+    try{ if(name === "updatePasswordStrength") updatePasswordStrength = wrapped; }catch(e){}
+  }
+  window.returnHomeFromAuth = returnHomeFromAuth;
+  window.hideLoginPasswordStrengthHint = hideLoginPasswordStrengthHint;
+  window.logoutToLoginPage = logoutToLoginPage;
+  window.logout = logoutToLoginPage;
+  try{ logout = logoutToLoginPage; }catch(e){}
+  wrapFunction("showLogin");
+  wrapFunction("setAuthVariant");
+  wrapFunction("updatePasswordStrength");
+  var style = document.createElement("style");
+  style.id = "citeoxAuthLoginPolishStyle";
+  style.textContent = ".loginCard.login-mode #passwordStrengthText{display:none!important}.loginCard.login-mode .strength{display:none!important}.auth-back-home-final{display:block}";
+  document.head.appendChild(style);
+  function boot(){ ensureAuthBackHomeButton(); hideLoginPasswordStrengthHint(); }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+  setTimeout(boot, 250);
+})();
+</script>
+
 </body>
 </html>
 

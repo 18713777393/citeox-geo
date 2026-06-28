@@ -193,4 +193,37 @@ assert.ok(
   "DOC-01 non-credential login failures must be shown inline near the password field, not only as a transient toast."
 );
 
+assert.ok(
+  html.includes('id="citeox-auth-login-polish-final"'),
+  "DOC-01 must include the final login/logout polish script."
+);
+assert.ok(
+  html.includes('id="authBackHomeFinal"'),
+  "DOC-01 login page must include a visible return-home button."
+);
+assert.ok(
+  html.includes("返回首页"),
+  "DOC-01 login page must show 返回首页 so users can switch back to the promo page."
+);
+assert.ok(
+  html.includes("function returnHomeFromAuth()"),
+  "DOC-01 login page must provide a return-home handler."
+);
+assert.ok(
+  html.includes("function hideLoginPasswordStrengthHint()"),
+  "DOC-01 login mode must hide password strength guidance for existing accounts."
+);
+assert.ok(
+  html.includes(".loginCard.login-mode #passwordStrengthText{display:none!important}"),
+  "DOC-01 login mode must not show password strength guidance."
+);
+assert.ok(
+  html.includes("function logoutToLoginPage()"),
+  "DOC-01 logout must clear the session and return to the login page."
+);
+assert.ok(
+  html.includes('showLogin("personal","login")'),
+  "DOC-01 logout should show the login form after clearing the session."
+);
+
 console.log("DOC-01 frontend contract checks passed.");
