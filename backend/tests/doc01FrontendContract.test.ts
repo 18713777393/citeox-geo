@@ -225,5 +225,33 @@ assert.ok(
   html.includes('showLogin("personal","login")'),
   "DOC-01 logout should show the login form after clearing the session."
 );
+assert.ok(
+  html.includes("function hideForgotPasswordShortcut()"),
+  "DOC-01 login page must remove the forgot-password shortcut from the visible login form."
+);
+assert.ok(
+  html.includes("#forgotPasswordFinal{display:none!important}"),
+  "DOC-01 login page must hide the visible forgot-password button."
+);
+assert.ok(
+  html.includes("function removeClearAccountButton()"),
+  "DOC-01 auth form must remove the unused clear-account button."
+);
+assert.ok(
+  html.includes("#clearAccountBtn{display:none!important}"),
+  "DOC-01 auth form must not show the clear-account button."
+);
+assert.ok(
+  html.includes("function clearRegisterExperienceFields()"),
+  "DOC-01 register experience must clear stale login/register values before display."
+);
+assert.ok(
+  html.includes('if(variant === "register") clearRegisterExperienceFields();'),
+  "DOC-01 switching to register must start from a blank form."
+);
+assert.ok(
+  html.includes('location.href = "/"'),
+  "DOC-01 return-home must reload the real promo homepage instead of only showing the embedded fallback landing page."
+);
 
 console.log("DOC-01 frontend contract checks passed.");
