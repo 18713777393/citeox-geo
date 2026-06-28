@@ -1909,11 +1909,22 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       strength.removeAttribute("data-login-polish-hidden");
     }
   }
+  function navigateToPromoHome(){
+    document.documentElement.classList.add("return-home-pending");
+    try{
+      if(/^https?:/.test(location.protocol)){
+        location.replace("/");
+        return true;
+      }
+    }catch(e){}
+    document.documentElement.classList.remove("return-home-pending");
+    return false;
+  }
   function returnHomeFromAuth(){
+    if(navigateToPromoHome()) return;
     document.documentElement.classList.remove("auth-boot");
     document.body.classList.remove("show-auth", "admin-entry", "logged-in");
     if(window.S && S.session && !(S.api && S.api.token)) S.session.logged = false;
-    try{ if(/^https?:/.test(location.protocol)){ location.href = "/"; return; } }catch(e){}
     try{ window.scrollTo({ top:0, left:0, behavior:"auto" }); }catch(e){ window.scrollTo(0, 0); }
   }
   function ensureAuthBackHomeButton(){
@@ -1983,6 +1994,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     try{ if(name === "updatePasswordStrength") updatePasswordStrength = wrapped; }catch(e){}
   }
   window.returnHomeFromAuth = returnHomeFromAuth;
+  window.navigateToPromoHome = navigateToPromoHome;
   window.hideForgotPasswordShortcut = hideForgotPasswordShortcut;
   window.removeClearAccountButton = removeClearAccountButton;
   window.clearRegisterExperienceFields = clearRegisterExperienceFields;
@@ -1995,7 +2007,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   wrapFunction("updatePasswordStrength");
   var style = document.createElement("style");
   style.id = "citeoxAuthLoginPolishStyle";
-  style.textContent = ".loginCard.login-mode #passwordStrengthText{display:none!important}.loginCard.login-mode .strength{display:none!important}#forgotPasswordFinal{display:none!important}#clearAccountBtn{display:none!important}.auth-back-home-final{display:block}";
+  style.textContent = "html.return-home-pending body{visibility:hidden!important}.loginCard.login-mode #passwordStrengthText{display:none!important}.loginCard.login-mode .strength{display:none!important}#forgotPasswordFinal{display:none!important}#clearAccountBtn{display:none!important}.auth-back-home-final{display:block}";
   document.head.appendChild(style);
   function boot(){
     if(card() && card().classList.contains("register-mode")) clearRegisterExperienceFields();

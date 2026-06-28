@@ -250,8 +250,20 @@ assert.ok(
   "DOC-01 switching to register must start from a blank form."
 );
 assert.ok(
-  html.includes('location.href = "/"'),
-  "DOC-01 return-home must reload the real promo homepage instead of only showing the embedded fallback landing page."
+  html.includes("function navigateToPromoHome()"),
+  "DOC-01 return-home must use a dedicated no-flicker navigation helper."
+);
+assert.ok(
+  html.includes('classList.add("return-home-pending")'),
+  "DOC-01 return-home must hide the current single-page app before navigating."
+);
+assert.ok(
+  html.includes('location.replace("/")'),
+  "DOC-01 return-home must replace the current auth route with the real promo homepage."
+);
+assert.ok(
+  html.includes("html.return-home-pending body{visibility:hidden!important}"),
+  "DOC-01 return-home must prevent the embedded fallback landing page from flashing."
 );
 
 console.log("DOC-01 frontend contract checks passed.");
