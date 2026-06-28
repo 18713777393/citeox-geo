@@ -108,6 +108,21 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum CreditTransactionType {
+  CHARGE
+  CONSUME
+  REFUND
+  ADJUST
+}
+
+enum RechargeOrderStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  CANCELLED
+}
+
 enum PaymentCallbackStatus {
   RECEIVED
   VERIFIED_REJECTED
@@ -216,6 +231,10 @@ model User {
   createdContents        Content[]       @relation("ContentCreator")
   uploadedTechnicalFiles TechnicalFile[] @relation("TechnicalFileUploader")
   orders                 Order[]         @relation("OrderUser")
+  creditAccount          CreditAccount?
+  creditTransactions     CreditTransaction[]
+  rechargeOrders         RechargeOrder[]
+  subscriptionOrders     SubscriptionOrder[]
   aiUsageLogs            AiUsageLog[]    @relation("AiUsageUser")
   auditLogs              AuditLog[]      @relation("AuditActor")
   legalConsents          LegalConsent[]
@@ -765,6 +784,7 @@ model Plan {
 
   subscriptions   Subscription[]
   orders          Order[]
+  subscriptionOrders SubscriptionOrder[]
 
   @@map("plans")
 }
@@ -844,6 +864,100 @@ model PaymentCallback {
   @@index([orderId])
   @@index([provider, status])
   @@map("payment_callbacks")
+}
+
+model CreditAccount {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  balance       Decimal  @default(0) @db.Decimal(10, 2)
+  totalCharged  Decimal  @default(0) @map("total_charged") @db.Decimal(10, 2)
+  totalConsumed Decimal  @default(0) @map("total_consumed") @db.Decimal(10, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("credit_accounts")
+}
+
+model CreditTransaction {
+  id                 String                @id @default(uuid()) @db.Uuid
+  userId             String                @map("user_id") @db.Uuid
+  type               CreditTransactionType
+  amount             Decimal               @db.Decimal(10, 2)
+  balanceAfter       Decimal               @map("balance_after") @db.Decimal(10, 2)
+  relatedModel       String?               @map("related_model")
+  relatedOperation   String?               @map("related_operation")
+  relatedOperationId String?               @map("related_operation_id") @db.Uuid
+  description        String?
+  createdAt          DateTime              @default(now()) @map("created_at")
+
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("credit_transactions")
+}
+
+model RechargeOrder {
+  id            String              @id @default(uuid()) @db.Uuid
+  userId        String              @map("user_id") @db.Uuid
+  orderNo       String              @unique @map("order_no")
+  amount        Decimal             @db.Decimal(10, 2)
+  paymentMethod PaymentProvider     @default(MANUAL) @map("payment_method")
+  status        RechargeOrderStatus @default(PENDING)
+  paymentUrl    String?             @map("payment_url")
+  qrPayload     String?             @map("qr_payload")
+  paidAt        DateTime?           @map("paid_at")
+  expiresAt     DateTime            @map("expires_at")
+  metadata      Json?
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status, expiresAt])
+  @@map("recharge_orders")
+}
+
+model SubscriptionOrder {
+  id            String              @id @default(uuid()) @db.Uuid
+  userId        String              @map("user_id") @db.Uuid
+  planId        String              @map("plan_id") @db.Uuid
+  orderNo       String              @unique @map("order_no")
+  billingCycle  PlanInterval        @default(MONTH) @map("billing_cycle")
+  amount        Decimal             @db.Decimal(10, 2)
+  paymentMethod PaymentProvider     @default(MANUAL) @map("payment_method")
+  status        RechargeOrderStatus @default(PENDING)
+  paymentUrl    String?             @map("payment_url")
+  qrPayload     String?             @map("qr_payload")
+  paidAt        DateTime?           @map("paid_at")
+  expiresAt     DateTime            @map("expires_at")
+  metadata      Json?
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan          Plan                @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status, expiresAt])
+  @@map("subscription_orders")
+}
+
+model ModelPricing {
+  id          String   @id @default(uuid()) @db.Uuid
+  modelKey    String   @unique @map("model_key")
+  modelName   String   @map("model_name")
+  apiCost     Decimal  @map("api_cost") @db.Decimal(10, 4)
+  serviceRate Decimal  @default(1.25) @map("service_rate") @db.Decimal(10, 4)
+  userPrice   Decimal  @map("user_price") @db.Decimal(10, 2)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("model_pricing")
 }
 
 model ModelProvider {

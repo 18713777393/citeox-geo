@@ -125,17 +125,18 @@
       <div class="group"><div class="gtitle">我的工作台</div><button class="navbtn active" onclick="openSection('dashboard',this)">数据总览 <small>01</small></button><button class="navbtn" onclick="openSection('project',this)">品牌项目 <small>02</small></button></div>
       <div class="group"><div class="gtitle">增长分析中心</div><button class="navbtn" onclick="openSection('questions',this)">AI 问题库 <small>03</small></button><button class="navbtn" onclick="openSection('monitor',this)">AI 回答监控 <small>04</small></button><button class="navbtn" onclick="openSection('scoring',this)">曝光评分 <small>05</small></button><button class="navbtn" onclick="openSection('gap',this)">差距诊断 <small>06</small></button><button class="navbtn" onclick="openSection('strategy',this)">内容策略 <small>07</small></button></div>
       <div class="group"><div class="gtitle">内容落地中心</div><button class="navbtn" onclick="openSection('assets',this)">素材库导入 <small>08</small></button><button class="navbtn" onclick="openSection('factory',this)">内容工厂 <small>09</small></button><button class="navbtn" onclick="openSection('distribution',this)">分发中心 <small>10</small></button><button class="navbtn" onclick="openSection('technical',this)">技术文件 <small>11</small></button><button class="navbtn" onclick="openSection('recheck',this)">效果复盘 <small>12</small></button><button class="navbtn" onclick="openSection('automation',this)">自动优化 <small>13</small></button><button class="navbtn" onclick="openSection('report',this)">报告中心 <small>14</small></button></div>
+      <div class="group"><div class="gtitle">账户与套餐</div><button class="navbtn" onclick="openSection('account',this)">账户概览 <small>A0</small></button><button class="navbtn" onclick="openSection('accountPlan',this)">套餐管理 <small>A1</small></button><button class="navbtn" onclick="openSection('accountCredits',this)">API额度 <small>A2</small></button><button class="navbtn" onclick="openSection('accountUsage',this)">用量明细 <small>A3</small></button><button class="navbtn" onclick="openSection('accountProfile',this)">个人信息 <small>A4</small></button><button class="navbtn" onclick="openSection('accountSecurity',this)">安全设置 <small>A5</small></button><button class="navbtn" onclick="openSection('accountBilling',this)">账单记录 <small>A6</small></button></div>
       <div class="group"><div class="gtitle">运营管理后台</div><button class="navbtn" onclick="openSection('tenant',this)">用户与企业 <small>15</small></button><button class="navbtn" onclick="openSection('billing',this)">套餐与付费 <small>16</small></button><button class="navbtn" onclick="openSection('modelAdmin',this)">模型与额度 <small>17</small></button><button class="navbtn" onclick="openSection('security',this)">安全体检 <small>18</small></button><button class="navbtn" onclick="openSection('audit',this)">后台审计 <small>19</small></button><button class="navbtn" onclick="openSection('adminHome',this)">后台首页 <small>A1</small></button><button class="navbtn" onclick="openSection('adminUsers',this)">用户管理 <small>A2</small></button><button class="navbtn" onclick="openSection('adminFinance',this)">订单财务 <small>A3</small></button><button class="navbtn" onclick="openSection('adminModeration',this)">内容审核 <small>A4</small></button><button class="navbtn" onclick="openSection('adminRoles',this)">权限矩阵 <small>A5</small></button><button class="navbtn" onclick="openSection('adminConfig',this)">系统配置 <small>A6</small></button></div>
       <div class="sideCard"><b id="sideBrand">你的品牌</b><p id="sideProgress">模块可用 0 / 14</p><p>当前身份：<span id="sideRole">个人用户</span></p></div>
     </aside>
     <main class="main">
-      <header class="top"><div class="crumb" id="crumb">首页 / 智引GEO / 数据总览</div><div class="user"><button class="btn soft" onclick="refreshRealtime()">刷新数据</button><button class="btn soft" onclick="syncProjectsFromServer()">同步项目</button><button class="btn soft" onclick="syncQuestionsFromServer()">同步问题库</button><button class="btn primary" onclick="runAll()">一键跑完整闭环</button><button class="btn soft" onclick="openSection('billing')">开通套餐</button><button class="btn soft" onclick="logout()">退出</button><div class="avatar">智</div><span id="userName">个人用户</span></div></header>
+      <header class="top"><div class="crumb" id="crumb">首页 / 智引GEO / 数据总览</div><div class="user"><button class="btn soft" onclick="refreshRealtime()">刷新数据</button><button class="btn soft" onclick="syncProjectsFromServer()">同步项目</button><button class="btn soft" onclick="syncQuestionsFromServer()">同步问题库</button><button class="btn primary" onclick="runAll()">一键跑完整闭环</button><button class="btn soft" onclick="openSection('accountPlan')">开通套餐</button><button class="btn soft" onclick="logout()">退出</button><div class="avatar">智</div><span id="userName">个人用户</span></div></header>
       <section class="content">
         <section class="title"><div><h1 id="pageTitle">数据总览</h1><p id="pageDesc">查看品牌 AI 曝光、竞品变化、内容机会和优化进度。</p></div><button class="btn dark" onclick="runCurrent()">运行当前模块</button></section>
         <section class="hero"><h2>让你的品牌，被 AI 看见、理解、引用、推荐</h2><p>智引GEO帮助品牌持续提升在 AI 搜索和智能问答中的存在感：让 AI 更容易识别你的品牌、理解你的优势、引用你的内容，并在用户提问时优先推荐你。</p><div class="notice">亮点：一套看板就能知道品牌有没有被 AI 提到、竞品哪里更强、下一步该补什么内容、发布后有没有开始见效。</div><div class="flow" id="flow"></div></section>
         <section class="stats"><div class="stat"><div class="ico">引</div><div><small>品牌出现率</small><strong id="mMention">0%</strong></div></div><div class="stat"><div class="ico">竞</div><div><small>竞品压制率</small><strong id="mCompete">0%</strong></div></div><div class="stat"><div class="ico">策</div><div><small>策略数量</small><strong id="mStrategy">0</strong></div></div><div class="stat"><div class="ico">发</div><div><small>已发布资产</small><strong id="mPublished">0</strong></div></div></section>
         <div class="tabs" id="tabs"></div>
-        <section class="section active" id="dashboard"></section><section class="section" id="project"></section><section class="section" id="questions"></section><section class="section" id="monitor"></section><section class="section" id="scoring"></section><section class="section" id="gap"></section><section class="section" id="strategy"></section><section class="section" id="assets"></section><section class="section" id="factory"></section><section class="section" id="distribution"></section><section class="section" id="technical"></section><section class="section" id="recheck"></section><section class="section" id="automation"></section><section class="section" id="report"></section><section class="section" id="tenant"></section><section class="section" id="billing"></section><section class="section" id="modelAdmin"></section><section class="section" id="security"></section><section class="section" id="audit"></section><section class="section" id="adminHome"></section><section class="section" id="adminUsers"></section><section class="section" id="adminFinance"></section><section class="section" id="adminModeration"></section><section class="section" id="adminRoles"></section><section class="section" id="adminConfig"></section>
+        <section class="section active" id="dashboard"></section><section class="section" id="project"></section><section class="section" id="questions"></section><section class="section" id="monitor"></section><section class="section" id="scoring"></section><section class="section" id="gap"></section><section class="section" id="strategy"></section><section class="section" id="assets"></section><section class="section" id="factory"></section><section class="section" id="distribution"></section><section class="section" id="technical"></section><section class="section" id="recheck"></section><section class="section" id="automation"></section><section class="section" id="report"></section><section class="section" id="tenant"></section><section class="section" id="billing"></section><section class="section" id="account"></section><section class="section" id="accountPlan"></section><section class="section" id="accountCredits"></section><section class="section" id="accountUsage"></section><section class="section" id="accountProfile"></section><section class="section" id="accountSecurity"></section><section class="section" id="accountBilling"></section><section class="section" id="modelAdmin"></section><section class="section" id="security"></section><section class="section" id="audit"></section><section class="section" id="adminHome"></section><section class="section" id="adminUsers"></section><section class="section" id="adminFinance"></section><section class="section" id="adminModeration"></section><section class="section" id="adminRoles"></section><section class="section" id="adminConfig"></section>
       </section>
     </main>
   </div>
@@ -145,9 +146,9 @@
 window.__errors=[];window.addEventListener("error",e=>window.__errors.push((e.message||"")+" @ "+(e.lineno||"")+":"+(e.colno||"")));
 const key="zhiyin_luopan_geo_system_v3";
 const storage=(()=>{try{const s=globalThis.localStorage;if(!s)return {getItem:()=>"{}",setItem:()=>{}};s.getItem(key);return s}catch(e){return {getItem:()=>"{}",setItem:()=>{}}}})();
-const baseState={loginMode:"personal",session:{logged:false,role:"个人用户"},api:{base:"https://citeox-geo.onrender.com",token:"",status:"未连接",lastSync:"",error:""},dashboardOverview:null,users:[],brand:"你的品牌",site:"https://example.com",product:"GEO 自动优化工具",scenarios:"购买决策、竞品对比、教程搜索、避坑问题、案例查询",industry:"AI 搜索优化",audience:"创业者、营销负责人、GEO 团队、内容运营团队",competitors:["竞品A","竞品B","竞品C"],keywords:["GEO 系统","AI 搜索优化","品牌 AI 曝光"],valueProps:"可被引用的产品优势、适用场景、案例结果、服务能力",promotionGoal:"诊断品牌在 AI 平台是否被提及、引用和推荐，并找出需要补充的内容缺口",targetAction:"引用官网说明、推荐案例页、进入对比页或咨询入口",preferredPlatforms:["deepseek"],projectHistory:[],timeRange:"d7",done:{},questions:[],questionImports:[],questionExports:[],questionFilter:"全部",answers:[],scores:{},gaps:[],strategies:[],assets:{files:[],knowledge:"",titles:"",keywords:"",briefs:""},content:[],distribution:[],technical:{},rechecks:[],automation:[],reports:[],exports:[],tenants:[{name:"自用品牌项目",type:"个人",plan:"专业版",users:1,status:"正常",quota:"8,000 次/月"},{name:"示例科技有限公司",type:"企业",plan:"企业套餐",users:12,status:"试用中",quota:"50,000 次/月"}],orders:[{no:"D20260603001",tenant:"自用品牌项目",plan:"专业版",amount:"699 元/月",channel:"微信支付",status:"已支付"}],logs:["系统初始化完成"],payDraft:"专业版"};
+const baseState={loginMode:"personal",session:{logged:false,role:"个人用户"},api:{base:"https://citeox-geo.onrender.com",token:"",status:"未连接",lastSync:"",error:""},dashboardOverview:null,users:[],brand:"你的品牌",site:"https://example.com",product:"GEO 自动优化工具",scenarios:"购买决策、竞品对比、教程搜索、避坑问题、案例查询",industry:"AI 搜索优化",audience:"创业者、营销负责人、GEO 团队、内容运营团队",competitors:["竞品A","竞品B","竞品C"],keywords:["GEO 系统","AI 搜索优化","品牌 AI 曝光"],valueProps:"可被引用的产品优势、适用场景、案例结果、服务能力",promotionGoal:"诊断品牌在 AI 平台是否被提及、引用和推荐，并找出需要补充的内容缺口",targetAction:"引用官网说明、推荐案例页、进入对比页或咨询入口",preferredPlatforms:["deepseek"],projectHistory:[],timeRange:"d7",done:{},questions:[],questionImports:[],questionExports:[],questionFilter:"全部",answers:[],scores:{},gaps:[],strategies:[],assets:{files:[],knowledge:"",titles:"",keywords:"",briefs:""},content:[],distribution:[],technical:{},rechecks:[],automation:[],reports:[],exports:[],tenants:[{name:"自用品牌项目",type:"个人",plan:"专业版",users:1,status:"正常",quota:"8,000 次/月"},{name:"示例科技有限公司",type:"企业",plan:"企业版",users:12,status:"试用中",quota:"50,000 次/月"}],orders:[{no:"D20260603001",tenant:"自用品牌项目",plan:"专业版",amount:"899 元/月",channel:"微信支付",status:"已支付"}],logs:["系统初始化完成"],payDraft:"专业版"};
 const S=Object.assign(baseState,JSON.parse(storage.getItem(key)||"{}"));
-S.plans=[{name:"免费试用版",price:"0 元",tag:"先体验效果",features:["1 个品牌项目","仅开放 1 个 AI 模型监控：DeepSeek","每日 10 个 AI 问题监控","每月 3 份报告预览","基础模型调度 2 万 Token","邀请好友可解锁额外体验额度"],limits:"适合先验证效果",brandProjects:1,aiQuestions:10,contentTasks:3,reports:3,modelTokens:20000,modelCalls:80,sourceConnectors:1,modelPlatforms:1,extraTokenPrice:"不支持加购"},{name:"入门版",price:"199 元/月",tag:"个人起步",features:["1 个品牌项目","开放 2 个 AI 模型：DeepSeek、豆包","每日基础监控","每月 20 篇内容任务","每月 20 万 Token 调度额度","基础报告下载"],limits:"适合个人创作者和小团队",brandProjects:1,aiQuestions:120,contentTasks:20,reports:30,modelTokens:200000,modelCalls:800,sourceConnectors:2,modelPlatforms:2,extraTokenPrice:"超额 10 元 / 10 万 Token"},{name:"专业版",price:"699 元/月",tag:"推荐套餐",features:["5 个品牌项目","开放 4 个 AI 模型：DeepSeek、豆包、通义千问、智谱清言","多平台 AI 监控和竞品对比","每月 120 篇内容任务","每月 100 万 Token 调度额度","自动优化任务","完整 GEO 报告"],limits:"适合增长团队",brandProjects:5,aiQuestions:800,contentTasks:120,reports:999,modelTokens:1000000,modelCalls:5000,sourceConnectors:4,modelPlatforms:4,extraTokenPrice:"超额 8 元 / 10 万 Token"},{name:"企业套餐",price:"1999 元/月",tag:"企业优选",features:["20 个品牌项目","开放 6 个 AI 平台：DeepSeek、豆包、通义千问、智谱清言、文心一言、腾讯元宝","企业用户和团队权限","每月 500 篇内容任务","每月 500 万 Token 调度额度","全量采集源配置","多站点分发","审计日志和专属接口配置"],limits:"适合企业和服务商",brandProjects:20,aiQuestions:2000,contentTasks:500,reports:999,modelTokens:5000000,modelCalls:30000,sourceConnectors:6,modelPlatforms:6,extraTokenPrice:"超额可按企业合同加购"}];
+S.plans=[{name:"免费版",price:"¥0/月",tag:"先体验效果",features:["1 个品牌项目","开放 1 个 AI 模型","每日 1 次数据刷新","AI 问题库基础体验","API 调用费用自行充值"],limits:"适合先验证效果",brandProjects:1,aiQuestions:20,contentTasks:0,reports:0,modelTokens:0,modelCalls:1,sourceConnectors:1,modelPlatforms:1,extraTokenPrice:"AI 调用费用由余额按次扣除"},{name:"个人版",price:"¥499/月",yearPrice:"¥4,999/年",tag:"个人起步",features:["2 个品牌项目","自选 2 个 AI 模型","每日 2 次数据刷新","回答监控、内容策略、素材和内容工厂基础额度","API 调用费用自行充值"],limits:"适合个人品牌和实体商家",brandProjects:2,aiQuestions:120,contentTasks:10,reports:0,modelTokens:0,modelCalls:2,sourceConnectors:2,modelPlatforms:2,extraTokenPrice:"AI 调用费用由余额按次扣除"},{name:"专业版",price:"¥899/月",yearPrice:"¥8,999/年",tag:"推荐",features:["5 个品牌项目","开放豆包、腾讯元宝、DeepSeek、通义千问","每日 4 次数据刷新","曝光评分、差距诊断、分发、复盘、报告和一键自动化","API 调用费用自行充值"],limits:"主推，适合增长团队",brandProjects:5,aiQuestions:800,contentTasks:50,reports:999,modelTokens:0,modelCalls:4,sourceConnectors:4,modelPlatforms:4,extraTokenPrice:"AI 调用费用由余额按次扣除"},{name:"企业版",price:"¥3,999/月",yearPrice:"¥39,999/年",tag:"企业优选",features:["不限品牌项目","开放全部 10+ AI 模型","实时和手动不限刷新","企业权限、技术文件、全自动优化和高级报告","专属经理 2 小时内响应"],limits:"适合企业和服务商",brandProjects:999,aiQuestions:999999,contentTasks:999999,reports:999999,modelTokens:0,modelCalls:999999,sourceConnectors:10,modelPlatforms:10,extraTokenPrice:"AI 调用费用由余额按次扣除，可按企业合同结算"}];
 S.entitlements ||= {plan:"免费试用版",status:"试用中",brandProjects:1,aiQuestions:10,contentTasks:3,reports:3,inviteBonus:30,unlocked:["数据总览","品牌项目","AI 问题库","报告预览"]};
 const entitlementPlan=S.plans.find(p=>p.name===S.entitlements.plan)||S.plans[0];S.entitlements={modelTokens:entitlementPlan.modelTokens,modelCalls:entitlementPlan.modelCalls,sourceConnectors:entitlementPlan.sourceConnectors,extraTokenPrice:entitlementPlan.extraTokenPrice,...S.entitlements};
 S.referrals ||= [{code:"ZYL-2026-88",invited:2,unlocked:"已解锁 60 次 AI 监控额度",reward:"再邀请 1 人解锁 7 天专业版"}];
@@ -2019,6 +2020,654 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
   setTimeout(boot, 250);
+})();
+</script>
+
+<script id="citeox-doc03-account-plans-final">
+(function(){
+  var doc03Sections = ["account","accountPlan","accountCredits","accountUsage","accountProfile","accountSecurity","accountBilling"];
+  var doc03RouteMap = {
+    account: "/account",
+    accountPlan: "/account/plan",
+    accountCredits: "/account/credits",
+    accountUsage: "/account/usage",
+    accountProfile: "/account/profile",
+    accountSecurity: "/account/security",
+    accountBilling: "/account/billing"
+  };
+  var doc03RechargePoller = null;
+
+  function $(id){ return document.getElementById(id); }
+  function money(v){
+    var n = Number(String(v == null ? 0 : v).replace(/[^\d.-]/g,""));
+    return "¥" + (Number.isFinite(n) ? n : 0).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function moneyShort(v){
+    var n = Number(String(v == null ? 0 : v).replace(/[^\d.-]/g,""));
+    if(!Number.isFinite(n)) n = 0;
+    return "¥" + n.toLocaleString("zh-CN", { maximumFractionDigits: 0 });
+  }
+  function esc(v){
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function(ch){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch];
+    });
+  }
+  function pct(used, limit){
+    if(limit === null || limit === undefined || Number(limit) <= 0) return 100;
+    return Math.max(0, Math.min(100, Math.round(Number(used || 0) / Number(limit) * 100)));
+  }
+  function addOnce(list, id){
+    try{ if(Array.isArray(list) && !list.includes(id)) list.push(id); }catch(e){}
+  }
+  function tableSafe(headers, rows){
+    if(typeof table === "function") return table(headers, rows);
+    return "<table class='table'><thead><tr>"+headers.map(function(h){return "<th>"+esc(h)+"</th>";}).join("")+"</tr></thead><tbody>"+rows.map(function(row){return "<tr>"+row.map(function(cell){return "<td>"+cell+"</td>";}).join("")+"</tr>";}).join("")+"</tbody></table>";
+  }
+  function toastDoc03(message){
+    if(window.toastMsg) toastMsg(message);
+    else alert(message);
+  }
+  function saveDoc03(){
+    try{ if(window.save) save(); else if(window.S && window.key) localStorage.setItem(window.key, JSON.stringify(S)); }catch(e){}
+  }
+  function ensureDoc03State(){
+    window.S = window.S || {};
+    S.doc03Account = S.doc03Account || {};
+    S.doc03Account.billingCycle = S.doc03Account.billingCycle || "monthly";
+    S.doc03Account.paymentMethod = S.doc03Account.paymentMethod || "alipay";
+    S.doc03Account.profile = Object.assign({
+      displayName: (S.session && S.session.user && (S.session.user.displayName || S.session.user.name)) || "体验用户",
+      email: (S.session && S.session.user && S.session.user.email) || "登录后同步邮箱",
+      phone: (S.session && S.session.user && S.session.user.phone) || "登录后同步手机号",
+      industry: S.industry || "AI 搜索优化",
+      status: "active",
+      createdAt: new Date().toISOString()
+    }, S.doc03Account.profile || {});
+    S.doc03Account.plan = Object.assign({
+      plan: (S.entitlements && S.entitlements.plan) || "免费版",
+      planCode: (S.entitlements && S.entitlements.planCode) || "free",
+      statusText: "试用中",
+      subscription: { currentPeriodEnd: null }
+    }, S.doc03Account.plan || {});
+    S.doc03Account.usage = Object.assign({
+      brandProjects: Math.min((S.projectHistory || []).length || 1, 1),
+      brandProjectsLimit: (S.entitlements && S.entitlements.brandProjects) || 1,
+      dailyRefresh: 1,
+      dailyRefreshLimit: (S.entitlements && S.entitlements.modelCalls) || 1,
+      materials: (S.assets || []).length || 0,
+      materialsLimit: (S.entitlements && S.entitlements.sourceConnectors) || 1,
+      contentGeneration: (S.content || []).length || 0,
+      contentGenerationLimit: (S.entitlements && S.entitlements.contentTasks) || 0
+    }, S.doc03Account.usage || {});
+    S.doc03Account.credits = Object.assign({
+      balance: { amount: Number(S.apiBalance || 0), formatted: money(Number(S.apiBalance || 0)) },
+      estimatedCalls: 0,
+      lowBalance: Number(S.apiBalance || 0) > 0 && Number(S.apiBalance || 0) < 10,
+      zeroBalance: Number(S.apiBalance || 0) <= 0,
+      modelPricing: defaultDoc03ModelPricing()
+    }, S.doc03Account.credits || {});
+    if(!Array.isArray(S.doc03Account.transactions)){
+      S.doc03Account.transactions = [
+        { id:"local-1", type:"charge", amount:100, amountFormatted:"¥100.00", balanceAfterFormatted:"¥100.00", description:"API额度充值示例", createdAt:new Date().toISOString() },
+        { id:"local-2", type:"consume", amount:-1.2, amountFormatted:"¥1.20", balanceAfterFormatted:"¥98.80", relatedModel:"deepseek", description:"AI回答监控消耗", createdAt:new Date(Date.now()-86400000).toISOString() }
+      ];
+    }
+    if(!Array.isArray(S.doc03Account.trend)){
+      S.doc03Account.trend = Array.from({length:14}, function(_, i){
+        var d = new Date(Date.now() - (13 - i) * 86400000);
+        return { date: String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"), amount: Math.round((i % 5 + 1) * 1.7), amountFormatted: money((i % 5 + 1) * 1.7) };
+      });
+    }
+    return S.doc03Account;
+  }
+  function defaultDoc03ModelPricing(){
+    return [
+      ["doubao","豆包",0.15],
+      ["deepseek","DeepSeek",0.50],
+      ["wenxin","文心一言",0.80],
+      ["tongyi","通义千问",0.30],
+      ["yuanbao","腾讯元宝",0.60],
+      ["zhipu","智谱清言",0.40],
+      ["kimi","Kimi",0.50],
+      ["metaso","秘塔AI搜索",0.25],
+      ["ai360","360智脑",0.20],
+      ["xinghuo","讯飞星火",0.35]
+    ].map(function(x){ return { modelKey:x[0], modelName:x[1], unitPrice:x[2], unitPriceFormatted:money(x[2]), isActive:true }; });
+  }
+  function canonicalDoc03Plans(){
+    var base = [
+      { code:"free", name:"免费版", priceMonth:"¥0/月", priceYear:"¥0/年", tag:"先体验", desc:"适合先验证品牌是否能被 AI 看见。", brandProjects:1, modelCalls:1, dailyRefresh:1, materials:0, contentTasks:0, features:["1 个品牌项目","开放 1 个 AI 模型","基础问题库体验","API 调用额度按余额扣费"] },
+      { code:"personal", name:"个人版", priceMonth:"¥499/月", priceYear:"¥4,999/年", tag:"个人起步", desc:"适合个人品牌、实体商家和轻量运营。", brandProjects:2, modelCalls:2, dailyRefresh:2, materials:50, contentTasks:10, features:["2 个品牌项目","自选 2 个 AI 模型","回答监控和内容策略","素材导入与内容工厂基础额度"] },
+      { code:"pro", name:"专业版", priceMonth:"¥899/月", priceYear:"¥8,999/年", tag:"推荐", recommended:true, desc:"主推专业版，适合持续做 AI 搜索曝光的团队。", brandProjects:5, modelCalls:4, dailyRefresh:4, materials:200, contentTasks:50, features:["5 个品牌项目","开放豆包、腾讯元宝、DeepSeek、通义千问","曝光评分、差距诊断和自动优化","报告中心和多平台分发"] },
+      { code:"enterprise", name:"企业版", priceMonth:"¥3,999/月", priceYear:"¥39,999/年", tag:"企业优选", desc:"适合多品牌、服务商和高频自动化场景。", brandProjects:null, modelCalls:null, dailyRefresh:null, materials:null, contentTasks:null, features:["不限品牌项目","开放全部 10+ AI 模型","企业权限和团队管理","专属经理 2 小时内响应"] }
+    ];
+    var remote = ensureDoc03State().plans;
+    if(!Array.isArray(remote) || !remote.length) return base;
+    return base.map(function(plan){
+      var matched = remote.find(function(p){ return String(p.code || "").indexOf(plan.code) === 0 || String(p.displayName || p.name || "").indexOf(plan.name.replace("版","")) >= 0; });
+      return Object.assign({}, plan, matched ? {
+        remoteCode: matched.code,
+        desc: matched.description || plan.desc,
+        recommended: matched.recommended || plan.recommended,
+        brandProjects: matched.brandLimit == null ? plan.brandProjects : matched.brandLimit,
+        modelCalls: matched.modelLimit == null ? plan.modelCalls : matched.modelLimit,
+        dailyRefresh: matched.dailyRefreshLimit == null ? plan.dailyRefresh : matched.dailyRefreshLimit,
+        materials: matched.materialLimit == null ? plan.materials : matched.materialLimit,
+        contentTasks: matched.contentTasks == null ? plan.contentTasks : matched.contentTasks
+      } : {});
+    });
+  }
+  function doc03Limit(v, unit){
+    return v === null || v === undefined ? "不限" : String(v).toLocaleString("zh-CN") + (unit || "");
+  }
+  async function refreshDoc03AccountData(silent){
+    var state = ensureDoc03State();
+    if(state.loading) return;
+    state.loading = true;
+    state.error = "";
+    try{
+      var results = await Promise.all([
+        apiRequest("/api/v1/account/profile").catch(function(e){ return { __error:e }; }),
+        apiRequest("/api/v1/account/plan").catch(function(e){ return { __error:e }; }),
+        apiRequest("/api/v1/account/usage").catch(function(e){ return { __error:e }; }),
+        apiRequest("/api/v1/account/credits").catch(function(e){ return { __error:e }; }),
+        apiRequest("/api/v1/account/credits/transactions?page=1&pageSize=20").catch(function(e){ return { __error:e }; }),
+        apiRequest("/api/v1/account/credits/consumption-trend?days=30").catch(function(e){ return { __error:e }; }),
+        apiRequest("/api/v1/plans").catch(function(e){ return { __error:e }; })
+      ]);
+      var profile = results[0] && results[0].data && results[0].data.profile;
+      var plan = results[1] && results[1].data && results[1].data.plan;
+      var usage = results[2] && results[2].data && results[2].data.usage;
+      var credits = results[3] && results[3].data && results[3].data.credits;
+      var tx = results[4] && results[4].data && results[4].data.items;
+      var trend = results[5] && results[5].data && results[5].data.trend;
+      var plans = results[6] && results[6].data && results[6].data.plans;
+      if(profile) state.profile = Object.assign({}, state.profile, profile);
+      if(plan) state.plan = Object.assign({}, state.plan, plan);
+      if(usage) state.usage = Object.assign({}, state.usage, usage);
+      if(credits) state.credits = Object.assign({}, state.credits, credits);
+      if(Array.isArray(tx)) state.transactions = tx;
+      if(Array.isArray(trend)) state.trend = trend;
+      if(Array.isArray(plans)) state.plans = plans;
+      state.status = "已同步";
+      state.lastSync = new Date().toLocaleString();
+    }catch(e){
+      state.status = "离线占位";
+      state.error = e && e.message ? e.message : "账户数据暂未同步";
+      if(!silent) toastDoc03("账户数据同步失败，已保留本地体验数据。");
+    }finally{
+      state.loading = false;
+      saveDoc03();
+      if(doc03Sections.includes(String(window.current || current || ""))) renderDoc03AccountPages();
+    }
+  }
+  function ensureDoc03Style(){
+    if($("doc03AccountStyle")) return;
+    var style = document.createElement("style");
+    style.id = "doc03AccountStyle";
+    style.textContent = [
+      ".doc03-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-bottom:16px}",
+      ".doc03-metric{background:#fff;border:1px solid #e6ebf2;border-radius:8px;padding:18px}",
+      ".doc03-metric small{color:#667085}.doc03-metric strong{display:block;font-size:30px;margin-top:6px;color:#172033}",
+      ".doc03-plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.doc03-plan{position:relative;background:#fff;border:1px solid #e6ebf2;border-radius:8px;padding:18px;min-height:360px}.doc03-plan.recommended{border-color:#5969f3;box-shadow:0 16px 40px rgba(89,105,243,.16)}",
+      ".pulse-badge{display:inline-flex;align-items:center;border-radius:999px;background:#eef2ff;color:#4f5eea;padding:5px 9px;font-size:12px;font-weight:900;animation:doc03Pulse 1.8s ease-in-out infinite}",
+      "@keyframes doc03Pulse{0%,100%{box-shadow:0 0 0 0 rgba(89,105,243,.22)}50%{box-shadow:0 0 0 8px rgba(89,105,243,0)}}",
+      ".doc03-cycle{display:inline-flex;border:1px solid #dfe7f2;border-radius:8px;overflow:hidden;background:#fff}.doc03-cycle button{border:0;background:#fff;padding:9px 12px;font-weight:900}.doc03-cycle button.active{background:#eef2ff;color:#4f5eea}",
+      ".doc03-warning{border-left-color:#d8a21c;background:#fff7e6;color:#805400}.doc03-danger{border-left-color:#c34242;background:#fff0f0;color:#9d1f1f}",
+      ".doc03-modal{position:fixed;inset:0;background:rgba(15,23,42,.34);backdrop-filter:blur(6px);z-index:60;display:flex;align-items:center;justify-content:center;padding:18px}.doc03-modal-card{width:min(560px,100%);max-height:92vh;overflow:auto;background:#fff;border:1px solid #e5ebf3;border-radius:10px;box-shadow:0 24px 80px rgba(15,23,42,.22);padding:20px}",
+      ".doc03-amounts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.doc03-amounts button{min-height:44px}",
+      ".doc03-pay-row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.doc03-pay-row label{border:1px solid #dfe7f2;border-radius:8px;padding:10px 12px;background:#fff;font-weight:900}",
+      ".doc03-qr{border:1px dashed #bcc8d8;border-radius:8px;min-height:132px;display:grid;place-items:center;background:#fbfcff;color:#40506a;text-align:center;padding:12px;word-break:break-all}",
+      ".trend-bars{display:grid;grid-template-columns:repeat(14,1fr);gap:8px;align-items:end;height:150px}.trend-bars i{display:block;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#5969f3,#20aa8a);min-height:8px}.trend-bars span{display:block;font-size:11px;color:#7a8699;margin-top:5px;text-align:center}",
+      ".count-up{color:#15866d;transition:color .25s ease,transform .25s ease}.count-up.bump{transform:scale(1.04)}",
+      "@media(max-width:1100px){.doc03-hero,.doc03-plan-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.doc03-hero,.doc03-plan-grid,.doc03-amounts{grid-template-columns:1fr}.doc03-plan{min-height:auto}.trend-bars{grid-template-columns:repeat(7,1fr);height:auto}}"
+    ].join("");
+    document.head.appendChild(style);
+  }
+  function syncDoc03Metadata(){
+    ensureDoc03Style();
+    try{
+      doc03Sections.forEach(function(id){
+        addOnce(frontSections, id);
+        addOnce(userCoreSections, id);
+        addOnce(paidPersonalSections, id);
+        addOnce(enterpriseSections, id);
+      });
+    }catch(e){}
+    try{
+      Object.assign(pages, {
+        account:["账户概览","查看当前套餐、API调用额度、用量和账户状态。"],
+        accountPlan:["套餐管理","选择免费版、个人版、专业版或企业版；专业版为主推套餐。"],
+        accountCredits:["API调用额度","充值API额度、查看模型单价、消费趋势和交易明细。"],
+        accountUsage:["用量明细","查看品牌项目、刷新次数、素材和内容生成额度。"],
+        accountProfile:["个人信息","维护账号展示名、行业和联系信息。"],
+        accountSecurity:["安全设置","修改密码并查看账号安全状态。"],
+        accountBilling:["账单记录","查看套餐订单、充值订单、发票和付款状态。"]
+      });
+      Object.assign(sub, {
+        account:["账户概览","当前套餐","额度提醒","快捷操作"],
+        accountPlan:["套餐对比","月付/年付","升级确认","权益说明"],
+        accountCredits:["余额","充值API额度","模型单价","交易流水"],
+        accountUsage:["本月用量","额度进度","消耗趋势","限制说明"],
+        accountProfile:["基础信息","联系方式","行业资料","保存记录"],
+        accountSecurity:["修改密码","登录保护","风险提示","安全日志"],
+        accountBilling:["充值订单","套餐订单","发票管理","支付说明"]
+      });
+    }catch(e){}
+    try{
+      var oldAllowed = allowedSections;
+      allowedSections = function(){
+        var set = oldAllowed ? oldAllowed() : new Set();
+        doc03Sections.forEach(function(id){ set.add(id); });
+        return set;
+      };
+      window.allowedSections = allowedSections;
+    }catch(e){}
+    try{
+      var oldVisible = visibleSections;
+      visibleSections = function(){
+        var set = oldVisible ? oldVisible() : new Set();
+        doc03Sections.forEach(function(id){ set.add(id); });
+        return set;
+      };
+      window.visibleSections = visibleSections;
+    }catch(e){}
+    try{
+      var oldLocked = isLockedSection;
+      isLockedSection = function(id){
+        if(doc03Sections.includes(id)) return false;
+        return oldLocked ? oldLocked(id) : false;
+      };
+      window.isLockedSection = isLockedSection;
+    }catch(e){}
+  }
+  function buildAccountOverview(){
+    var state = ensureDoc03State();
+    var el = $("account");
+    if(!el) return;
+    var credits = state.credits || {};
+    var balance = credits.balance || { amount:0, formatted:"¥0.00" };
+    var plan = state.plan || {};
+    var usage = state.usage || {};
+    var low = Number(balance.amount || 0) <= 10;
+    el.innerHTML = "<div class='doc03-hero'><div class='panel'><div class='head'><div><h2>账户与套餐</h2><p class='hint'>这里集中管理套餐、API调用额度、用量、资料、安全和账单。</p></div><span class='tag green'>"+esc(state.status || "本地体验")+"</span></div><div class='grid4'><div class='doc03-metric'><small>当前套餐</small><strong>"+esc(plan.plan || "免费版")+"</strong><small>"+esc(plan.statusText || "试用中")+"</small></div><div class='doc03-metric'><small>API调用额度</small><strong id='doc03BalanceTop' class='count-up'>"+esc(balance.formatted || money(balance.amount))+"</strong><small>预计可调用 "+esc(credits.estimatedCalls || 0)+" 次</small></div><div class='doc03-metric'><small>品牌项目</small><strong>"+doc03Limit(usage.brandProjects, "")+" / "+doc03Limit(usage.brandProjectsLimit, "")+"</strong><small>已创建项目</small></div><div class='doc03-metric'><small>内容生成</small><strong>"+doc03Limit(usage.contentGeneration, "")+" / "+doc03Limit(usage.contentGenerationLimit, "")+"</strong><small>本月额度</small></div></div>"+(low ? "<div class='notice doc03-warning'><b>余额不足</b>：API 调用余额偏低，建议先充值API额度，避免监控或内容生成中断。</div>" : "")+"</div><div class='panel'><h2>快捷入口</h2><div class='list'><button class='btn primary' onclick=\"openSection('accountPlan')\">升级到专业版</button><button class='btn green' onclick='openRechargeModal(100)'>充值API额度</button><button class='btn soft' onclick=\"openSection('accountUsage')\">查看用量明细</button><button class='btn soft' onclick=\"openSection('accountBilling')\">查看账单记录</button></div><p class='hint'>支付当前是安全占位流程，真实微信/支付宝收款需要上线后在服务器配置商户密钥。</p></div></div><div class='grid2'><div class='panel'><h2>本月用量</h2>"+usageProgressHtml()+"</div><div class='panel'><h2>最近交易</h2>"+transactionsHtml(5)+"</div></div>";
+  }
+  function buildAccountPlan(){
+    var state = ensureDoc03State();
+    var el = $("accountPlan");
+    if(!el) return;
+    var cycle = state.billingCycle || "monthly";
+    var plansHtml = canonicalDoc03Plans().map(function(plan){
+      var price = cycle === "yearly" ? plan.priceYear : plan.priceMonth;
+      var recommended = plan.recommended ? " recommended" : "";
+      return "<div class='doc03-plan"+recommended+"'><div class='head'><span class='"+(plan.recommended ? "pulse-badge" : "tag")+"'>"+esc(plan.tag)+"</span><span class='tag'>"+esc(plan.name)+"</span></div><h3>"+esc(plan.name)+(plan.recommended ? " 推荐" : "")+"</h3><strong style='font-size:30px'>"+esc(price)+"</strong><p class='hint'>"+esc(plan.desc)+"</p><div class='list' style='margin:12px 0'><div class='row'><span>品牌项目</span><b>"+doc03Limit(plan.brandProjects," 个")+"</b></div><div class='row'><span>每日刷新</span><b>"+doc03Limit(plan.dailyRefresh," 次")+"</b></div><div class='row'><span>AI模型</span><b>"+doc03Limit(plan.modelCalls," 个")+"</b></div><div class='row'><span>内容任务</span><b>"+doc03Limit(plan.contentTasks," 篇/月")+"</b></div></div><ul>"+plan.features.map(function(f){return "<li>"+esc(f)+"</li>";}).join("")+"</ul><button class='btn "+(plan.recommended ? "primary" : "soft")+"' style='width:100%;margin-top:14px' onclick=\"openUpgradeModal('"+esc(plan.code)+"')\">"+(plan.code === "free" ? "保持免费版" : "选择"+esc(plan.name))+"</button></div>";
+    }).join("");
+    el.innerHTML = "<div class='panel' style='margin-bottom:16px'><div class='head'><div><h2>套餐管理</h2><p class='hint'>免费版、个人版、专业版、企业版。主推专业版，适合大多数希望被 AI 搜索看到的品牌。</p></div><div class='doc03-cycle'><button class='"+(cycle==="monthly"?"active":"")+"' onclick=\"setDoc03BillingCycle('monthly')\">月付</button><button class='"+(cycle==="yearly"?"active":"")+"' onclick=\"setDoc03BillingCycle('yearly')\">年付</button></div></div><div class='notice'>专业版：¥899/月；年付 ¥8,999/年。API 调用费用独立通过余额扣除，避免把模型成本写死在套餐里。</div></div><div class='doc03-plan-grid'>"+plansHtml+"</div>";
+  }
+  function buildAccountCredits(){
+    var state = ensureDoc03State();
+    var el = $("accountCredits");
+    if(!el) return;
+    var credits = state.credits || {};
+    var balance = credits.balance || { amount:0, formatted:"¥0.00" };
+    var low = credits.zeroBalance || credits.lowBalance || Number(balance.amount || 0) <= 10;
+    el.innerHTML = "<div class='panel' style='margin-bottom:16px'><div class='head'><div><h2>API调用额度</h2><p class='hint'>所有 AI 平台调用都由后端按模型单价计算，前端只展示用户价格，不展示服务成本。</p></div><button class='btn primary' onclick='openRechargeModal(100)'>充值API额度</button></div><div class='grid4'><div class='doc03-metric'><small>当前余额</small><strong id='doc03CreditBalance' class='count-up'>"+esc(balance.formatted || money(balance.amount))+"</strong><small>预计可调用 "+esc(credits.estimatedCalls || 0)+" 次</small></div><div class='doc03-metric'><small>余额状态</small><strong>"+(low ? "余额不足" : "余额正常")+"</strong><small>"+(low ? "建议立即充值" : "可继续使用")+"</small></div><div class='doc03-metric'><small>模型数量</small><strong>"+((credits.modelPricing || []).length || defaultDoc03ModelPricing().length)+"</strong><small>已配置单价</small></div><div class='doc03-metric'><small>轮询状态</small><strong>3秒</strong><small>支付状态轮询</small></div></div>"+(low ? "<div class='notice doc03-danger'><b>余额不足</b>：当前余额可能无法完成一次完整监控，请先充值API额度。</div>" : "")+"</div><div class='grid2'><div class='panel'><h2>充值API额度</h2><div class='doc03-amounts'>"+[50,100,200,500,1000,2000].map(function(n){return "<button class='btn soft' onclick='openRechargeModal("+n+")'>"+moneyShort(n)+"</button>";}).join("")+"</div><p class='hint'>充值订单 5分00秒后过期，未支付不会改变余额。</p></div><div class='panel'><h2>30 天消费趋势</h2>"+trendHtml()+"</div></div><div class='grid2' style='margin-top:16px'><div class='panel'><h2>模型单价</h2>"+modelPricingHtml()+"</div><div class='panel'><h2>交易流水</h2>"+transactionsHtml(20)+"</div></div>";
+  }
+  function buildAccountUsage(){
+    var el = $("accountUsage");
+    if(!el) return;
+    el.innerHTML = "<div class='panel' style='margin-bottom:16px'><div class='head'><div><h2>用量明细</h2><p class='hint'>用量由服务端权益系统判断，前端只负责展示进度。</p></div><button class='btn soft' onclick='refreshDoc03AccountData()'>刷新用量</button></div></div><div class='grid2'><div class='panel'><h2>额度进度</h2>"+usageProgressHtml()+"</div><div class='panel'><h2>消耗说明</h2>"+tableSafe(["项目","说明"],[["品牌项目","创建品牌、官网、竞品和关键词资料。"],["每日刷新","AI 回答监控和数据刷新次数。"],["素材额度","导入知识库、标题库和关键词库。"],["内容任务","生成内容草稿、策略和报告时消耗。"],["API调用额度","按模型真实调用由余额扣除。"]])+"</div></div>";
+  }
+  function buildAccountProfile(){
+    var state = ensureDoc03State(), p = state.profile || {};
+    var el = $("accountProfile");
+    if(!el) return;
+    el.innerHTML = "<div class='panel'><div class='head'><div><h2>个人信息</h2><p class='hint'>邮箱和手机号会做脱敏展示；修改资料走 /api/v1/account/profile。</p></div><button class='btn primary' onclick='saveAccountProfile()'>保存资料</button></div><div class='grid2'><div class='field'><label>展示名称</label><input id='doc03DisplayName' value='"+esc(p.displayName || "")+"' placeholder='请输入展示名称'></div><div class='field'><label>所属行业</label><input id='doc03Industry' value='"+esc(p.industry || "")+"' placeholder='例如：AI 搜索优化'></div><div class='field'><label>邮箱</label><input value='"+esc(p.email || "")+"' disabled></div><div class='field'><label>手机号</label><input value='"+esc(p.phone || "")+"' disabled></div></div><div class='notice'>涉及邮箱、手机号等隐私信息时，系统只展示脱敏内容；不要把验证码、密码或支付密钥发在聊天里。</div></div>";
+  }
+  function buildAccountSecurity(){
+    var el = $("accountSecurity");
+    if(!el) return;
+    el.innerHTML = "<div class='grid2'><div class='panel'><div class='head'><div><h2>安全设置</h2><p class='hint'>修改密码走 /api/v1/account/password。</p></div><button class='btn primary' onclick='updateAccountPassword()'>更新密码</button></div><div class='field'><label>当前密码</label><input id='doc03CurrentPassword' type='password' autocomplete='current-password'></div><div class='field'><label>新密码</label><input id='doc03NewPassword' type='password' autocomplete='new-password'></div><div class='field'><label>确认新密码</label><input id='doc03ConfirmPassword' type='password' autocomplete='new-password'></div></div><div class='panel'><h2>安全状态</h2>"+tableSafe(["检查项","状态","说明"],[["登录保护","已启用","登录接口已接入限流和安全提示。"],["隐私展示","已启用","邮箱、手机号脱敏展示。"],["支付回调","占位中","上线前必须配置服务端验签。"],["API密钥","服务端保存","前端不展示任何真实密钥。"]])+"</div></div>";
+  }
+  function buildAccountBilling(){
+    var state = ensureDoc03State();
+    var txRows = (state.transactions || []).map(function(x){
+      return [x.id || "-", x.type === "charge" ? "充值" : x.type === "consume" ? "消费" : (x.type || "-"), x.amountFormatted || money(Math.abs(Number(x.amount || 0))), x.balanceAfterFormatted || "-", x.description || "-", x.createdAt ? new Date(x.createdAt).toLocaleString() : "-"];
+    });
+    var orderRows = (S.orders || []).map(function(o){ return [o.no || o.id || "-", o.plan || "-", o.amount || "-", o.channel || "微信 / 支付宝", o.status || "-"]; });
+    var el = $("accountBilling");
+    if(!el) return;
+    el.innerHTML = "<div class='grid2'><div class='panel'><h2>充值订单与交易</h2>"+(txRows.length ? tableSafe(["编号","类型","金额","余额","说明","时间"], txRows) : "<div class='empty'>暂无交易记录。</div>")+"</div><div class='panel'><h2>套餐订单</h2>"+(orderRows.length ? tableSafe(["订单号","套餐","金额","渠道","状态"], orderRows) : "<div class='empty'>暂无套餐订单。</div>")+"<div class='notice'>真实收款上线后，订单状态以服务端支付回调验签结果为准。</div></div></div><div class='panel' style='margin-top:16px'><h2>发票管理</h2><div class='grid2'><div class='field'><label>发票抬头</label><input id='invoiceTitle' placeholder='企业名称'></div><div class='field'><label>开票金额</label><input id='invoiceAmount' placeholder='例如：899 元'></div></div><button class='btn soft' onclick='applyInvoice && applyInvoice()'>申请发票</button></div>";
+  }
+  function renderDoc03AccountPages(){
+    ensureDoc03State();
+    var id = String(window.current || current || "");
+    if(id === "account") buildAccountOverview();
+    if(id === "accountPlan") buildAccountPlan();
+    if(id === "accountCredits") buildAccountCredits();
+    if(id === "accountUsage") buildAccountUsage();
+    if(id === "accountProfile") buildAccountProfile();
+    if(id === "accountSecurity") buildAccountSecurity();
+    if(id === "accountBilling") buildAccountBilling();
+  }
+  function usageProgressHtml(){
+    var u = ensureDoc03State().usage || {};
+    var rows = [
+      ["品牌项目", u.brandProjects || 0, u.brandProjectsLimit],
+      ["每日刷新", u.dailyRefresh || 0, u.dailyRefreshLimit],
+      ["素材额度", u.materials || 0, u.materialsLimit],
+      ["内容生成", u.contentGeneration || 0, u.contentGenerationLimit]
+    ];
+    return rows.map(function(row){
+      var value = pct(row[1], row[2]);
+      return "<div class='row'><span>"+esc(row[0])+"</span><b>"+doc03Limit(row[1],"")+" / "+doc03Limit(row[2],"")+"</b></div><div class='progress'><div class='bar "+(value>85?"gold":"green")+"' style='width:"+value+"%'></div></div>";
+    }).join("");
+  }
+  function trendHtml(){
+    var trend = ensureDoc03State().trend || [];
+    var max = Math.max.apply(null, trend.map(function(x){ return Number(x.amount || 0); }).concat([1]));
+    return "<div class='trend-bars'>"+trend.slice(-14).map(function(x){
+      var h = Math.max(8, Math.round(Number(x.amount || 0) / max * 130));
+      return "<div><i style='height:"+h+"px'></i><span>"+esc(String(x.date || "").slice(-5))+"</span></div>";
+    }).join("")+"</div>";
+  }
+  function modelPricingHtml(){
+    var rows = (ensureDoc03State().credits.modelPricing || defaultDoc03ModelPricing()).map(function(x){
+      return [x.modelName || x.modelKey, x.modelKey || "-", x.unitPriceFormatted || money(x.unitPrice), x.isActive === false ? "停用" : "启用"];
+    });
+    return tableSafe(["模型","标识","用户单价","状态"], rows);
+  }
+  function transactionsHtml(limit){
+    var rows = (ensureDoc03State().transactions || []).slice(0, limit || 10).map(function(x){
+      return [x.type === "charge" ? "充值" : x.type === "consume" ? "消费" : (x.type || "-"), x.amountFormatted || money(Math.abs(Number(x.amount || 0))), x.relatedModel || "-", x.description || "-", x.createdAt ? new Date(x.createdAt).toLocaleString() : "-"];
+    });
+    return rows.length ? tableSafe(["类型","金额","模型","说明","时间"], rows) : "<div class='empty'>暂无交易记录。</div>";
+  }
+  function setDoc03BillingCycle(cycle){
+    ensureDoc03State().billingCycle = cycle === "yearly" ? "yearly" : "monthly";
+    saveDoc03();
+    buildAccountPlan();
+  }
+  function openRechargeModal(amount){
+    ensureDoc03State().rechargeAmount = amount || ensureDoc03State().rechargeAmount || 100;
+    var old = $("doc03RechargeModal");
+    if(old) old.remove();
+    var wrap = document.createElement("div");
+    wrap.id = "doc03RechargeModal";
+    wrap.className = "doc03-modal";
+    wrap.innerHTML = "<div class='doc03-modal-card'><div class='head'><div><h2>充值API额度</h2><p class='hint'>订单创建后 5分00秒后过期。当前为安全占位支付，不会调用真实收款。</p></div><button class='btn soft' onclick='closeDoc03Modal()'>关闭</button></div><div class='doc03-amounts'>"+[50,100,200,500,1000,2000].map(function(n){return "<button class='btn "+(n===amount?"primary":"soft")+"' onclick='setRechargeAmount("+n+")'>"+moneyShort(n)+"</button>";}).join("")+"</div><div class='field'><label>自定义金额</label><input id='doc03RechargeAmount' type='number' min='10' value='"+esc(ensureDoc03State().rechargeAmount)+"'></div><div class='doc03-pay-row'><label><input type='radio' name='doc03Pay' value='alipay' checked> 支付宝</label><label><input type='radio' name='doc03Pay' value='wechat'> 微信支付</label></div><button id='doc03RechargeSubmit' class='btn primary' style='width:100%' onclick='submitRechargeOrder()'>创建充值订单</button><div id='doc03RechargeStatus' class='notice' style='margin-top:12px'>支付占位二维码会在这里显示，状态每 3 秒自动检查一次。</div><div id='doc03RechargeQr' class='doc03-qr' style='margin-top:12px'>等待创建订单</div></div>";
+    document.body.appendChild(wrap);
+  }
+  function closeDoc03Modal(){
+    if(doc03RechargePoller) clearInterval(doc03RechargePoller);
+    doc03RechargePoller = null;
+    var modal = $("doc03RechargeModal") || $("doc03UpgradeModal");
+    if(modal) modal.remove();
+  }
+  function setRechargeAmount(amount){
+    ensureDoc03State().rechargeAmount = amount;
+    var input = $("doc03RechargeAmount");
+    if(input) input.value = amount;
+  }
+  function submitRechargeOrder(){
+    var amount = Number(($("doc03RechargeAmount") && $("doc03RechargeAmount").value) || 0);
+    var picked = document.querySelector("input[name='doc03Pay']:checked");
+    createRechargeOrder(amount, picked ? picked.value : "alipay");
+  }
+  async function createRechargeOrder(amount, paymentMethod){
+    amount = Number(amount || 0);
+    if(!Number.isFinite(amount) || amount < 10){ toastDoc03("充值金额最低为 ¥10。"); return; }
+    var btn = $("doc03RechargeSubmit");
+    var oldText = btn ? btn.textContent : "";
+    if(btn){ btn.disabled = true; btn.textContent = "正在创建订单..."; }
+    try{
+      var created = await apiRequest("/api/v1/recharge/orders", { method:"POST", body:JSON.stringify({ amount:amount, paymentMethod:paymentMethod || "alipay" }) });
+      var order = created && created.data && created.data.order ? created.data.order : created.order;
+      var paid = order && order.id ? await apiRequest("/api/v1/recharge/orders/"+encodeURIComponent(order.id)+"/pay", { method:"POST", body:JSON.stringify({}) }) : null;
+      renderRechargePayment(order, paid && paid.data ? paid.data.payment : null);
+      if(order && order.id) startRechargePolling(order.id);
+    }catch(e){
+      var order = { id:"local-"+Date.now(), orderNo:"RC-LOCAL-"+Date.now(), amount:amount, amountFormatted:money(amount), status:"pending", expiresAt:new Date(Date.now()+300000).toISOString() };
+      renderRechargePayment(order, { mode:"placeholder", qrPayload:"Citeox DOC-03 placeholder payment: "+order.orderNo, pollIntervalSeconds:3, expiresAt:order.expiresAt });
+      startRechargePolling(order.id);
+      toastDoc03("服务暂未返回真实订单，已展示本地占位支付流程。");
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = oldText || "创建充值订单"; }
+    }
+  }
+  function renderRechargePayment(order, payment){
+    var status = $("doc03RechargeStatus"), qr = $("doc03RechargeQr");
+    if(status) status.innerHTML = "订单号："+esc(order && order.orderNo || "-")+"；金额："+esc(order && (order.amountFormatted || money(order.amount)) || "-")+"；<b id='doc03ExpireText'>5分00秒后过期</b>";
+    if(qr) qr.textContent = (payment && (payment.qrPayload || payment.paymentUrl)) || "安全占位支付二维码";
+    startRechargeCountdown(order && order.expiresAt);
+  }
+  function startRechargeCountdown(expiresAt){
+    var end = expiresAt ? new Date(expiresAt).getTime() : Date.now() + 300000;
+    function tick(){
+      var left = Math.max(0, Math.round((end - Date.now()) / 1000));
+      var text = Math.floor(left / 60) + "分" + String(left % 60).padStart(2,"0") + "秒后过期";
+      var node = $("doc03ExpireText");
+      if(node) node.textContent = text;
+    }
+    tick();
+    var timer = setInterval(function(){
+      tick();
+      var node = $("doc03ExpireText");
+      if(!node || /0分00秒/.test(node.textContent || "")) clearInterval(timer);
+    }, 1000);
+  }
+  function startRechargePolling(orderId){
+    if(doc03RechargePoller) clearInterval(doc03RechargePoller);
+    doc03RechargePoller = setInterval(async function(){
+      if(!orderId || String(orderId).indexOf("local-") === 0) return;
+      try{
+        var res = await apiRequest("/api/v1/recharge/orders/"+encodeURIComponent(orderId)+"/status");
+        var order = res && res.data && res.data.order;
+        if(order && order.status === "paid"){
+          clearInterval(doc03RechargePoller);
+          doc03RechargePoller = null;
+          var before = Number(ensureDoc03State().credits.balance.amount || 0);
+          ensureDoc03State().credits.balance.amount = before + Number(order.amount || 0);
+          ensureDoc03State().credits.balance.formatted = money(ensureDoc03State().credits.balance.amount);
+          animateBalanceCountUp("doc03CreditBalance", before, ensureDoc03State().credits.balance.amount);
+          toastDoc03("充值成功，余额已更新。");
+          renderDoc03AccountPages();
+        }
+      }catch(e){}
+    }, 3000);
+  }
+  function animateBalanceCountUp(target, from, to){
+    var el = typeof target === "string" ? $(target) : target;
+    if(!el) return;
+    from = Number(from || 0);
+    to = Number(to || 0);
+    var start = performance.now();
+    el.classList.add("count-up","bump");
+    function frame(now){
+      var t = Math.min(1, (now - start) / 700);
+      el.textContent = money(from + (to - from) * t);
+      if(t < 1) requestAnimationFrame(frame);
+      else setTimeout(function(){ el.classList.remove("bump"); }, 180);
+    }
+    requestAnimationFrame(frame);
+  }
+  function openUpgradeModal(planCode){
+    var plan = canonicalDoc03Plans().find(function(x){ return x.code === planCode; }) || canonicalDoc03Plans()[2];
+    var cycle = ensureDoc03State().billingCycle || "monthly";
+    var price = cycle === "yearly" ? plan.priceYear : plan.priceMonth;
+    var old = $("doc03UpgradeModal");
+    if(old) old.remove();
+    var wrap = document.createElement("div");
+    wrap.id = "doc03UpgradeModal";
+    wrap.className = "doc03-modal";
+    wrap.innerHTML = "<div class='doc03-modal-card'><div class='head'><div><h2>确认开通 "+esc(plan.name)+"</h2><p class='hint'>当前选择："+esc(price)+"。支付为安全占位流程，正式开通以服务端回调为准。</p></div><button class='btn soft' onclick='closeDoc03Modal()'>关闭</button></div><div class='doc03-pay-row'><label><input type='radio' name='doc03SubPay' value='alipay' checked> 支付宝</label><label><input type='radio' name='doc03SubPay' value='wechat'> 微信支付</label></div><button id='doc03UpgradeSubmit' class='btn primary' style='width:100%' onclick=\"createSubscriptionOrder('"+esc(plan.code)+"')\">创建套餐订单</button><div id='doc03UpgradeStatus' class='notice' style='margin-top:12px'>套餐订单 5 分钟内有效。</div><div id='doc03UpgradeQr' class='doc03-qr' style='margin-top:12px'>等待创建订单</div></div>";
+    document.body.appendChild(wrap);
+  }
+  async function createSubscriptionOrder(planCode){
+    var state = ensureDoc03State();
+    var picked = document.querySelector("input[name='doc03SubPay']:checked");
+    var btn = $("doc03UpgradeSubmit");
+    var oldText = btn ? btn.textContent : "";
+    if(btn){ btn.disabled = true; btn.textContent = "正在创建套餐订单..."; }
+    try{
+      var created = await apiRequest("/api/v1/subscriptions/orders", { method:"POST", body:JSON.stringify({ planCode:planCode, billingCycle:state.billingCycle || "monthly", paymentMethod:picked ? picked.value : "alipay" }) });
+      var order = created && created.data && created.data.order;
+      var paid = order && order.id ? await apiRequest("/api/v1/subscriptions/orders/"+encodeURIComponent(order.id)+"/pay", { method:"POST", body:JSON.stringify({}) }) : null;
+      var status = $("doc03UpgradeStatus"), qr = $("doc03UpgradeQr");
+      if(status) status.textContent = "订单已创建："+(order && order.orderNo || "-")+"，等待支付回调确认。";
+      if(qr) qr.textContent = (paid && paid.data && paid.data.payment && (paid.data.payment.qrPayload || paid.data.payment.paymentUrl)) || "安全占位支付二维码";
+    }catch(e){
+      var status = $("doc03UpgradeStatus"), qr = $("doc03UpgradeQr");
+      if(status) status.textContent = "服务暂未返回套餐订单，已保留占位收银台。";
+      if(qr) qr.textContent = "Citeox DOC-03 placeholder subscription order";
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = oldText || "创建套餐订单"; }
+    }
+  }
+  async function saveAccountProfile(){
+    var displayName = $("doc03DisplayName") ? $("doc03DisplayName").value.trim() : "";
+    var industry = $("doc03Industry") ? $("doc03Industry").value.trim() : "";
+    try{
+      var res = await apiRequest("/api/v1/account/profile", { method:"PUT", body:JSON.stringify({ displayName:displayName, industry:industry }) });
+      ensureDoc03State().profile = Object.assign({}, ensureDoc03State().profile, res.data && res.data.profile ? res.data.profile : { displayName:displayName, industry:industry });
+      toastDoc03("资料已保存。");
+    }catch(e){
+      ensureDoc03State().profile = Object.assign({}, ensureDoc03State().profile, { displayName:displayName, industry:industry });
+      toastDoc03("服务暂未同步，资料已先保存在本地体验数据。");
+    }
+    saveDoc03();
+    buildAccountProfile();
+  }
+  async function updateAccountPassword(){
+    var currentPassword = $("doc03CurrentPassword") ? $("doc03CurrentPassword").value : "";
+    var newPassword = $("doc03NewPassword") ? $("doc03NewPassword").value : "";
+    var confirmPassword = $("doc03ConfirmPassword") ? $("doc03ConfirmPassword").value : "";
+    if(!currentPassword || !newPassword || !confirmPassword){ toastDoc03("请填写当前密码、新密码和确认密码。"); return; }
+    if(newPassword !== confirmPassword){ toastDoc03("两次新密码不一致。"); return; }
+    if(newPassword.length < 8){ toastDoc03("新密码至少 8 位。"); return; }
+    try{
+      await apiRequest("/api/v1/account/password", { method:"PUT", body:JSON.stringify({ currentPassword:currentPassword, newPassword:newPassword }) });
+      toastDoc03("密码已更新，请妥善保存。");
+      ["doc03CurrentPassword","doc03NewPassword","doc03ConfirmPassword"].forEach(function(id){ if($(id)) $(id).value = ""; });
+    }catch(e){
+      toastDoc03(e && e.message ? e.message : "密码更新失败，请稍后再试。");
+    }
+  }
+  function sectionFromDoc03Path(){
+    var path = location.pathname.toLowerCase();
+    if(path === "/account") return "account";
+    if(path.indexOf("/account/plan") === 0) return "accountPlan";
+    if(path.indexOf("/account/credits") === 0) return "accountCredits";
+    if(path.indexOf("/account/usage") === 0) return "accountUsage";
+    if(path.indexOf("/account/profile") === 0) return "accountProfile";
+    if(path.indexOf("/account/security") === 0) return "accountSecurity";
+    if(path.indexOf("/account/billing") === 0) return "accountBilling";
+    return "";
+  }
+  function setDoc03BrowserRoute(id){
+    try{
+      var route = doc03RouteMap[id];
+      if(route && /^https?:/.test(location.protocol) && location.pathname !== route) history.replaceState(null, "", route);
+    }catch(e){}
+  }
+  function bootDoc03Route(){
+    var target = sectionFromDoc03Path();
+    if(!target) return;
+    if(S && S.session && S.session.logged){
+      setTimeout(function(){ if(window.openSection) openSection(target); }, 0);
+    }else{
+      ensureDoc03State().afterLogin = target;
+      saveDoc03();
+      if(window.showLogin) showLogin("personal", "login");
+    }
+  }
+
+  syncDoc03Metadata();
+  var oldOpenSection = window.openSection;
+  window.openSection = function(id, btn){
+    var requested = id;
+    if(id === "billing" && !(window.isAdminRole && isAdminRole())) id = "accountPlan";
+    var result = oldOpenSection ? oldOpenSection(id, btn) : null;
+    if(doc03Sections.includes(id)){
+      setDoc03BrowserRoute(id);
+      renderDoc03AccountPages();
+      if(!ensureDoc03State().loadedOnce){
+        ensureDoc03State().loadedOnce = true;
+        refreshDoc03AccountData(true);
+      }
+    }
+    return result || requested;
+  };
+  try{ openSection = window.openSection; }catch(e){}
+  var oldRunCurrent = window.runCurrent;
+  window.runCurrent = function(){
+    var id = String(window.current || current || "");
+    if(doc03Sections.includes(id)){
+      refreshDoc03AccountData(false);
+      renderDoc03AccountPages();
+      return;
+    }
+    return oldRunCurrent ? oldRunCurrent() : null;
+  };
+  try{ runCurrent = window.runCurrent; }catch(e){}
+  var oldRender = window.render;
+  window.render = function(){
+    var result = oldRender ? oldRender() : null;
+    renderDoc03AccountPages();
+    return result;
+  };
+  try{ render = window.render; }catch(e){}
+  var oldFinishAuth = window.finishAuth;
+  window.finishAuth = function(message, target){
+    var state = ensureDoc03State();
+    var wanted = state.afterLogin;
+    var result = oldFinishAuth ? oldFinishAuth(message, target) : null;
+    if(wanted){
+      state.afterLogin = "";
+      saveDoc03();
+      setTimeout(function(){ if(window.openSection) openSection(wanted); }, 0);
+    }
+    return result;
+  };
+  try{ finishAuth = window.finishAuth; }catch(e){}
+
+  Object.assign(window, {
+    buildAccountOverview: buildAccountOverview,
+    buildAccountPlan: buildAccountPlan,
+    buildAccountCredits: buildAccountCredits,
+    buildAccountUsage: buildAccountUsage,
+    buildAccountProfile: buildAccountProfile,
+    buildAccountSecurity: buildAccountSecurity,
+    buildAccountBilling: buildAccountBilling,
+    openRechargeModal: openRechargeModal,
+    closeDoc03Modal: closeDoc03Modal,
+    setRechargeAmount: setRechargeAmount,
+    submitRechargeOrder: submitRechargeOrder,
+    createRechargeOrder: createRechargeOrder,
+    startRechargePolling: startRechargePolling,
+    animateBalanceCountUp: animateBalanceCountUp,
+    openUpgradeModal: openUpgradeModal,
+    createSubscriptionOrder: createSubscriptionOrder,
+    saveAccountProfile: saveAccountProfile,
+    updateAccountPassword: updateAccountPassword,
+    setDoc03BillingCycle: setDoc03BillingCycle,
+    refreshDoc03AccountData: refreshDoc03AccountData,
+    renderDoc03AccountPages: renderDoc03AccountPages
+  });
+  try{
+    buildAccountOverview = window.buildAccountOverview;
+    buildAccountPlan = window.buildAccountPlan;
+    buildAccountCredits = window.buildAccountCredits;
+    openRechargeModal = window.openRechargeModal;
+    createRechargeOrder = window.createRechargeOrder;
+    startRechargePolling = window.startRechargePolling;
+    animateBalanceCountUp = window.animateBalanceCountUp;
+    openUpgradeModal = window.openUpgradeModal;
+    renderDoc03AccountPages = window.renderDoc03AccountPages;
+  }catch(e){}
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootDoc03Route);
+  else bootDoc03Route();
 })();
 </script>
 

@@ -304,13 +304,17 @@ async function resolvePlan(planCodeOrName: string | undefined) {
       return direct;
     }
 
-    if (requested.includes("free") || requested.includes("trial")) return findPlan(plans, "free_trial");
-    if (requested.includes("starter")) return findPlan(plans, "starter");
-    if (requested.includes("professional") || requested.includes("pro")) return findPlan(plans, "professional");
-    if (requested.includes("enterprise")) return findPlan(plans, "enterprise");
+    if (requested.includes("free") || requested.includes("trial") || requested.includes("免费")) return findPlan(plans, "free");
+    if (requested.includes("starter") || requested.includes("personal") || requested.includes("个人")) {
+      return findPlan(plans, "personal_month");
+    }
+    if (requested.includes("professional") || requested.includes("pro") || requested.includes("专业")) {
+      return findPlan(plans, "pro_month");
+    }
+    if (requested.includes("enterprise") || requested.includes("企业")) return findPlan(plans, "enterprise_month");
   }
 
-  return findPlan(plans, "starter");
+  return findPlan(plans, "pro_month");
 }
 
 function findPlan(plans: Plan[], code: string) {

@@ -2,14 +2,16 @@ import bcrypt from "bcryptjs";
 import { UserRole, UserStatus } from "@prisma/client";
 import { prisma } from "../src/lib/prisma.js";
 import { seedPlans } from "../src/services/entitlements.js";
+import { seedModelPricing } from "../src/services/credits.js";
 import { encryptSensitive, hashEmail } from "../src/services/authSecurity.js";
 
 await seedPlans();
+await seedModelPricing();
 await seedDefaultInviteCodes();
 await seedAdministrator();
 
 await prisma.$disconnect();
-console.log("Seeded Citeox GEO plans, invite codes and administrator configuration.");
+console.log("Seeded Citeox GEO plans, model pricing, invite codes and administrator configuration.");
 
 async function seedAdministrator() {
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();

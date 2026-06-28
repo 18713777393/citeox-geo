@@ -7,6 +7,13 @@ import { apiRateLimit } from "./middleware/rateLimit.js";
 import { authRouter } from "./routes/auth.js";
 import { adminRouter } from "./routes/admin.js";
 import { aiRouter } from "./routes/ai.js";
+import {
+  accountRouter,
+  paymentCallbackRouter,
+  plansRouter,
+  rechargeRouter,
+  subscriptionsRouter
+} from "./routes/account.js";
 import { assetsRouter } from "./routes/assets.js";
 import { billingRouter } from "./routes/billing.js";
 import { contentsRouter } from "./routes/contents.js";
@@ -44,6 +51,11 @@ export function createApp() {
   app.use("/api/health", healthRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/v1/auth", authRouter);
+  app.use("/api/v1/account", accountRouter);
+  app.use("/api/v1/plans", plansRouter);
+  app.use("/api/v1/recharge", rechargeRouter);
+  app.use("/api/v1/subscriptions", subscriptionsRouter);
+  app.use("/api/v1/payment/callback", paymentCallbackRouter);
   app.use("/api/projects", projectsRouter);
   app.use("/api/project", projectsRouter);
   app.use("/api/billing", billingRouter);
