@@ -17,6 +17,7 @@
     .loginCard #passwordStrengthText:hover{text-decoration:underline}
     .loginCard.reset-mode > .authForm,.loginCard.reset-mode .legal,.loginCard.reset-mode > button{display:none}
     .loginCard.reset-mode #resetPanel{display:block!important}
+    .loginCard.token-reset-mode #resetPhoneField,.loginCard.token-reset-mode #resetCodeField{display:none!important}
     html.auth-boot .landing{display:none}
     html.auth-boot .login{display:grid}
     html.auth-boot body.logged-in .login,html.auth-boot body.logged-in .landing{display:none!important}
@@ -107,8 +108,8 @@
         <button id="registerBtn" class="btn soft" style="width:100%;padding:13px;margin-top:10px" onclick="registerAndLogin()">注册并进入系统</button>
         <div id="resetPanel" style="display:none">
           <div class="formGrid authForm">
-            <div class="field"><label>邮箱</label><input id="resetPhone" type="email" inputmode="email" autocomplete="email" placeholder="请输入注册邮箱"></div>
-            <div class="field"><label>邮箱验证码</label><div class="smsRow"><input id="resetCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="输入 6 位邮箱验证码"><button id="resetCodeBtn" class="btn soft" type="button" onclick="sendResetCode()">发送邮箱验证码</button></div></div>
+            <div id="resetPhoneField" class="field"><label>邮箱</label><input id="resetPhone" type="email" inputmode="email" autocomplete="email" placeholder="请输入注册邮箱"></div>
+            <div id="resetCodeField" class="field"><label>邮箱验证码</label><div class="smsRow"><input id="resetCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="输入 6 位邮箱验证码"><button id="resetCodeBtn" class="btn soft" type="button" onclick="sendResetCode()">发送邮箱验证码</button></div></div>
             <div class="field"><label>新密码</label><div class="smsRow"><input id="resetPassword" type="password" autocomplete="new-password" placeholder="设置新密码"><button class="btn soft" type="button" onclick="togglePassword('resetPassword')">显示</button></div></div><div class="field"><label>确认新密码</label><div class="smsRow"><input id="resetPasswordConfirm" type="password" autocomplete="new-password" placeholder="请再次输入新密码"><button class="btn soft" type="button" onclick="togglePassword('resetPasswordConfirm')">显示</button></div></div>
           </div>
           <button class="btn primary" style="width:100%;padding:13px" onclick="resetPasswordByPhone()">确认重置密码</button>
@@ -488,7 +489,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   }catch(e){}
 
   var style = document.createElement("style");
-  style.textContent = ".loginCard.login-mode .registerOnly,.loginCard.login-mode #registerBtn{display:none!important}.loginCard.register-mode #loginBtn{display:none!important}.loginCard.reset-mode .authForm,.loginCard.reset-mode .remember,.loginCard.reset-mode .legal,.loginCard.reset-mode #loginBtn,.loginCard.reset-mode #registerBtn{display:none!important}.loginCard.reset-mode #resetPanel{display:block!important}.commercial-switch{margin-top:12px;text-align:center;color:#5969f3;font-weight:800;cursor:pointer}.confirm-strength{height:8px;background:#edf1f7;border-radius:999px;overflow:hidden;margin-top:8px}.confirm-strength i{display:block;height:100%;width:0;border-radius:999px;background:#d8a21c;transition:width .25s,background .25s}body.admin-full-access .navbtn.locked:after{display:none!important}body.admin-full-access .navbtn.locked{opacity:1!important}.user-safe-hidden{display:none!important}";
+  style.textContent = ".loginCard.login-mode .registerOnly,.loginCard.login-mode #registerBtn{display:none!important}.loginCard.register-mode #loginBtn{display:none!important}.loginCard.reset-mode .authForm,.loginCard.reset-mode .remember,.loginCard.reset-mode .legal,.loginCard.reset-mode #loginBtn,.loginCard.reset-mode #registerBtn{display:none!important}.loginCard.reset-mode #resetPanel{display:block!important}.loginCard.token-reset-mode #resetPhoneField,.loginCard.token-reset-mode #resetCodeField{display:none!important}.commercial-switch{margin-top:12px;text-align:center;color:#5969f3;font-weight:800;cursor:pointer}.confirm-strength{height:8px;background:#edf1f7;border-radius:999px;overflow:hidden;margin-top:8px}.confirm-strength i{display:block;height:100%;width:0;border-radius:999px;background:#d8a21c;transition:width .25s,background .25s}body.admin-full-access .navbtn.locked:after{display:none!important}body.admin-full-access .navbtn.locked{opacity:1!important}.user-safe-hidden{display:none!important}";
   document.head.appendChild(style);
 
   function addAuthSwitch(){
@@ -1174,12 +1175,30 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     if(path.includes("register") || q.get("entry") === "register" || q.get("action") === "register") return "register";
     return "login";
   }
+  function getResetTokenFromUrl(){
+    var q = new URLSearchParams(location.search);
+    return q.get("token") || q.get("resetToken") || "";
+  }
+  function applyResetTokenMode(){
+    var token = getResetTokenFromUrl();
+    S.authDraft = Object.assign({}, S.authDraft || {});
+    S.authDraft.resetTokenFromUrl = token;
+    var card = qs(".loginCard");
+    if(card) card.classList.toggle("token-reset-mode", !!token);
+    var phoneField = $("resetPhone") && $("resetPhone").closest(".field");
+    var codeField = $("resetCode") && $("resetCode").closest(".field");
+    if(phoneField && !phoneField.id) phoneField.id = "resetPhoneField";
+    if(codeField && !codeField.id) codeField.id = "resetCodeField";
+    text("loginTitle", token ? "\u8bbe\u7f6e\u65b0\u5bc6\u7801" : "\u627e\u56de\u5bc6\u7801");
+    text("loginHint", token ? "\u90ae\u4ef6\u94fe\u63a5\u5df2\u9a8c\u8bc1\uff0c\u8bf7\u76f4\u63a5\u8bbe\u7f6e\u65b0\u5bc6\u7801\u3002" : "\u8f93\u5165\u6ce8\u518c\u90ae\u7bb1\uff0c\u63a5\u6536\u9a8c\u8bc1\u7801\u540e\u8bbe\u7f6e\u65b0\u5bc6\u7801\u3002");
+    if(window.save) save();
+  }
   function setAuthVariantFinal(variant){
     setupAuthDomShallow();
     variant = variant === "register" ? "register" : "login";
     S.authVariant = variant;
     var card = qs(".loginCard");
-    if(card){ card.classList.remove("login-mode","register-mode","reset-mode"); card.classList.add(variant + "-mode"); }
+    if(card){ card.classList.remove("login-mode","register-mode","reset-mode","token-reset-mode"); card.classList.add(variant + "-mode"); }
     text("loginTitle", variant === "register" ? authTitleRegister : authTitleLogin);
     text("loginHint", variant === "register" ? "新用户填写名字、邮箱、手机号、验证码、密码和行业后即可进入系统。" : "已注册用户填写账号和密码即可进入系统。");
     text("accountLabel", variant === "register" ? "名字" : "账号");
@@ -1219,9 +1238,10 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     text("loginTitle", "找回密码");
     text("loginHint", "输入注册邮箱，接收验证码后设置新密码。");
     setValue("resetPhone", value("regName").includes("@") ? value("regName") : value("regEmail"));
+    applyResetTokenMode();
   };
   try{ forgotPassword = window.forgotPassword; }catch(e){}
-  window.showAuthForm = function(){ setAuthVariantFinal("login"); };
+  window.showAuthForm = function(){ if(S.authDraft) S.authDraft.resetTokenFromUrl = ""; setAuthVariantFinal("login"); };
   try{ showAuthForm = window.showAuthForm; }catch(e){}
 
   function saveDraft(){
@@ -1385,6 +1405,19 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }finally{ done(); }
   };
   try{ resetPasswordByPhone = window.resetPasswordByPhone; }catch(e){}
+
+  function authRouteForTarget(target){
+    if(target === "brandCreate" || target === "project") return "/brand/create";
+    if(target === "dashboard") return "/dashboard";
+    return "";
+  }
+  function authSectionForTarget(target){
+    return target === "brandCreate" ? "project" : target;
+  }
+  function setBrowserRouteForAuthTarget(target){
+    var route = authRouteForTarget(target);
+    if(route && /^https?:/.test(location.protocol)) history.replaceState(null, "", route);
+  }
 
   window.applyBackendAuth = function(data, message, preferredTarget){
     data = data || {};
@@ -1652,6 +1685,154 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   setTimeout(bind, 0);
   setTimeout(applyStrengthBars, 250);
   setTimeout(applyStrengthBars, 800);
+})();
+</script>
+
+<script id="citeox-auth-success-route-final">
+(function(){
+  function isAdminRole(role){
+    return ["admin","super_admin","超级管理员"].includes(String(role || ""));
+  }
+  function authRouteForTarget(target){
+    if(target === "brandCreate" || target === "project") return "/brand/create";
+    if(target === "dashboard") return "/dashboard";
+    return "";
+  }
+  function authSectionForTarget(target){
+    return target === "brandCreate" ? "project" : target;
+  }
+  function setBrowserRouteForAuthTarget(target){
+    var route = authRouteForTarget(target);
+    if(route && /^https?:/.test(location.protocol)) history.replaceState(null, "", route);
+  }
+  window.finishAuth = function(message, target){
+    var browserTarget = target || "dashboard";
+    var section = authSectionForTarget(browserTarget) || "dashboard";
+    document.documentElement.classList.remove("auth-boot");
+    document.body.classList.remove("show-auth","admin-entry");
+    document.body.classList.add("logged-in");
+    try{ setBrowserRouteForAuthTarget(browserTarget); }catch(e){}
+    if(window.save) save();
+    if(window.applySession) applySession();
+    if(window.openSection) openSection(section);
+    setTimeout(function(){ window.scrollTo({ top:0, left:0, behavior:"auto" }); }, 0);
+    if(window.toastMsg) toastMsg(message || "登录成功。");
+  };
+  window.applyBackendAuth = function(data, message, preferredTarget){
+    data = data || {};
+    window.S = window.S || {};
+    S.api = S.api || {};
+    S.session = S.session || {};
+    if(data.token || data.accessToken) S.api.token = data.token || data.accessToken;
+    S.api.status = "已连接服务端";
+    S.api.error = "";
+    S.api.lastSync = new Date().toLocaleString();
+    if(data.user) S.session.user = data.user;
+    S.session.logged = true;
+    var role = data.role || (data.user && data.user.role);
+    S.session.role = isAdminRole(role) ? "超级管理员" : "运营用户";
+    if(data.entitlements && window.normalizeServerEntitlements) S.entitlements = normalizeServerEntitlements(data.entitlements);
+    var target = preferredTarget || (isAdminRole(role) ? "adminHome" : (data.user && data.user.hasBrand ? "dashboard" : "brandCreate"));
+    finishAuth(message || "登录成功。", target);
+  };
+  try{ finishAuth = window.finishAuth; applyBackendAuth = window.applyBackendAuth; }catch(e){}
+})();
+</script>
+
+<script id="citeox-reset-token-final">
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function getResetTokenFromUrl(){
+    var q = new URLSearchParams(location.search);
+    return q.get("token") || q.get("resetToken") || "";
+  }
+  function fieldValue(id){ return ($(id) && $(id).value || "").trim(); }
+  function rawValue(id){ return ($(id) && $(id).value || ""); }
+  function scorePassword(value){
+    var score = 0;
+    if(String(value || "").length >= 8) score++;
+    if(/[A-Za-z]/.test(value) && /\d/.test(value)) score++;
+    if(/[^A-Za-z0-9]/.test(value)) score++;
+    return score;
+  }
+  function focusField(id, message){
+    var el = $(id);
+    if(el && typeof el.focus === "function") el.focus();
+    if(window.toastMsg) toastMsg(message);
+    else alert(message);
+  }
+  function setBusy(btn, text){
+    if(!btn) return function(){};
+    var old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = text;
+    return function(){ btn.disabled = false; btn.textContent = old; };
+  }
+  async function authApi(path, body){
+    var base = (window.S && S.api && S.api.base) || "https://citeox-geo.onrender.com";
+    var res = await fetch(base + path, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(body)
+    });
+    var data = await res.json().catch(function(){ return {}; });
+    if(!res.ok){
+      var err = new Error((data.error && data.error.message) || "操作失败，请稍后再试。");
+      err.status = res.status;
+      err.code = data.error && data.error.code;
+      throw err;
+    }
+    return data;
+  }
+  function applyResetTokenMode(){
+    var token = getResetTokenFromUrl();
+    window.S = window.S || {};
+    S.authDraft = Object.assign({}, S.authDraft || {});
+    S.authDraft.resetTokenFromUrl = token;
+    var card = document.querySelector(".loginCard");
+    if(card) card.classList.toggle("token-reset-mode", !!token);
+    var phoneField = $("resetPhoneField") || ($("resetPhone") && $("resetPhone").closest(".field"));
+    var codeField = $("resetCodeField") || ($("resetCode") && $("resetCode").closest(".field"));
+    if(phoneField) phoneField.id = "resetPhoneField";
+    if(codeField) codeField.id = "resetCodeField";
+  }
+  window.getResetTokenFromUrl = getResetTokenFromUrl;
+  window.applyResetTokenMode = applyResetTokenMode;
+  var previousForgotPassword = window.forgotPassword;
+  window.forgotPassword = function(){
+    if(previousForgotPassword) previousForgotPassword.apply(this, arguments);
+    applyResetTokenMode();
+  };
+  window.resetPasswordByPhone = async function(){
+    var token = getResetTokenFromUrl() || (S.authDraft && (S.authDraft.resetTokenFromUrl || S.authDraft.resetToken)) || "";
+    var tokenMode = !!token;
+    if(!tokenMode && !fieldValue("resetPhone")) return focusField("resetPhone", "请填写注册邮箱。");
+    if(!tokenMode && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fieldValue("resetPhone"))) return focusField("resetPhone", "邮箱格式不正确，请检查后重试。");
+    if(!tokenMode && !/^\d{6}$/.test(fieldValue("resetCode"))) return focusField("resetCodeBoxes", "请填写 6 位验证码。");
+    if(scorePassword(rawValue("resetPassword")) < 2) return focusField("resetPassword", "新密码强度不足，请至少 8 位并包含字母和数字。");
+    if(rawValue("resetPassword") !== rawValue("resetPasswordConfirm")) return focusField("resetPasswordConfirm", "两次输入的新密码不一致。");
+    var btn = document.activeElement && document.activeElement.tagName === "BUTTON" ? document.activeElement : null;
+    var done = setBusy(btn, "正在重置...");
+    try{
+      await authApi("/api/v1/auth/reset-password", {
+        email: tokenMode ? undefined : fieldValue("resetPhone"),
+        code: tokenMode ? undefined : fieldValue("resetCode"),
+        token: token,
+        resetToken: token,
+        newPassword: rawValue("resetPassword"),
+        confirmPassword: rawValue("resetPasswordConfirm")
+      });
+      if(window.toastMsg) toastMsg("密码已重置，请使用新密码登录。");
+      if(window.showAuthForm) showAuthForm();
+    }catch(e){
+      if(window.toastMsg) toastMsg(e.message);
+      else alert(e.message);
+    }finally{
+      done();
+    }
+  };
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", applyResetTokenMode);
+  else applyResetTokenMode();
 })();
 </script>
 

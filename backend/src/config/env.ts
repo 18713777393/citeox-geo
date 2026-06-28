@@ -26,7 +26,7 @@ const envSchema = z
     ENCRYPTION_KEY: z.string().optional(),
     SESSION_SECRET: z.string().optional(),
     BCRYPT_COST: z.coerce.number().int().min(10).max(14).default(12),
-    AUTH_CODE_TTL_MINUTES: z.coerce.number().int().positive().default(10),
+    AUTH_CODE_TTL_MINUTES: z.coerce.number().int().positive().default(5),
     AUTH_CODE_RESEND_SECONDS: z.coerce.number().int().positive().default(60),
     AUTH_DEMO_CODE: z.string().regex(/^\d{6}$/).optional(),
     PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(30),
@@ -71,5 +71,10 @@ if (env.NODE_ENV === "production" && !env.JWT_REFRESH_SECRET) {
 
 if (env.NODE_ENV === "production" && !env.ENCRYPTION_KEY) {
   console.error("ENCRYPTION_KEY is required in production.");
+  process.exit(1);
+}
+
+if (env.NODE_ENV === "production" && !env.REDIS_URL) {
+  console.error("REDIS_URL is required in production.");
   process.exit(1);
 }

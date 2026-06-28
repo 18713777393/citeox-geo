@@ -9,9 +9,10 @@ import {
   type InviteCode,
   type User
 } from "@prisma/client";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
+import { getRedis } from "../lib/redis.js";
 import { HttpError } from "../middleware/error.js";
 import {
   ensureDefaultSubscription,
@@ -64,7 +65,79 @@ interface JwtPayload {
 }
 
 const jwtIssuer = "citeox-geo-api";
-const loginFailures = new Map<string, { count: number; lockedUntil?: number; updatedAt: number }>();
+const loginLockThreshold = 5;
+const loginLockMs = 15 * 60_000;
+const loginFailureTtlSeconds = Math.ceil(loginLockMs / 1000);
+const memoryLoginFailures = new Map<string, { count: number; lockedUntil?: number; updatedAt: number }>();
+
+const loginFailureStore = {
+  async get(account: string) {
+    const redis = env.REDIS_URL ? getRedis() : null;
+    const key = loginFailureKey(account);
+
+    if (redis) {
+      const [countValue, lockedUntilValue] = await Promise.all([
+        redis.get(`auth:login_fail:${key}`),
+        redis.get(`auth:login_lock:${key}`)
+      ]);
+      return {
+        count: Number(countValue ?? 0),
+        lockedUntil: lockedUntilValue ? Number(lockedUntilValue) : undefined,
+        updatedAt: Date.now()
+      };
+    }
+
+    const record = memoryLoginFailures.get(key);
+    if (!record) {
+      return { count: 0, updatedAt: Date.now() };
+    }
+
+    if ((record.lockedUntil && record.lockedUntil <= Date.now()) || record.updatedAt + loginLockMs <= Date.now()) {
+      memoryLoginFailures.delete(key);
+      return { count: 0, updatedAt: Date.now() };
+    }
+
+    return record;
+  },
+
+  async registerFailure(account: string) {
+    const redis = env.REDIS_URL ? getRedis() : null;
+    const key = loginFailureKey(account);
+    const now = Date.now();
+
+    if (redis) {
+      const failKey = `auth:login_fail:${key}`;
+      const lockKey = `auth:login_lock:${key}`;
+      const nextCount = await redis.incr(failKey);
+      await redis.expire(failKey, loginFailureTtlSeconds);
+
+      if (nextCount >= loginLockThreshold) {
+        await redis.set(lockKey, String(now + loginLockMs), "PX", loginLockMs);
+      }
+      return;
+    }
+
+    const record = memoryLoginFailures.get(key) ?? { count: 0, updatedAt: now };
+    const nextCount = record.count + 1;
+    memoryLoginFailures.set(key, {
+      count: nextCount,
+      updatedAt: now,
+      lockedUntil: nextCount >= loginLockThreshold ? now + loginLockMs : record.lockedUntil
+    });
+  },
+
+  async clear(account: string) {
+    const redis = env.REDIS_URL ? getRedis() : null;
+    const key = loginFailureKey(account);
+
+    if (redis) {
+      await redis.del(`auth:login_fail:${key}`, `auth:login_lock:${key}`);
+      return;
+    }
+
+    memoryLoginFailures.delete(key);
+  }
+};
 
 export function toApiRole(role: UserRole): ApiRole {
   switch (role) {
@@ -306,19 +379,19 @@ export async function loginUser(input: {
   request: RequestMetadata;
 }) {
   const account = input.account.trim();
-  assertLoginAllowed(account);
+  await assertLoginAllowed(account);
 
   let user = await findUserByAccount(account);
   user = await ensureConfiguredAdminCanLogin(user, account, input.password);
 
   if (!user?.passwordHash) {
-    registerLoginFailure(account);
+    await registerLoginFailure(account);
     throw new HttpError(401, "INVALID_CREDENTIALS", "账号或密码错误，请检查后重新输入。");
   }
 
   const passwordOk = await bcrypt.compare(input.password, user.passwordHash);
   if (!passwordOk) {
-    registerLoginFailure(account);
+    await registerLoginFailure(account);
     throw new HttpError(401, "INVALID_CREDENTIALS", "账号或密码错误，请检查后重新输入。");
   }
 
@@ -326,7 +399,7 @@ export async function loginUser(input: {
     throw new HttpError(403, "ACCOUNT_DISABLED", "账号已被停用，请联系管理员处理。");
   }
 
-  clearLoginFailures(account);
+  await clearLoginFailures(account);
   await prisma.user.update({
     where: { id: user.id },
     data: {
@@ -493,12 +566,16 @@ export async function requestPasswordReset(input: {
 }
 
 export async function resetPassword(input: {
-  account: string;
+  account?: string;
   code?: string;
   resetToken?: string;
   newPassword: string;
 }) {
-  const user = await findUserByAccount(input.account);
+  const user = input.account
+    ? await findUserByAccount(input.account)
+    : input.resetToken
+      ? await findUserByResetToken(input.resetToken)
+      : null;
   if (!user) {
     throw new HttpError(400, "RESET_INVALID", "重置链接或验证码已失效，请重新申请。");
   }
@@ -739,6 +816,23 @@ async function verifyAndConsumeResetToken(userId: string, resetToken: string) {
   return false;
 }
 
+async function findUserByResetToken(resetToken: string) {
+  const tokens = await prisma.passwordResetToken.findMany({
+    where: { consumedAt: null, expiresAt: { gt: new Date() } },
+    include: { user: true },
+    orderBy: { createdAt: "desc" },
+    take: 50
+  });
+
+  for (const token of tokens) {
+    if (await bcrypt.compare(resetToken, token.tokenHash)) {
+      return token.user;
+    }
+  }
+
+  return null;
+}
+
 async function findUserByAccount(account: string) {
   const clean = account.trim();
   if (!clean) {
@@ -916,29 +1010,23 @@ async function sendEmail(input: { to: string; subject: string; text: string; htm
   }
 }
 
-function assertLoginAllowed(account: string) {
-  const record = loginFailures.get(account.toLowerCase());
-  if (!record) {
-    return;
-  }
+function loginFailureKey(account: string) {
+  return createHash("sha256").update(account.trim().toLowerCase()).digest("hex");
+}
+
+async function assertLoginAllowed(account: string) {
+  const record = await loginFailureStore.get(account);
   if (record.lockedUntil && record.lockedUntil > Date.now()) {
     throw new HttpError(429, "LOGIN_LOCKED", "登录尝试次数过多，请 15 分钟后再试。");
   }
 }
 
-function registerLoginFailure(account: string) {
-  const key = account.toLowerCase();
-  const record = loginFailures.get(key) ?? { count: 0, updatedAt: Date.now() };
-  const nextCount = record.count + 1;
-  loginFailures.set(key, {
-    count: nextCount,
-    updatedAt: Date.now(),
-    lockedUntil: nextCount >= 5 ? Date.now() + 15 * 60_000 : record.lockedUntil
-  });
+async function registerLoginFailure(account: string) {
+  await loginFailureStore.registerFailure(account);
 }
 
-function clearLoginFailures(account: string) {
-  loginFailures.delete(account.toLowerCase());
+async function clearLoginFailures(account: string) {
+  await loginFailureStore.clear(account);
 }
 
 function toVerificationPurpose(purpose: CodePurpose) {

@@ -191,3 +191,20 @@ GET /api/source-hub/health
 5. 必须做真实数据库环境下的 live smoke。
 6. 必须备份数据库和配置日志监控。
 
+## 八、DOC-01 注册登录复核
+
+- Prisma schema 校验：通过。
+- TypeScript 构建：通过。
+- DOC-01 认证路由测试：通过。
+- DOC-01 HTTP 合同测试：通过。
+- DOC-01 前端合同测试：通过。
+- 前端脚本语法检查：通过，已检查 7 段脚本。
+- 注册入口：已对齐 `/register`。
+- 登录入口：已对齐 `/login`。
+- 忘记密码入口：已对齐 `/forgot-password`。
+- 重置密码入口：已支持 `/reset-password?token=...`。
+- 注册成功路径：浏览器地址进入 `/brand/create`，内部打开品牌项目页。
+- 登录成功路径：`hasBrand=true` 进入 `/dashboard`，否则进入 `/brand/create`。
+- 生产环境 Redis：`REDIS_URL` 已列为必填，用于登录失败锁定。
+- 生产环境敏感变量：必须在 Render 控制台配置，不写入代码、不放进上传包。
+

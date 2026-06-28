@@ -177,3 +177,6 @@ npm run prisma:migrate
 - 管理员 403/200 隔离未通过。
 - 未配置 HTTPS、CORS、密钥轮换和日志脱敏。
 
+## DOC-01 注册登录部署补充
+
+Render 后端上线前必须在环境变量中填写 `DATABASE_URL`、`REDIS_URL`、`JWT_SECRET`、`JWT_REFRESH_SECRET`、`ENCRYPTION_KEY`、`RESEND_API_KEY`、`EMAIL_FROM`、`CORS_ORIGIN`、`APP_URL`。这些值只填在 Render 控制台，不要写进代码或压缩包。

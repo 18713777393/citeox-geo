@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 const frontendPath = resolve(process.cwd(), "../frontend/GEOFlow-Integrated-Final-White.html");
 const html = readFileSync(frontendPath, "utf8");
+const redirects = readFileSync(resolve(process.cwd(), "../frontend/_redirects"), "utf8");
 
 assert.ok(
   !html.includes("/api/auth/"),
@@ -18,6 +19,37 @@ assert.ok(
 assert.ok(
   !html.includes("https://citeox-api.onrender.com"),
   "DOC-01 frontend must not call the old Render service domain citeox-api.onrender.com."
+);
+
+assert.ok(
+  html.includes("function getResetTokenFromUrl()"),
+  "DOC-01 reset password page must read token/resetToken from the URL."
+);
+assert.ok(
+  html.includes("applyResetTokenMode"),
+  "DOC-01 reset password page must switch the form when a reset token is present."
+);
+assert.ok(
+  html.includes('classList.toggle("token-reset-mode"'),
+  "DOC-01 token reset mode must hide account/code fields and ask only for the new password."
+);
+assert.ok(
+  html.includes("S.authDraft.resetTokenFromUrl"),
+  "DOC-01 reset form must remember the URL reset token for submit."
+);
+assert.ok(html.includes("/brand/create"), "DOC-01 register success must route to /brand/create.");
+assert.ok(html.includes("/dashboard"), "DOC-01 login with an existing brand must route to /dashboard.");
+assert.ok(
+  html.includes("authRouteForTarget"),
+  "DOC-01 frontend must map internal auth success targets to browser routes."
+);
+assert.ok(
+  html.includes("brandCreate"),
+  "DOC-01 frontend must distinguish brand creation target from the internal project section."
+);
+assert.ok(
+  redirects.includes("/brand/create /GEOFlow-Integrated-Final-White"),
+  "DOC-01 Cloudflare redirects must serve the app at /brand/create."
 );
 
 for (const endpoint of [

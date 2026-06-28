@@ -1,5 +1,6 @@
 /login /GEOFlow-Integrated-Final-White?entry=login 302
 /register /GEOFlow-Integrated-Final-White?action=register 302
 /app /GEOFlow-Integrated-Final-White 302
+/brand/create /GEOFlow-Integrated-Final-White 302
 /dashboard /GEOFlow-Integrated-Final-White 302
 /admin /GEOFlow-Integrated-Final-White?entry=admin 302

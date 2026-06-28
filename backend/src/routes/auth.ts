@@ -112,32 +112,47 @@ const accountSchema = z
 
 const resetPasswordSchema = z
   .object({
-    account: z.string().trim().min(1).max(160).optional(),
+    account: optionalCleanString(z.string().trim().max(160)),
     email: z.string().trim().max(160).optional(),
     phone: z.string().trim().max(32).optional(),
     code: z.string().trim().length(6, "请输入 6 位验证码。").optional(),
     resetToken: z.string().trim().min(12).optional(),
+    token: z.string().trim().min(12).optional(),
     newPassword: passwordSchema,
     confirmPassword: z.string().optional(),
     passwordConfirm: z.string().optional()
   })
   .transform((value) => ({
-    account: value.account || value.email || value.phone || "",
+    account: value.account || value.email || value.phone || undefined,
     code: value.code,
-    resetToken: value.resetToken,
+    resetToken: value.resetToken || value.token,
     newPassword: value.newPassword,
     confirmPassword: value.confirmPassword || value.passwordConfirm
   }))
   .pipe(
     z
       .object({
-        account: z.string().trim().min(1, "请输入账号或邮箱。").max(160),
+        account: z.string().trim().max(160).optional(),
         code: z.string().trim().length(6, "请输入 6 位验证码。").optional(),
         resetToken: z.string().trim().min(12).optional(),
         newPassword: passwordSchema,
         confirmPassword: z.string().optional()
       })
       .superRefine((value, ctx) => {
+        if (!value.account && !value.resetToken) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["account"],
+            message: "请输入账号或使用邮件里的重置链接。"
+          });
+        }
+        if (!value.code && !value.resetToken) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["code"],
+            message: "请输入验证码或使用邮件里的重置链接。"
+          });
+        }
         if (value.confirmPassword !== undefined && value.confirmPassword !== value.newPassword) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -338,7 +353,7 @@ authRouter.post(
       severity: "info",
       ipAddress: req.ip,
       userAgent: req.header("user-agent"),
-      metadata: { account: maskAccount(body.account) }
+      metadata: { account: maskAccount(body.account || ""), viaToken: Boolean(body.resetToken) }
     });
 
     res.json(result);

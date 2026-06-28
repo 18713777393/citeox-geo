@@ -112,3 +112,6 @@ Invoke-RestMethod "$base/api/admin/dashboard" -Headers @{ Authorization = "Beare
 
 支付回调安全测试见 `VERIFY_COMMANDS.md`。
 
+## DOC-01 注册登录安全补充
+
+生产环境必须配置 `REDIS_URL`。登录失败 5 次后的 15 分钟锁定需要写入 Redis，不能只依赖单台服务器内存，否则服务重启或多实例部署时锁定会失效。
