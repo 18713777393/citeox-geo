@@ -299,6 +299,7 @@ model VerificationCode {
   purpose        VerificationCodePurpose
   codeHash       String                  @map("code_hash")
   sendCount      Int                     @default(1) @map("send_count")
+  attemptCount   Int                     @default(0) @map("attempt_count")
   lastSentAt     DateTime                @default(now()) @map("last_sent_at")
   expiresAt      DateTime                @map("expires_at")
   consumedAt     DateTime?               @map("consumed_at")

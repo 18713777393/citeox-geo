@@ -68,6 +68,7 @@ const jwtIssuer = "citeox-geo-api";
 const loginLockThreshold = 5;
 const loginLockMs = 15 * 60_000;
 const loginFailureTtlSeconds = Math.ceil(loginLockMs / 1000);
+const MAX_VERIFICATION_ATTEMPTS = 5;
 const memoryLoginFailures = new Map<string, { count: number; lockedUntil?: number; updatedAt: number }>();
 
 const loginFailureStore = {
@@ -219,6 +220,73 @@ export async function checkUsernameAvailability(username: string) {
     reason: base.message,
     severity: base.severity ?? "success",
     suggestions: base.severity === "warning" ? usernameSuggestions(clean) : []
+  };
+}
+
+export async function checkEmailAvailability(email: string) {
+  const clean = normalizeEmail(email);
+
+  try {
+    assertEmailAllowed(clean);
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return {
+        available: false,
+        reason: error.message,
+        severity: "error" as const
+      };
+    }
+    throw error;
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ emailHash: hashEmail(clean) }, { email: clean }] },
+    select: { id: true }
+  });
+
+  if (existing) {
+    return {
+      available: false,
+      reason: "该邮箱已注册，请直接登录或更换邮箱。",
+      severity: "error" as const
+    };
+  }
+
+  return {
+    available: true,
+    reason: "邮箱可用。",
+    severity: "success" as const
+  };
+}
+
+export async function checkPhoneAvailability(phone: string) {
+  const clean = normalizePhone(phone);
+
+  if (!/^1[3-9]\d{9}$/.test(clean)) {
+    return {
+      available: false,
+      reason: "请输入正确的 11 位中国大陆手机号。",
+      severity: "error" as const
+    };
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ phoneHash: hashPhone(clean) }, { phone: clean }] },
+    select: { id: true }
+  });
+
+  if (existing) {
+    return {
+      available: false,
+      reason: "该手机号已注册，请直接登录或更换手机号。",
+      severity: "error" as const
+    };
+  }
+
+  return {
+    available: true,
+    reason: "手机号可用。",
+    severity: "success" as const
   };
 }
 
@@ -774,7 +842,8 @@ async function verifyAndConsumeCode(input: {
       email: input.email,
       purpose: input.purpose,
       consumedAt: null,
-      expiresAt: { gt: new Date() }
+      expiresAt: { gt: new Date() },
+      attemptCount: { lt: MAX_VERIFICATION_ATTEMPTS }
     },
     orderBy: { createdAt: "desc" }
   });
@@ -785,6 +854,16 @@ async function verifyAndConsumeCode(input: {
 
   const ok = await bcrypt.compare(input.code, code.codeHash);
   if (!ok) {
+    await prisma.$transaction([
+      prisma.verificationCode.updateMany({
+        data: { consumedAt: new Date() },
+        where: { id: code.id, attemptCount: { gte: MAX_VERIFICATION_ATTEMPTS - 1 } }
+      }),
+      prisma.verificationCode.update({
+        where: { id: code.id },
+        data: { attemptCount: { increment: 1 } }
+      })
+    ]);
     return false;
   }
 

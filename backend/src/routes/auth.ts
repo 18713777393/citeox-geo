@@ -11,6 +11,8 @@ import {
   verificationCodeRateLimit
 } from "../middleware/rateLimit.js";
 import {
+  checkEmailAvailability,
+  checkPhoneAvailability,
   checkUsernameAvailability,
   createVerificationCode,
   emailDomainSuggestion,
@@ -169,6 +171,24 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const body = parseBody(z.object({ username: z.string().trim().min(1).max(80) }), req);
     res.json(await checkUsernameAvailability(body.username));
+  })
+);
+
+authRouter.post(
+  "/check-email",
+  usernameCheckRateLimit,
+  asyncHandler(async (req, res) => {
+    const body = parseBody(z.object({ email: z.string().trim().min(1).max(160) }), req);
+    res.json(await checkEmailAvailability(body.email));
+  })
+);
+
+authRouter.post(
+  "/check-phone",
+  usernameCheckRateLimit,
+  asyncHandler(async (req, res) => {
+    const body = parseBody(z.object({ phone: z.string().trim().min(1).max(32) }), req);
+    res.json(await checkPhoneAvailability(body.phone));
   })
 );
 

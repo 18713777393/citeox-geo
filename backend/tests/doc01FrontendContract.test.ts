@@ -51,9 +51,19 @@ assert.ok(
   redirects.includes("/brand/create /GEOFlow-Integrated-Final-White"),
   "DOC-01 Cloudflare redirects must serve the app at /brand/create."
 );
+assert.ok(
+  redirects.includes("/forgot-password /GEOFlow-Integrated-Final-White?entry=forgot-password"),
+  "DOC-01 Cloudflare redirects must serve the forgot-password flow."
+);
+assert.ok(
+  redirects.includes("/reset-password /GEOFlow-Integrated-Final-White"),
+  "DOC-01 Cloudflare redirects must serve reset-password token links."
+);
 
 for (const endpoint of [
   "/api/v1/auth/check-username",
+  "/api/v1/auth/check-email",
+  "/api/v1/auth/check-phone",
   "/api/v1/auth/email-suggestion",
   "/api/v1/auth/validate-industry",
   "/api/v1/auth/validate-invite-code",
@@ -248,6 +258,58 @@ assert.ok(
 assert.ok(
   html.includes('if(variant === "register") clearRegisterExperienceFields();'),
   "DOC-01 switching to register must start from a blank form."
+);
+assert.ok(
+  html.includes('text("accountLabel", variant === "register" ? "账号名称 *" : "账号");'),
+  "DOC-01 register mode must label the first field as 账号名称 *."
+);
+assert.ok(
+  html.includes('placeholder("regName", variant === "register" ? "请输入账号名称（2-20个字符）" : "请输入账号、邮箱或手机号");'),
+  "DOC-01 register mode must use the account-name placeholder from the spec."
+);
+assert.ok(
+  html.includes("支持中文、英文、数字、下划线，不能纯数字"),
+  "DOC-01 register mode must show the account-name helper text from the spec."
+);
+assert.ok(
+  html.includes("function setUsernameStatus("),
+  "DOC-01 account-name field must expose a right-side status such as 检测中/可用/不可用."
+);
+assert.ok(
+  html.includes('setUsernameStatus("检测中", "checking")'),
+  "DOC-01 account-name duplicate check must show 检测中 while the request is running."
+);
+assert.ok(
+  html.includes("/api/v1/auth/check-email"),
+  "DOC-01 email field must perform real-time availability checks."
+);
+assert.ok(
+  html.includes("/api/v1/auth/check-phone"),
+  "DOC-01 phone field must perform real-time availability checks."
+);
+assert.ok(
+  html.includes("validateEmailAvailability"),
+  "DOC-01 email availability check must be wired to the register form."
+);
+assert.ok(
+  html.includes("validatePhoneAvailability"),
+  "DOC-01 phone availability check must be wired to the register form."
+);
+assert.ok(
+  html.includes('href="/terms"') && html.includes('href="/privacy"'),
+  "DOC-01 legal consent must link to terms and privacy pages."
+);
+assert.ok(
+  html.includes('target="_blank"') && html.includes('rel="noopener noreferrer"'),
+  "DOC-01 legal links must open safely in a new tab."
+);
+assert.ok(
+  html.includes(".loginCard.login-mode > .legal{display:none!important}"),
+  "DOC-01 login mode should not show register-only legal consent."
+);
+assert.ok(
+  !finalQuickLoginBlock.includes("assertLegal()"),
+  "DOC-01 login must not force existing users to tick the registration legal consent."
 );
 assert.ok(
   html.includes("function navigateToPromoHome()"),

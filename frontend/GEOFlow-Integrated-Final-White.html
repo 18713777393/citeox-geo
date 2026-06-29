@@ -900,6 +900,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     style.textContent = [
       ".modeTabs{display:none!important}",
       ".loginCard.login-mode .registerOnly,.loginCard.login-mode #registerBtn{display:none!important}",
+      ".loginCard.login-mode > .legal{display:none!important}",
       ".loginCard.login-mode #loginBtn{display:block!important}",
       ".loginCard.register-mode #loginBtn{display:none!important}",
       ".loginCard.reset-mode>.authForm,.loginCard.reset-mode>.remember,.loginCard.reset-mode>.legal,.loginCard.reset-mode>#loginBtn,.loginCard.reset-mode>#registerBtn,.loginCard.reset-mode>#commercialAuthSwitch{display:none!important}",
@@ -907,6 +908,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       ".auth-help-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0 12px;color:#5f6b80;font-size:13px}",
       ".auth-link{border:0;background:transparent;color:#5969f3;font-weight:900;padding:0;box-shadow:none}",
       ".auth-clear{border:0;background:#eef2ff;color:#4f5eea;border-radius:8px;padding:6px 8px;font-weight:900}",
+      ".username-status{display:inline-flex;margin-top:6px;font-size:12px;font-weight:900;color:#647086}.username-status.checking{color:#9a6400}.username-status.success{color:#15866d}.username-status.error{color:#b42318}",
       ".auth-tip{margin-top:6px;font-size:12px;color:#647086;line-height:1.5}",
       ".auth-tip.warning{color:#9a6400}.auth-tip.error{color:#b42318}.auth-tip.success{color:#15866d}",
       ".email-suggestion{display:none;margin-top:8px;padding:9px 10px;border-radius:8px;background:#fff7e6;color:#805400;font-size:13px}",
@@ -950,7 +952,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }
     var legal = qs(".loginCard > .legal");
     if(legal){
-      legal.innerHTML = '<input id="legalAgree" type="checkbox"> 我已阅读并同意《用户协议》《隐私政策》《付费服务协议》《内容合规规则》《数据安全说明》《第三方平台合规条款》，同意系统保存必要注册信息用于账号开通、套餐权益、订单审计和服务通知。';
+      legal.innerHTML = '<input id="legalAgree" type="checkbox"> 我已阅读并同意 <a href="/terms" target="_blank" rel="noopener noreferrer">《用户协议》</a> 和 <a href="/privacy" target="_blank" rel="noopener noreferrer">《隐私政策》</a>，同意系统保存必要注册信息用于账号开通、套餐权益、订单审计和服务通知。';
     }
     if($("legalAgree")) $("legalAgree").checked = legalWasChecked;
     if($("rememberPassword")) $("rememberPassword").checked = rememberPasswordExists ? rememberPasswordWasChecked : rememberedAccount;
@@ -981,6 +983,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }
     addFieldTip("regName", "usernameTip");
     addFieldTip("regEmail", "emailTip");
+    addFieldTip("regPhone", "phoneTip");
     addFieldTip("regPassword", "passwordTip");
     addFieldTip("regIndustry", "industryTip");
     addFieldTip("regInvite", "inviteTip");
@@ -1007,6 +1010,18 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     if(!el) return;
     el.textContent = textValue || "";
     el.className = "auth-tip" + (type ? " " + type : "");
+  }
+  function setUsernameStatus(textValue, type){
+    var input = $("regName");
+    if(!input) return;
+    var status = $("usernameStatus");
+    if(!status){
+      status = document.createElement("span");
+      status.id = "usernameStatus";
+      input.insertAdjacentElement("afterend", status);
+    }
+    status.textContent = textValue || "";
+    status.className = "username-status" + (type ? " " + type : "");
   }
   function addEmailSuggestion(){
     if($("emailSuggestion")) return;
@@ -1082,10 +1097,11 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   }
   function bindAuthEvents(){
     if($("regName")) $("regName").oninput = debounce(checkUsername, 300);
-    if($("regEmail")) $("regEmail").oninput = debounce(checkEmailSuggestion, 300);
+    if($("regEmail")) $("regEmail").oninput = debounce(function(){ checkEmailSuggestion(); validateEmailAvailability(); }, 300);
     if($("regPhone")) $("regPhone").oninput = function(){
       var digits = normalizePhone(this.value).slice(0, 11);
       this.value = digits.replace(/^(\d{3})(\d{0,4})(\d{0,4}).*/, function(_, a, b, c){ return [a,b,c].filter(Boolean).join(" "); });
+      validatePhoneAvailability();
     };
     if($("regIndustry")) $("regIndustry").onblur = validateIndustryRemote;
     if($("regInvite")) $("regInvite").onblur = validateInviteRemote;
@@ -1106,16 +1122,20 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     return function(){ var args = arguments; clearTimeout(timer); timer = setTimeout(function(){ fn.apply(null, args); }, delay); };
   }
   async function checkUsername(){
+    if(S.authVariant !== "register") setUsernameStatus("", "");
     if(S.authVariant !== "register"){ setTip("usernameTip", loginUsernameTip, ""); return; }
     var username = value("regName");
-    if(!username){ setTip("usernameTip", "", ""); return; }
+    if(!username){ setUsernameStatus("", ""); setTip("usernameTip", "", ""); return; }
     try{
+      setUsernameStatus("检测中", "checking");
       var data = await api("/api/v1/auth/check-username", { method:"POST", body:JSON.stringify({ username:username }) });
+      setUsernameStatus(data.available ? "可用" : "不可用", data.available ? "success" : "error");
       setTip("usernameTip", data.reason || (data.available ? "账号名称可用。" : "账号名称不可用。"), data.available ? (data.severity === "warning" ? "warning" : "success") : "error");
       if(!data.available && Array.isArray(data.suggestions) && data.suggestions.length){
         setTip("usernameTip", "账号已被占用，可尝试：" + data.suggestions.join("、"), "warning");
       }
     }catch(e){
+      setUsernameStatus("需重试", "error");
       setTip("usernameTip", cnError(e), "warning");
     }
   }
@@ -1126,7 +1146,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     box.style.display = "none";
     if(!email || !email.includes("@")) return;
     if(!validEmail(email)){ setTip("emailTip", "邮箱格式不正确，请检查后重试。", "error"); return; }
-    setTip("emailTip", "邮箱格式正确。", "success");
+    setTip("emailTip", "邮箱格式正确，正在检测是否可用。", "warning");
     try{
       var data = await api("/api/v1/auth/email-suggestion", { method:"POST", body:JSON.stringify({ email:email }) });
       if(data.suggestion && data.suggestion !== email){
@@ -1135,6 +1155,33 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
         box.querySelector("button").onclick = function(){ setValue("regEmail", data.suggestion); box.style.display = "none"; };
       }
     }catch(e){}
+  }
+  async function validateEmailAvailability(){
+    if(S.authVariant !== "register") return;
+    var email = value("regEmail");
+    if(!email){ setTip("emailTip", "", ""); return; }
+    if(!validEmail(email)){ setTip("emailTip", "邮箱格式不正确，请检查后重试。", "error"); return; }
+    setTip("emailTip", "正在检测邮箱是否可用。", "warning");
+    try{
+      var data = await api("/api/v1/auth/check-email", { method:"POST", body:JSON.stringify({ email:email }) });
+      setTip("emailTip", data.reason || (data.available ? "邮箱可用。" : "该邮箱不可用。"), data.available ? "success" : "error");
+    }catch(e){
+      setTip("emailTip", cnError(e), "warning");
+    }
+  }
+  async function validatePhoneAvailability(){
+    if(S.authVariant !== "register") return;
+    var phone = normalizePhone(value("regPhone"));
+    if(!phone){ setTip("phoneTip", "", ""); return; }
+    if(phone.length < 11){ setTip("phoneTip", "请输入 11 位手机号。", "warning"); return; }
+    if(!validPhone(phone)){ setTip("phoneTip", "手机号格式不正确，请填写 11 位中国大陆手机号。", "error"); return; }
+    setTip("phoneTip", "正在检测手机号是否可用。", "warning");
+    try{
+      var data = await api("/api/v1/auth/check-phone", { method:"POST", body:JSON.stringify({ phone:phone }) });
+      setTip("phoneTip", data.reason || (data.available ? "手机号可用。" : "该手机号不可用。"), data.available ? "success" : "error");
+    }catch(e){
+      setTip("phoneTip", cnError(e), "warning");
+    }
   }
   async function validateIndustryRemote(){
     var industry = value("regIndustry");
@@ -1202,9 +1249,11 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     if(card){ card.classList.remove("login-mode","register-mode","reset-mode","token-reset-mode"); card.classList.add(variant + "-mode"); }
     text("loginTitle", variant === "register" ? authTitleRegister : authTitleLogin);
     text("loginHint", variant === "register" ? "新用户填写名字、邮箱、手机号、验证码、密码和行业后即可进入系统。" : "已注册用户填写账号和密码即可进入系统。");
-    text("accountLabel", variant === "register" ? "名字" : "账号");
-    placeholder("regName", variant === "register" ? "请输入你的名字" : "请输入账号、邮箱或手机号");
+    text("accountLabel", variant === "register" ? "账号名称 *" : "账号");
+    placeholder("regName", variant === "register" ? "请输入账号名称（2-20个字符）" : "请输入账号、邮箱或手机号");
     setTip("usernameTip", variant === "login" ? loginUsernameTip : "", "");
+    if(variant === "register") setTip("usernameTip", "支持中文、英文、数字、下划线，不能纯数字", "");
+    if(variant === "login") setUsernameStatus("", "");
     setTip("passwordTip", "", "");
     if($("regPassword")) $("regPassword").autocomplete = variant === "register" ? "new-password" : "current-password";
     var sw = $("commercialAuthSwitch");
@@ -1453,7 +1502,6 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   window.quickLogin = async function(){
     setupAuthDom();
     if(!validateLoginFinal()) return;
-    if(!assertLegal()) return;
     saveRememberedAccount();
     var done = setBusy($("loginBtn"), "正在登录...");
     try{
@@ -1543,7 +1591,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     setupAuthDom();
     var q = new URLSearchParams(location.search);
     var path = location.pathname.toLowerCase();
-    if(path.includes("reset-password") || q.get("token")){ showLogin("personal","login"); forgotPassword(); return; }
+    if(path.includes("forgot-password") || path.includes("reset-password") || q.get("token")){ showLogin("personal","login"); forgotPassword(); return; }
     if(path.includes("register") || q.get("entry") === "register" || q.get("action") === "register"){ showLogin("personal","register"); return; }
     if(path.includes("login") || q.get("entry") === "login" || q.get("entry") === "admin"){ showLogin("personal","login"); return; }
   };
@@ -1874,6 +1922,8 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       var tip = $(id);
       if(tip) tip.textContent = "";
     });
+    if($("usernameTip")) $("usernameTip").textContent = "支持中文、英文、数字、下划线，不能纯数字";
+    if($("usernameStatus")) $("usernameStatus").textContent = "";
     ["passwordStrengthBar","confirmStrengthBar"].forEach(function(id){
       var bar = $(id);
       if(bar) bar.style.width = "0%";
@@ -2067,6 +2117,75 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     if(window.toastMsg) toastMsg(message);
     else alert(message);
   }
+  function doc03SafeClass(value, fallback){
+    var v = String(value || fallback || "").toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    return v || fallback || "free";
+  }
+  function doc03PlanTheme(code){
+    var v = doc03SafeClass(code, "free");
+    return ["free","personal","pro","enterprise"].includes(v) ? "doc03-plan-" + v : "doc03-plan-free";
+  }
+  function doc03PlanButtonClass(code){
+    var v = doc03SafeClass(code, "free");
+    if(v === "pro") return "green";
+    if(v === "enterprise") return "gold";
+    if(v === "personal") return "blue";
+    return "soft";
+  }
+  function doc03CurrentPlanCode(){
+    var plan = ensureDoc03State().plan || {};
+    var code = String(plan.planCode || plan.code || "free").toLowerCase();
+    if(code.indexOf("enterprise") >= 0) return "enterprise";
+    if(code.indexOf("pro") >= 0 || String(plan.plan || "").indexOf("专业") >= 0) return "pro";
+    if(code.indexOf("personal") >= 0 || String(plan.plan || "").indexOf("个人") >= 0) return "personal";
+    return "free";
+  }
+  function isDoc03CurrentPlan(plan){
+    return doc03SafeClass(plan && plan.code, "free") === doc03CurrentPlanCode();
+  }
+  function doc03ApproxCalls(amount){
+    var n = Number(amount || 0);
+    return Math.max(0, Math.floor(n / 0.15));
+  }
+  function toggleDoc03PlanDetail(code){
+    var state = ensureDoc03State();
+    state.openPlanDetails = state.openPlanDetails || {};
+    state.openPlanDetails[code] = !state.openPlanDetails[code];
+    saveDoc03();
+    buildAccountPlan();
+  }
+  function doc03PlanDetailHtml(plan, open){
+    return "<div class='doc03-plan-detail' "+(open ? "" : "hidden")+" id='doc03PlanDetail-"+esc(plan.code)+"'><div class='row'><span>素材额度</span><b>"+doc03Limit(plan.materials," 条/月")+"</b></div><div class='row'><span>客服支持</span><b>"+(plan.code === "enterprise" ? "专属经理" : plan.code === "pro" ? "优先工单" : plan.code === "personal" ? "邮件工单" : "在线文档")+"</b></div><div class='row'><span>API额度</span><b>自行充值</b></div></div>";
+  }
+  function doc03PaymentErrorText(error){
+    var raw = [error && error.code, error && error.message, String(error || "")].join(" ");
+    if(raw.indexOf("PAYMENT_PROVIDER_NOT_CONFIGURED") >= 0 || raw.indexOf("支付商户参数未配置") >= 0){
+      return "支付商户参数未配置，请先在 Render 环境变量中配置支付宝或微信商户信息。";
+    }
+    return (error && error.message) || "支付订单创建失败，请稍后重试。";
+  }
+  function renderDoc03PaymentError(statusId, qrId, error){
+    var msg = doc03PaymentErrorText(error);
+    var status = $(statusId), qr = $(qrId);
+    if(status) status.innerHTML = "<b>支付未完成</b>："+esc(msg);
+    if(qr) qr.textContent = msg;
+    toastDoc03(msg);
+  }
+  function doc03SyncNoticeHtml(){
+    var state = ensureDoc03State();
+    var parts = ["数据状态：" + esc(state.status || "本地体验")];
+    if(state.lastSync) parts.push("最近同步：" + esc(state.lastSync));
+    if(state.error) parts.push("提示：" + esc(state.error));
+    return "<div class='notice doc03-sync-text'>" + parts.join(" · ") + "</div>";
+  }
+  function doc03RefreshButton(label){
+    var state = ensureDoc03State();
+    var loading = !!state.loading;
+    return "<button id='doc03RefreshBtn' class='btn soft doc03-refresh-button "+(loading ? "is-loading" : "")+"' "+(loading ? "disabled" : "")+" onclick='refreshDoc03AccountData()'>"+(loading ? "同步中..." : esc(label || "刷新数据"))+"</button>";
+  }
+  function setDoc03ShellMode(active){
+    if(document.body) document.body.classList.toggle("doc03-account-view", !!active);
+  }
   function saveDoc03(){
     try{ if(window.save) save(); else if(window.S && window.key) localStorage.setItem(window.key, JSON.stringify(S)); }catch(e){}
   }
@@ -2162,9 +2281,14 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   }
   async function refreshDoc03AccountData(silent){
     var state = ensureDoc03State();
-    if(state.loading) return;
+    if(state.loading){
+      if(!silent) toastDoc03("账户数据正在同步，请稍等。");
+      return;
+    }
     state.loading = true;
+    state.status = "同步中...";
     state.error = "";
+    if(doc03Sections.includes(String(window.current || current || ""))) renderDoc03AccountPages();
     try{
       var results = await Promise.all([
         apiRequest("/api/v1/account/profile").catch(function(e){ return { __error:e }; }),
@@ -2175,6 +2299,8 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
         apiRequest("/api/v1/account/credits/consumption-trend?days=30").catch(function(e){ return { __error:e }; }),
         apiRequest("/api/v1/plans").catch(function(e){ return { __error:e }; })
       ]);
+      var successCount = results.filter(function(item){ return !(item && item.__error); }).length;
+      var failedCount = results.length - successCount;
       var profile = results[0] && results[0].data && results[0].data.profile;
       var plan = results[1] && results[1].data && results[1].data.plan;
       var usage = results[2] && results[2].data && results[2].data.usage;
@@ -2189,8 +2315,16 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       if(Array.isArray(tx)) state.transactions = tx;
       if(Array.isArray(trend)) state.trend = trend;
       if(Array.isArray(plans)) state.plans = plans;
-      state.status = "已同步";
       state.lastSync = new Date().toLocaleString();
+      if(successCount){
+        state.status = failedCount ? "部分同步" : "已同步";
+        state.error = failedCount ? "部分接口暂未连接，已保留本地体验数据。" : "";
+        if(!silent) toastDoc03(failedCount ? "已刷新，部分数据使用本地体验值。" : "账户数据已刷新。");
+      }else{
+        state.status = "离线占位";
+        state.error = "账户接口暂未连接，已显示本地体验数据。";
+        if(!silent) toastDoc03("服务暂未连接，已显示本地体验数据。");
+      }
     }catch(e){
       state.status = "离线占位";
       state.error = e && e.message ? e.message : "账户数据暂未同步";
@@ -2209,16 +2343,21 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       ".doc03-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-bottom:16px}",
       ".doc03-metric{background:#fff;border:1px solid #e6ebf2;border-radius:8px;padding:18px}",
       ".doc03-metric small{color:#667085}.doc03-metric strong{display:block;font-size:30px;margin-top:6px;color:#172033}",
-      ".doc03-plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.doc03-plan{position:relative;background:#fff;border:1px solid #e6ebf2;border-radius:8px;padding:18px;min-height:360px}.doc03-plan.recommended{border-color:#5969f3;box-shadow:0 16px 40px rgba(89,105,243,.16)}",
-      ".pulse-badge{display:inline-flex;align-items:center;border-radius:999px;background:#eef2ff;color:#4f5eea;padding:5px 9px;font-size:12px;font-weight:900;animation:doc03Pulse 1.8s ease-in-out infinite}",
-      "@keyframes doc03Pulse{0%,100%{box-shadow:0 0 0 0 rgba(89,105,243,.22)}50%{box-shadow:0 0 0 8px rgba(89,105,243,0)}}",
-      ".doc03-cycle{display:inline-flex;border:1px solid #dfe7f2;border-radius:8px;overflow:hidden;background:#fff}.doc03-cycle button{border:0;background:#fff;padding:9px 12px;font-weight:900}.doc03-cycle button.active{background:#eef2ff;color:#4f5eea}",
+      ".doc03-plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.doc03-plan{position:relative;background:#fff;border:1px solid #e6ebf2;border-top:4px solid #d8e0ec;border-radius:8px;padding:18px;min-height:360px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}.doc03-plan:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(31,41,55,.10)}.doc03-plan-free{border-top-color:#7c8da6;background:linear-gradient(180deg,#fbfcff,#fff)}.doc03-plan-personal{border-top-color:#0ea5e9;background:linear-gradient(180deg,#f0faff,#fff)}.doc03-plan-pro,.doc03-plan.recommended{border-color:#bdebdc;border-top-color:#20aa8a;background:linear-gradient(180deg,#effaf6,#fff);box-shadow:0 16px 40px rgba(32,170,138,.16)}.doc03-plan-enterprise{border-color:#f3d18b;border-top-color:#d8a21c;background:linear-gradient(180deg,#fff9e8,#fff)}",
+      ".doc03-plan-price{display:block;font-size:30px;letter-spacing:0;margin:8px 0}.doc03-plan-free .doc03-plan-price{color:#4b5a70}.doc03-plan-personal .doc03-plan-price{color:#0678b8}.doc03-plan-pro .doc03-plan-price{color:#15866d}.doc03-plan-enterprise .doc03-plan-price{color:#9a6400}.btn.blue{background:#0ea5e9;color:#fff;border-color:#0ea5e9}.btn.gold{background:#d8a21c;color:#fff;border-color:#d8a21c}",
+      ".doc03-current-plan{border-color:#2563eb!important;border-width:2px;background:linear-gradient(180deg,#eff6ff,#fff)!important}.doc03-current-label{background:#2563eb;color:#fff}.doc03-discount-badge{position:absolute;right:12px;top:12px;background:#16a34a;color:#fff;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:900}.doc03-plan-detail{border-top:1px solid #e6ebf2;margin-top:12px;padding-top:10px}.doc03-plan-detail[hidden]{display:none}.doc03-detail-btn{width:100%;margin-top:10px}.doc03-money-input{position:relative}.doc03-money-input input{padding-left:28px}.doc03-currency-prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:900;color:#596579}.doc03-amount-btn small{display:block;font-size:11px;font-weight:700;opacity:.76;margin-top:2px}",
+      ".pulse-badge{display:inline-flex;align-items:center;border-radius:4px;background:#F59E0B;color:#fff;padding:2px 8px;font-size:11px;font-weight:900;animation:doc03Pulse 2s ease-in-out infinite}",
+      "@keyframes doc03Pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}",
+      ".doc03-cycle{display:inline-flex;border:1px solid #dfe7f2;border-radius:8px;overflow:hidden;background:#fff}.doc03-cycle button{border:0;background:#fff;padding:9px 12px;font-weight:900;transition:background .18s ease,color .18s ease}.doc03-cycle button.active{background:#eef2ff;color:#4f5eea}",
       ".doc03-warning{border-left-color:#d8a21c;background:#fff7e6;color:#805400}.doc03-danger{border-left-color:#c34242;background:#fff0f0;color:#9d1f1f}",
       ".doc03-modal{position:fixed;inset:0;background:rgba(15,23,42,.34);backdrop-filter:blur(6px);z-index:60;display:flex;align-items:center;justify-content:center;padding:18px}.doc03-modal-card{width:min(560px,100%);max-height:92vh;overflow:auto;background:#fff;border:1px solid #e5ebf3;border-radius:10px;box-shadow:0 24px 80px rgba(15,23,42,.22);padding:20px}",
-      ".doc03-amounts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.doc03-amounts button{min-height:44px}",
+      ".doc03-amounts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.doc03-amounts button{min-height:44px;transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease}.doc03-amounts button:hover{transform:translateY(-1px)}.doc03-amount-btn.active{background:#5969f3;color:#fff;border-color:#5969f3;box-shadow:0 8px 18px rgba(89,105,243,.20)}",
       ".doc03-pay-row{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.doc03-pay-row label{border:1px solid #dfe7f2;border-radius:8px;padding:10px 12px;background:#fff;font-weight:900}",
       ".doc03-qr{border:1px dashed #bcc8d8;border-radius:8px;min-height:132px;display:grid;place-items:center;background:#fbfcff;color:#40506a;text-align:center;padding:12px;word-break:break-all}",
       ".trend-bars{display:grid;grid-template-columns:repeat(14,1fr);gap:8px;align-items:end;height:150px}.trend-bars i{display:block;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#5969f3,#20aa8a);min-height:8px}.trend-bars span{display:block;font-size:11px;color:#7a8699;margin-top:5px;text-align:center}",
+      ".doc03-refresh-button.is-loading{position:relative;padding-left:34px}.doc03-refresh-button.is-loading:before{content:'';position:absolute;left:12px;top:50%;width:13px;height:13px;margin-top:-7px;border:2px solid #c7d2fe;border-top-color:#5969f3;border-radius:50%;animation:doc03Spin .75s linear infinite}.doc03-sync-text{font-size:13px}.doc03-plan .row,.doc03-metric{transition:border-color .18s ease,background .18s ease}",
+      "body.doc03-account-view .content>.hero,body.doc03-account-view .content>.stats{display:none}body.doc03-account-view .title>.btn.dark{display:none}body.doc03-account-view .top .btn[onclick='refreshRealtime()'],body.doc03-account-view .top .btn[onclick='syncProjectsFromServer()'],body.doc03-account-view .top .btn[onclick='syncQuestionsFromServer()'],body.doc03-account-view .top .btn[onclick='runAll()'],body.doc03-account-view .top .btn[onclick=\"openSection('accountPlan')\"]{display:none}body.doc03-account-view .tabs{margin-top:0}@media(max-width:720px){body.doc03-account-view .side{max-height:34vh}}",
+      "@keyframes doc03Spin{to{transform:rotate(360deg)}}",
       ".count-up{color:#15866d;transition:color .25s ease,transform .25s ease}.count-up.bump{transform:scale(1.04)}",
       "@media(max-width:1100px){.doc03-hero,.doc03-plan-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.doc03-hero,.doc03-plan-grid,.doc03-amounts{grid-template-columns:1fr}.doc03-plan{min-height:auto}.trend-bars{grid-template-columns:repeat(7,1fr);height:auto}}"
     ].join("");
@@ -2290,7 +2429,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     var plan = state.plan || {};
     var usage = state.usage || {};
     var low = Number(balance.amount || 0) <= 10;
-    el.innerHTML = "<div class='doc03-hero'><div class='panel'><div class='head'><div><h2>账户与套餐</h2><p class='hint'>这里集中管理套餐、API调用额度、用量、资料、安全和账单。</p></div><span class='tag green'>"+esc(state.status || "本地体验")+"</span></div><div class='grid4'><div class='doc03-metric'><small>当前套餐</small><strong>"+esc(plan.plan || "免费版")+"</strong><small>"+esc(plan.statusText || "试用中")+"</small></div><div class='doc03-metric'><small>API调用额度</small><strong id='doc03BalanceTop' class='count-up'>"+esc(balance.formatted || money(balance.amount))+"</strong><small>预计可调用 "+esc(credits.estimatedCalls || 0)+" 次</small></div><div class='doc03-metric'><small>品牌项目</small><strong>"+doc03Limit(usage.brandProjects, "")+" / "+doc03Limit(usage.brandProjectsLimit, "")+"</strong><small>已创建项目</small></div><div class='doc03-metric'><small>内容生成</small><strong>"+doc03Limit(usage.contentGeneration, "")+" / "+doc03Limit(usage.contentGenerationLimit, "")+"</strong><small>本月额度</small></div></div>"+(low ? "<div class='notice doc03-warning'><b>余额不足</b>：API 调用余额偏低，建议先充值API额度，避免监控或内容生成中断。</div>" : "")+"</div><div class='panel'><h2>快捷入口</h2><div class='list'><button class='btn primary' onclick=\"openSection('accountPlan')\">升级到专业版</button><button class='btn green' onclick='openRechargeModal(100)'>充值API额度</button><button class='btn soft' onclick=\"openSection('accountUsage')\">查看用量明细</button><button class='btn soft' onclick=\"openSection('accountBilling')\">查看账单记录</button></div><p class='hint'>支付当前是安全占位流程，真实微信/支付宝收款需要上线后在服务器配置商户密钥。</p></div></div><div class='grid2'><div class='panel'><h2>本月用量</h2>"+usageProgressHtml()+"</div><div class='panel'><h2>最近交易</h2>"+transactionsHtml(5)+"</div></div>";
+    el.innerHTML = "<div class='doc03-hero'><div class='panel'><div class='head'><div><h2>账户与套餐</h2><p class='hint'>这里集中管理套餐、API调用额度、用量、资料、安全和账单。</p></div><span class='tag green'>"+esc(state.status || "本地体验")+"</span></div><div class='grid4'><div class='doc03-metric'><small>当前套餐</small><strong>"+esc(plan.plan || "免费版")+"</strong><small>"+esc(plan.statusText || "试用中")+"</small></div><div class='doc03-metric'><small>API调用额度</small><strong id='doc03BalanceTop' class='count-up'>"+esc(balance.formatted || money(balance.amount))+"</strong><small>预计可调用 "+esc(credits.estimatedCalls || 0)+" 次</small></div><div class='doc03-metric'><small>品牌项目</small><strong>"+doc03Limit(usage.brandProjects, "")+" / "+doc03Limit(usage.brandProjectsLimit, "")+"</strong><small>已创建项目</small></div><div class='doc03-metric'><small>内容生成</small><strong>"+doc03Limit(usage.contentGeneration, "")+" / "+doc03Limit(usage.contentGenerationLimit, "")+"</strong><small>本月额度</small></div></div>"+doc03SyncNoticeHtml()+(low ? "<div class='notice doc03-warning'><b>余额不足</b>：API 调用余额偏低，建议先充值API额度，避免监控或内容生成中断。</div>" : "")+"</div><div class='panel'><h2>快捷入口</h2><div class='list'><button class='btn primary' onclick=\"openSection('accountPlan')\">升级到专业版</button><button class='btn green' onclick='openRechargeModal(100)'>充值API额度</button>"+doc03RefreshButton("刷新账户数据")+"<button class='btn soft' onclick=\"openSection('accountUsage')\">查看用量明细</button><button class='btn soft' onclick=\"openSection('accountBilling')\">查看账单记录</button></div><p class='hint'>真实微信/支付宝收款需要先在服务器配置商户密钥，开通结果以支付回调验签为准。</p></div></div><div class='grid2'><div class='panel'><h2>本月用量</h2>"+usageProgressHtml()+"</div><div class='panel'><h2>最近交易</h2>"+transactionsHtml(5)+"</div></div>";
   }
   function buildAccountPlan(){
     var state = ensureDoc03State();
@@ -2300,7 +2439,13 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     var plansHtml = canonicalDoc03Plans().map(function(plan){
       var price = cycle === "yearly" ? plan.priceYear : plan.priceMonth;
       var recommended = plan.recommended ? " recommended" : "";
-      return "<div class='doc03-plan"+recommended+"'><div class='head'><span class='"+(plan.recommended ? "pulse-badge" : "tag")+"'>"+esc(plan.tag)+"</span><span class='tag'>"+esc(plan.name)+"</span></div><h3>"+esc(plan.name)+(plan.recommended ? " 推荐" : "")+"</h3><strong style='font-size:30px'>"+esc(price)+"</strong><p class='hint'>"+esc(plan.desc)+"</p><div class='list' style='margin:12px 0'><div class='row'><span>品牌项目</span><b>"+doc03Limit(plan.brandProjects," 个")+"</b></div><div class='row'><span>每日刷新</span><b>"+doc03Limit(plan.dailyRefresh," 次")+"</b></div><div class='row'><span>AI模型</span><b>"+doc03Limit(plan.modelCalls," 个")+"</b></div><div class='row'><span>内容任务</span><b>"+doc03Limit(plan.contentTasks," 篇/月")+"</b></div></div><ul>"+plan.features.map(function(f){return "<li>"+esc(f)+"</li>";}).join("")+"</ul><button class='btn "+(plan.recommended ? "primary" : "soft")+"' style='width:100%;margin-top:14px' onclick=\"openUpgradeModal('"+esc(plan.code)+"')\">"+(plan.code === "free" ? "保持免费版" : "选择"+esc(plan.name))+"</button></div>";
+      var theme = " " + doc03PlanTheme(plan.code);
+      var buttonClass = doc03PlanButtonClass(plan.code);
+      var current = isDoc03CurrentPlan(plan);
+      var detailOpen = !!(state.openPlanDetails && state.openPlanDetails[plan.code]);
+      var discount = cycle === "yearly" && plan.code !== "free" ? "<span class='doc03-discount-badge'>-17%</span>" : "";
+      var currentLabel = current ? "<span class='tag doc03-current-label'>当前套餐</span>" : "<span class='tag'>"+esc(plan.name)+"</span>";
+      return "<div class='doc03-plan"+recommended+theme+(current?" doc03-current-plan":"")+"'>"+discount+"<div class='head'><span class='"+(plan.recommended ? "pulse-badge" : "tag")+"'>"+esc(plan.tag)+"</span>"+currentLabel+"</div><h3>"+esc(plan.name)+(plan.recommended ? " 推荐" : "")+"</h3><strong class='doc03-plan-price'>"+esc(price)+"</strong><p class='hint'>"+esc(plan.desc)+"</p><div class='list' style='margin:12px 0'><div class='row'><span>品牌项目</span><b>"+doc03Limit(plan.brandProjects," 个")+"</b></div><div class='row'><span>每日刷新</span><b>"+doc03Limit(plan.dailyRefresh," 次")+"</b></div><div class='row'><span>AI模型</span><b>"+doc03Limit(plan.modelCalls," 个")+"</b></div><div class='row'><span>内容任务</span><b>"+doc03Limit(plan.contentTasks," 篇/月")+"</b></div></div><ul>"+plan.features.map(function(f){return "<li>"+esc(f)+"</li>";}).join("")+"</ul>"+doc03PlanDetailHtml(plan, detailOpen)+"<button class='btn soft doc03-detail-btn' onclick=\"toggleDoc03PlanDetail('"+esc(plan.code)+"')\">"+(detailOpen?"收起详情 ▲":"展开详情 ▼")+"</button><button class='btn "+buttonClass+" doc03-plan-btn' style='width:100%;margin-top:10px' onclick=\"openUpgradeModal('"+esc(plan.code)+"')\">"+(current ? "当前套餐" : plan.code === "free" ? "保持免费版" : "选择"+esc(plan.name))+"</button></div>";
     }).join("");
     el.innerHTML = "<div class='panel' style='margin-bottom:16px'><div class='head'><div><h2>套餐管理</h2><p class='hint'>免费版、个人版、专业版、企业版。主推专业版，适合大多数希望被 AI 搜索看到的品牌。</p></div><div class='doc03-cycle'><button class='"+(cycle==="monthly"?"active":"")+"' onclick=\"setDoc03BillingCycle('monthly')\">月付</button><button class='"+(cycle==="yearly"?"active":"")+"' onclick=\"setDoc03BillingCycle('yearly')\">年付</button></div></div><div class='notice'>专业版：¥899/月；年付 ¥8,999/年。API 调用费用独立通过余额扣除，避免把模型成本写死在套餐里。</div></div><div class='doc03-plan-grid'>"+plansHtml+"</div>";
   }
@@ -2311,12 +2456,12 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     var credits = state.credits || {};
     var balance = credits.balance || { amount:0, formatted:"¥0.00" };
     var low = credits.zeroBalance || credits.lowBalance || Number(balance.amount || 0) <= 10;
-    el.innerHTML = "<div class='panel' style='margin-bottom:16px'><div class='head'><div><h2>API调用额度</h2><p class='hint'>所有 AI 平台调用都由后端按模型单价计算，前端只展示用户价格，不展示服务成本。</p></div><button class='btn primary' onclick='openRechargeModal(100)'>充值API额度</button></div><div class='grid4'><div class='doc03-metric'><small>当前余额</small><strong id='doc03CreditBalance' class='count-up'>"+esc(balance.formatted || money(balance.amount))+"</strong><small>预计可调用 "+esc(credits.estimatedCalls || 0)+" 次</small></div><div class='doc03-metric'><small>余额状态</small><strong>"+(low ? "余额不足" : "余额正常")+"</strong><small>"+(low ? "建议立即充值" : "可继续使用")+"</small></div><div class='doc03-metric'><small>模型数量</small><strong>"+((credits.modelPricing || []).length || defaultDoc03ModelPricing().length)+"</strong><small>已配置单价</small></div><div class='doc03-metric'><small>轮询状态</small><strong>3秒</strong><small>支付状态轮询</small></div></div>"+(low ? "<div class='notice doc03-danger'><b>余额不足</b>：当前余额可能无法完成一次完整监控，请先充值API额度。</div>" : "")+"</div><div class='grid2'><div class='panel'><h2>充值API额度</h2><div class='doc03-amounts'>"+[50,100,200,500,1000,2000].map(function(n){return "<button class='btn soft' onclick='openRechargeModal("+n+")'>"+moneyShort(n)+"</button>";}).join("")+"</div><p class='hint'>充值订单 5分00秒后过期，未支付不会改变余额。</p></div><div class='panel'><h2>30 天消费趋势</h2>"+trendHtml()+"</div></div><div class='grid2' style='margin-top:16px'><div class='panel'><h2>模型单价</h2>"+modelPricingHtml()+"</div><div class='panel'><h2>交易流水</h2>"+transactionsHtml(20)+"</div></div>";
+    el.innerHTML = "<div class='panel' style='margin-bottom:16px'><div class='head'><div><h2>API调用额度</h2><p class='hint'>所有 AI 平台调用都由后端按模型单价计算，前端只展示用户价格，不展示服务成本。</p></div><button class='btn primary' onclick='openRechargeModal(100)'>充值API额度</button></div><div class='grid4'><div class='doc03-metric'><small>当前余额</small><strong id='doc03CreditBalance' class='count-up'>"+esc(balance.formatted || money(balance.amount))+"</strong><small>预计可调用 "+esc(credits.estimatedCalls || 0)+" 次</small></div><div class='doc03-metric'><small>余额状态</small><strong>"+(low ? "余额不足" : "余额正常")+"</strong><small>"+(low ? "建议立即充值" : "可继续使用")+"</small></div><div class='doc03-metric'><small>模型数量</small><strong>"+((credits.modelPricing || []).length || defaultDoc03ModelPricing().length)+"</strong><small>已配置单价</small></div><div class='doc03-metric'><small>轮询状态</small><strong>3秒</strong><small>支付状态轮询</small></div></div>"+(low ? "<div class='notice doc03-danger'><b>余额不足</b>：当前余额可能无法完成一次完整监控，请先充值API额度。</div>" : "")+"</div><div class='grid2'><div class='panel'><h2>充值API额度</h2><div class='doc03-amounts'>"+[50,100,200,500,1000,2000].map(function(n){return "<button class='btn soft doc03-amount-btn' onclick='openRechargeModal("+n+")'>"+moneyShort(n)+"<small>约 "+doc03ApproxCalls(n)+" 次豆包调用</small></button>";}).join("")+"</div><p class='hint'>充值订单 5分00秒后过期，未支付不会改变余额。</p></div><div class='panel'><h2>30 天消费趋势</h2>"+trendHtml()+"</div></div><div class='grid2' style='margin-top:16px'><div class='panel'><h2>模型单价</h2>"+modelPricingHtml()+"</div><div class='panel'><h2>交易流水</h2>"+transactionsHtml(20)+"</div></div>";
   }
   function buildAccountUsage(){
     var el = $("accountUsage");
     if(!el) return;
-    el.innerHTML = "<div class='panel' style='margin-bottom:16px'><div class='head'><div><h2>用量明细</h2><p class='hint'>用量由服务端权益系统判断，前端只负责展示进度。</p></div><button class='btn soft' onclick='refreshDoc03AccountData()'>刷新用量</button></div></div><div class='grid2'><div class='panel'><h2>额度进度</h2>"+usageProgressHtml()+"</div><div class='panel'><h2>消耗说明</h2>"+tableSafe(["项目","说明"],[["品牌项目","创建品牌、官网、竞品和关键词资料。"],["每日刷新","AI 回答监控和数据刷新次数。"],["素材额度","导入知识库、标题库和关键词库。"],["内容任务","生成内容草稿、策略和报告时消耗。"],["API调用额度","按模型真实调用由余额扣除。"]])+"</div></div>";
+    el.innerHTML = "<div class='panel' style='margin-bottom:16px'><div class='head'><div><h2>用量明细</h2><p class='hint'>用量由服务端权益系统判断，前端只负责展示进度。</p></div>"+doc03RefreshButton("刷新用量")+"</div>"+doc03SyncNoticeHtml()+"</div><div class='grid2'><div class='panel'><h2>额度进度</h2>"+usageProgressHtml()+"</div><div class='panel'><h2>消耗说明</h2>"+tableSafe(["项目","说明"],[["品牌项目","创建品牌、官网、竞品和关键词资料。"],["每日刷新","AI 回答监控和数据刷新次数。"],["素材额度","导入知识库、标题库和关键词库。"],["内容任务","生成内容草稿、策略和报告时消耗。"],["API调用额度","按模型真实调用由余额扣除。"]])+"</div></div>";
   }
   function buildAccountProfile(){
     var state = ensureDoc03State(), p = state.profile || {};
@@ -2342,6 +2487,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   function renderDoc03AccountPages(){
     ensureDoc03State();
     var id = String(window.current || current || "");
+    setDoc03ShellMode(doc03Sections.includes(id));
     if(id === "account") buildAccountOverview();
     if(id === "accountPlan") buildAccountPlan();
     if(id === "accountCredits") buildAccountCredits();
@@ -2389,14 +2535,16 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     buildAccountPlan();
   }
   function openRechargeModal(amount){
-    ensureDoc03State().rechargeAmount = amount || ensureDoc03State().rechargeAmount || 100;
+    var selectedAmount = Number(amount || ensureDoc03State().rechargeAmount || 100);
+    ensureDoc03State().rechargeAmount = selectedAmount;
     var old = $("doc03RechargeModal");
     if(old) old.remove();
     var wrap = document.createElement("div");
     wrap.id = "doc03RechargeModal";
     wrap.className = "doc03-modal";
-    wrap.innerHTML = "<div class='doc03-modal-card'><div class='head'><div><h2>充值API额度</h2><p class='hint'>订单创建后 5分00秒后过期。当前为安全占位支付，不会调用真实收款。</p></div><button class='btn soft' onclick='closeDoc03Modal()'>关闭</button></div><div class='doc03-amounts'>"+[50,100,200,500,1000,2000].map(function(n){return "<button class='btn "+(n===amount?"primary":"soft")+"' onclick='setRechargeAmount("+n+")'>"+moneyShort(n)+"</button>";}).join("")+"</div><div class='field'><label>自定义金额</label><input id='doc03RechargeAmount' type='number' min='10' value='"+esc(ensureDoc03State().rechargeAmount)+"'></div><div class='doc03-pay-row'><label><input type='radio' name='doc03Pay' value='alipay' checked> 支付宝</label><label><input type='radio' name='doc03Pay' value='wechat'> 微信支付</label></div><button id='doc03RechargeSubmit' class='btn primary' style='width:100%' onclick='submitRechargeOrder()'>创建充值订单</button><div id='doc03RechargeStatus' class='notice' style='margin-top:12px'>支付占位二维码会在这里显示，状态每 3 秒自动检查一次。</div><div id='doc03RechargeQr' class='doc03-qr' style='margin-top:12px'>等待创建订单</div></div>";
+    wrap.innerHTML = "<div class='doc03-modal-card'><div class='head'><div><h2>充值API额度</h2><p class='hint'>订单创建后 5分00秒后过期；支付成功以服务端验签回调为准。</p></div><button class='btn soft' onclick='closeDoc03Modal()'>关闭</button></div><div class='doc03-amounts'>"+[50,100,200,500,1000,2000].map(function(n){var active = Number(n) === Number(selectedAmount); return "<button class='btn doc03-amount-btn "+(active?"primary active":"soft")+"' data-amount='"+n+"' aria-pressed='"+(active?"true":"false")+"' onclick='setRechargeAmount("+n+")'>"+moneyShort(n)+"<small>约 "+doc03ApproxCalls(n)+" 次豆包调用</small></button>";}).join("")+"</div><div class='field'><label>自定义金额</label><div class='doc03-money-input'><span class='doc03-currency-prefix'>¥</span><input id='doc03RechargeAmount' type='number' min='10' value='"+esc(selectedAmount)+"' oninput='syncRechargeAmountFromInput(this.value)'></div></div><div class='doc03-pay-row'><label><input type='radio' name='doc03Pay' value='alipay' checked> 支付宝</label><label><input type='radio' name='doc03Pay' value='wechat'> 微信支付</label></div><button id='doc03RechargeSubmit' class='btn primary' style='width:100%' onclick='submitRechargeOrder()'>创建充值订单</button><div id='doc03RechargeStatus' class='notice' style='margin-top:12px'>支付二维码或链接会在这里显示，状态每 3 秒自动检查一次。</div><div id='doc03RechargeQr' class='doc03-qr' style='margin-top:12px'>等待创建订单</div></div>";
     document.body.appendChild(wrap);
+    updateRechargeAmountButtons(selectedAmount);
   }
   function closeDoc03Modal(){
     if(doc03RechargePoller) clearInterval(doc03RechargePoller);
@@ -2405,9 +2553,28 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     if(modal) modal.remove();
   }
   function setRechargeAmount(amount){
+    amount = Number(amount || 0);
     ensureDoc03State().rechargeAmount = amount;
     var input = $("doc03RechargeAmount");
     if(input) input.value = amount;
+    updateRechargeAmountButtons(amount);
+    saveDoc03();
+  }
+  function syncRechargeAmountFromInput(value){
+    var amount = Number(value || 0);
+    if(Number.isFinite(amount)) ensureDoc03State().rechargeAmount = amount;
+    updateRechargeAmountButtons(amount);
+    saveDoc03();
+  }
+  function updateRechargeAmountButtons(amount){
+    var selected = Number(amount || 0);
+    document.querySelectorAll("#doc03RechargeModal .doc03-amount-btn").forEach(function(btn){
+      var isActive = Number(btn.getAttribute("data-amount")) === selected;
+      btn.classList.toggle("active", isActive);
+      btn.classList.toggle("primary", isActive);
+      btn.classList.toggle("soft", !isActive);
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    });
   }
   function submitRechargeOrder(){
     var amount = Number(($("doc03RechargeAmount") && $("doc03RechargeAmount").value) || 0);
@@ -2427,10 +2594,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       renderRechargePayment(order, paid && paid.data ? paid.data.payment : null);
       if(order && order.id) startRechargePolling(order.id);
     }catch(e){
-      var order = { id:"local-"+Date.now(), orderNo:"RC-LOCAL-"+Date.now(), amount:amount, amountFormatted:money(amount), status:"pending", expiresAt:new Date(Date.now()+300000).toISOString() };
-      renderRechargePayment(order, { mode:"placeholder", qrPayload:"Citeox DOC-03 placeholder payment: "+order.orderNo, pollIntervalSeconds:3, expiresAt:order.expiresAt });
-      startRechargePolling(order.id);
-      toastDoc03("服务暂未返回真实订单，已展示本地占位支付流程。");
+      renderDoc03PaymentError("doc03RechargeStatus", "doc03RechargeQr", e);
     }finally{
       if(btn){ btn.disabled = false; btn.textContent = oldText || "创建充值订单"; }
     }
@@ -2438,7 +2602,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   function renderRechargePayment(order, payment){
     var status = $("doc03RechargeStatus"), qr = $("doc03RechargeQr");
     if(status) status.innerHTML = "订单号："+esc(order && order.orderNo || "-")+"；金额："+esc(order && (order.amountFormatted || money(order.amount)) || "-")+"；<b id='doc03ExpireText'>5分00秒后过期</b>";
-    if(qr) qr.textContent = (payment && (payment.qrPayload || payment.paymentUrl)) || "安全占位支付二维码";
+    if(qr) qr.textContent = (payment && (payment.qrPayload || payment.paymentUrl)) || "等待支付提供器返回二维码或链接";
     startRechargeCountdown(order && order.expiresAt);
   }
   function startRechargeCountdown(expiresAt){
@@ -2500,7 +2664,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     var wrap = document.createElement("div");
     wrap.id = "doc03UpgradeModal";
     wrap.className = "doc03-modal";
-    wrap.innerHTML = "<div class='doc03-modal-card'><div class='head'><div><h2>确认开通 "+esc(plan.name)+"</h2><p class='hint'>当前选择："+esc(price)+"。支付为安全占位流程，正式开通以服务端回调为准。</p></div><button class='btn soft' onclick='closeDoc03Modal()'>关闭</button></div><div class='doc03-pay-row'><label><input type='radio' name='doc03SubPay' value='alipay' checked> 支付宝</label><label><input type='radio' name='doc03SubPay' value='wechat'> 微信支付</label></div><button id='doc03UpgradeSubmit' class='btn primary' style='width:100%' onclick=\"createSubscriptionOrder('"+esc(plan.code)+"')\">创建套餐订单</button><div id='doc03UpgradeStatus' class='notice' style='margin-top:12px'>套餐订单 5 分钟内有效。</div><div id='doc03UpgradeQr' class='doc03-qr' style='margin-top:12px'>等待创建订单</div></div>";
+    wrap.innerHTML = "<div class='doc03-modal-card'><div class='head'><div><h2>确认开通 "+esc(plan.name)+"</h2><p class='hint'>当前选择："+esc(price)+"。套餐正式开通以服务端支付回调验签为准。</p></div><button class='btn soft' onclick='closeDoc03Modal()'>关闭</button></div><div class='doc03-pay-row'><label><input type='radio' name='doc03SubPay' value='alipay' checked> 支付宝</label><label><input type='radio' name='doc03SubPay' value='wechat'> 微信支付</label></div><button id='doc03UpgradeSubmit' class='btn primary' style='width:100%' onclick=\"createSubscriptionOrder('"+esc(plan.code)+"')\">创建套餐订单</button><div id='doc03UpgradeStatus' class='notice' style='margin-top:12px'>套餐订单 5 分钟内有效。</div><div id='doc03UpgradeQr' class='doc03-qr' style='margin-top:12px'>等待创建订单</div></div>";
     document.body.appendChild(wrap);
   }
   async function createSubscriptionOrder(planCode){
@@ -2515,11 +2679,9 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       var paid = order && order.id ? await apiRequest("/api/v1/subscriptions/orders/"+encodeURIComponent(order.id)+"/pay", { method:"POST", body:JSON.stringify({}) }) : null;
       var status = $("doc03UpgradeStatus"), qr = $("doc03UpgradeQr");
       if(status) status.textContent = "订单已创建："+(order && order.orderNo || "-")+"，等待支付回调确认。";
-      if(qr) qr.textContent = (paid && paid.data && paid.data.payment && (paid.data.payment.qrPayload || paid.data.payment.paymentUrl)) || "安全占位支付二维码";
+      if(qr) qr.textContent = (paid && paid.data && paid.data.payment && (paid.data.payment.qrPayload || paid.data.payment.paymentUrl)) || "等待支付提供器返回二维码或链接";
     }catch(e){
-      var status = $("doc03UpgradeStatus"), qr = $("doc03UpgradeQr");
-      if(status) status.textContent = "服务暂未返回套餐订单，已保留占位收银台。";
-      if(qr) qr.textContent = "Citeox DOC-03 placeholder subscription order";
+      renderDoc03PaymentError("doc03UpgradeStatus", "doc03UpgradeQr", e);
     }finally{
       if(btn){ btn.disabled = false; btn.textContent = oldText || "创建套餐订单"; }
     }
@@ -2589,12 +2751,15 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     if(id === "billing" && !(window.isAdminRole && isAdminRole())) id = "accountPlan";
     var result = oldOpenSection ? oldOpenSection(id, btn) : null;
     if(doc03Sections.includes(id)){
+      setDoc03ShellMode(true);
       setDoc03BrowserRoute(id);
       renderDoc03AccountPages();
       if(!ensureDoc03State().loadedOnce){
         ensureDoc03State().loadedOnce = true;
         refreshDoc03AccountData(true);
       }
+    }else{
+      setDoc03ShellMode(false);
     }
     return result || requested;
   };
@@ -2614,6 +2779,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   window.render = function(){
     var result = oldRender ? oldRender() : null;
     renderDoc03AccountPages();
+    if(!doc03Sections.includes(String(window.current || current || ""))) setDoc03ShellMode(false);
     return result;
   };
   try{ render = window.render; }catch(e){}
@@ -2642,6 +2808,8 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     openRechargeModal: openRechargeModal,
     closeDoc03Modal: closeDoc03Modal,
     setRechargeAmount: setRechargeAmount,
+    syncRechargeAmountFromInput: syncRechargeAmountFromInput,
+    updateRechargeAmountButtons: updateRechargeAmountButtons,
     submitRechargeOrder: submitRechargeOrder,
     createRechargeOrder: createRechargeOrder,
     startRechargePolling: startRechargePolling,
@@ -2651,6 +2819,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     saveAccountProfile: saveAccountProfile,
     updateAccountPassword: updateAccountPassword,
     setDoc03BillingCycle: setDoc03BillingCycle,
+    toggleDoc03PlanDetail: toggleDoc03PlanDetail,
     refreshDoc03AccountData: refreshDoc03AccountData,
     renderDoc03AccountPages: renderDoc03AccountPages
   });
@@ -2659,10 +2828,13 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     buildAccountPlan = window.buildAccountPlan;
     buildAccountCredits = window.buildAccountCredits;
     openRechargeModal = window.openRechargeModal;
+    setRechargeAmount = window.setRechargeAmount;
+    syncRechargeAmountFromInput = window.syncRechargeAmountFromInput;
     createRechargeOrder = window.createRechargeOrder;
     startRechargePolling = window.startRechargePolling;
     animateBalanceCountUp = window.animateBalanceCountUp;
     openUpgradeModal = window.openUpgradeModal;
+    toggleDoc03PlanDetail = window.toggleDoc03PlanDetail;
     renderDoc03AccountPages = window.renderDoc03AccountPages;
   }catch(e){}
 

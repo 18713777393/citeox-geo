@@ -87,6 +87,36 @@ assert.match(
   /findUserByResetToken/,
   "DOC-01 reset-password service must resolve the user from a reset token without asking for account."
 );
+assert.match(
+  authRouteSource,
+  /"\/check-email"/,
+  "DOC-01 email field requires a public real-time availability endpoint."
+);
+assert.match(
+  authRouteSource,
+  /"\/check-phone"/,
+  "DOC-01 phone field requires a public real-time availability endpoint."
+);
+assert.match(
+  prismaSchemaSource,
+  /attemptCount\s+Int\s+@default\(0\)\s+@map\("attempt_count"\)/,
+  "DOC-01 email code verification must track failed attempts."
+);
+assert.match(
+  authServiceSource,
+  /MAX_VERIFICATION_ATTEMPTS\s*=\s*5/,
+  "DOC-01 verification codes must expire after 5 failed attempts."
+);
+assert.match(
+  authServiceSource,
+  /attemptCount:\s*\{\s*increment:\s*1\s*\}/,
+  "DOC-01 failed verification attempts must be counted."
+);
+assert.match(
+  authServiceSource,
+  /consumedAt:\s*new Date\(\)[\s\S]*attemptCount:\s*\{\s*gte:\s*MAX_VERIFICATION_ATTEMPTS - 1\s*\}/,
+  "DOC-01 verification codes must be consumed when the 5-attempt limit is reached."
+);
 
 const server = createServer(createApp());
 

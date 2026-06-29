@@ -22,6 +22,9 @@ for (const fn of [
   "function buildAccountPlan()",
   "function buildAccountCredits()",
   "function openRechargeModal(",
+  "function setRechargeAmount(",
+  "function syncRechargeAmountFromInput(",
+  "function updateRechargeAmountButtons(",
   "function createRechargeOrder(",
   "function startRechargePolling(",
   "function animateBalanceCountUp(",
@@ -63,6 +66,25 @@ for (const text of [
 }
 
 assert.ok(html.includes("pulse-badge"), "DOC-03 professional recommended badge must use pulse animation.");
+assert.ok(html.includes("doc03-plan-free"), "DOC-03 free plan must have its own visual theme.");
+assert.ok(html.includes("doc03-plan-personal"), "DOC-03 personal plan must have its own visual theme.");
+assert.ok(html.includes("doc03-plan-pro"), "DOC-03 professional plan must have its own green visual theme.");
+assert.ok(html.includes("doc03-plan-enterprise"), "DOC-03 enterprise plan must have its own gold visual theme.");
+assert.ok(html.includes("doc03-current-plan"), "DOC-03 current plan card must have a visible highlight class.");
+assert.ok(html.includes("doc03-discount-badge"), "DOC-03 yearly cards must show the -17% discount badge.");
+assert.ok(html.includes("toggleDoc03PlanDetail"), "DOC-03 plan cards must support expand/collapse details.");
+assert.ok(html.includes("doc03-plan-detail"), "DOC-03 plan card detail panel must exist.");
+assert.ok(html.includes("doc03ApproxCalls"), "DOC-03 recharge amounts must show approximate call counts.");
+assert.ok(html.includes("doc03-currency-prefix"), "DOC-03 custom recharge input must show a visible currency prefix.");
+assert.ok(html.includes("PAYMENT_PROVIDER_NOT_CONFIGURED"), "DOC-03 frontend must handle missing merchant config.");
+assert.ok(html.includes("支付商户参数未配置"), "DOC-03 frontend must show a clear payment config message.");
+assert.ok(!html.includes("Citeox DOC-03 placeholder payment"), "DOC-03 frontend must not fake recharge payment success with placeholder text.");
+assert.ok(!html.includes("Citeox DOC-03 placeholder subscription order"), "DOC-03 frontend must not fake subscription payment success with placeholder text.");
+assert.ok(html.includes(".btn.green") && html.includes(".btn.gold") && html.includes(".btn.blue"), "DOC-03 plan CTAs must support distinct colors.");
+assert.ok(html.includes("doc03-amount-btn") && html.includes("data-amount") && html.includes("aria-pressed"), "DOC-03 recharge amount buttons must expose selected state.");
+assert.ok(html.includes("syncRechargeAmountFromInput(this.value)"), "DOC-03 custom recharge input must sync the selected preset state.");
+assert.ok(html.includes("同步中...") && html.includes("doc03-refresh-button"), "DOC-03 refresh actions must show a visible loading state.");
+assert.ok(html.includes("doc03-account-view") && html.includes(".content>.hero"), "DOC-03 account pages must hide the old dashboard shell.");
 assert.ok(html.includes("setInterval") && html.includes("3000"), "DOC-03 recharge polling must check status every 3 seconds.");
 assert.ok(html.includes("5分00秒后过期") || html.includes("300"), "DOC-03 recharge modal must include 5 minute expiry countdown.");
 assert.ok(!html.includes("199 元/月"), "DOC-03 frontend must not show stale 199/month starter price.");

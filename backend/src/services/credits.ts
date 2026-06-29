@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import {
   CreditTransactionType,
   PaymentProvider,
@@ -15,9 +15,16 @@ import { prisma } from "../lib/prisma.js";
 import { HttpError } from "../middleware/error.js";
 import { recordAuditEvent } from "./audit.js";
 import { ensurePlansSeeded } from "./entitlements.js";
+import {
+  createPaymentIntent,
+  normalizePaymentMethod,
+  verifyProviderCallback,
+  type PaymentIntent
+} from "./paymentProviders.js";
 
 const rechargeAmounts = [50, 100, 200, 500, 1000, 2000];
 const defaultPaymentWindowMinutes = 5;
+const paidCallbackStatuses = new Set(["SUCCESS", "PAID", "TRADE_SUCCESS", "TRADE_FINISHED", "COMPLETED"]);
 
 const modelPricingSeeds = [
   ["doubao", "豆包", "0.1200", "0.15"],
@@ -280,7 +287,7 @@ export async function createRechargeOrder(
       expiresAt: addMinutes(new Date(), defaultPaymentWindowMinutes),
       metadata: {
         source: rechargeAmounts.includes(amount) ? "preset" : "custom",
-        paymentMode: "placeholder"
+        paymentMode: "provider_pending"
       }
     }
   });
@@ -317,16 +324,27 @@ export async function startRechargePayment(userId: string, orderId: string) {
     return formatPaymentPayload(expired);
   }
 
-  const qrPayload = createPlaceholderQr(order.orderNo, order.amount, order.paymentMethod);
+  const payment = await createPaymentIntent({
+    orderNo: order.orderNo,
+    amount: toNumber(order.amount),
+    subject: "Citeox API credit recharge",
+    method: normalizePaymentMethod(order.paymentMethod),
+    expiresAt: order.expiresAt,
+    callbackPath: `/api/v1/payment/callback/recharge/${normalizePaymentMethod(order.paymentMethod)}`
+  });
   const updated = await prisma.rechargeOrder.update({
     where: { id: order.id },
     data: {
-      qrPayload,
-      paymentUrl: `https://citeox.com/pay/placeholder/${order.orderNo}`
+      qrPayload: payment.qrPayload,
+      paymentUrl: payment.paymentUrl,
+      metadata: {
+        ...toRecord(order.metadata),
+        paymentMode: payment.mode
+      }
     }
   });
 
-  return formatPaymentPayload(updated);
+  return formatPaymentPayload(updated, payment);
 }
 
 export async function getRechargeOrderStatus(userId: string, orderId: string) {
@@ -350,8 +368,7 @@ export async function getRechargeOrderStatus(userId: string, orderId: string) {
 }
 
 export async function processRechargeCallback(provider: string, body: Record<string, unknown>) {
-  const verification = verifyCallback(provider, body);
-  if (!verification.verified) {
+  if (!verifyProviderCallback(provider, body)) {
     throw new HttpError(400, "PAYMENT_SIGNATURE_INVALID", "支付回调验签失败。");
   }
 
@@ -370,8 +387,58 @@ export async function processRechargeCallback(provider: string, body: Record<str
     return { received: true, duplicate: true, order: formatRechargeOrder(order) };
   }
 
+  if (!isPaidCallback(body)) {
+    return { received: true, duplicate: false, ignored: true, order: formatRechargeOrder(order) };
+  }
+
   const paid = await applyRechargePaid(order);
   return { received: true, duplicate: false, order: formatRechargeOrder(paid) };
+}
+
+export async function processSubscriptionCallback(provider: string, body: Record<string, unknown>) {
+  if (!verifyProviderCallback(provider, body)) {
+    throw new HttpError(400, "PAYMENT_SIGNATURE_INVALID", "支付回调验签失败。");
+  }
+
+  const orderNo = stringFrom(body.orderNo ?? body.outTradeNo ?? body.out_trade_no, "");
+  const order = await prisma.subscriptionOrder.findUnique({
+    where: { orderNo },
+    include: { plan: true }
+  });
+
+  if (!order) {
+    throw new HttpError(404, "NOT_FOUND", "套餐订单不存在。");
+  }
+
+  const amount = toMoney(body.amount ?? body.totalAmount ?? order.amount);
+  if (amount !== toNumber(order.amount)) {
+    throw new HttpError(400, "PAYMENT_AMOUNT_MISMATCH", "支付金额与订单金额不一致。");
+  }
+
+  if (order.status === RechargeOrderStatus.PAID) {
+    return {
+      received: true,
+      duplicate: true,
+      order: formatSubscriptionOrder(order, order.plan)
+    };
+  }
+
+  if (!isPaidCallback(body)) {
+    return {
+      received: true,
+      duplicate: false,
+      ignored: true,
+      order: formatSubscriptionOrder(order, order.plan)
+    };
+  }
+
+  const paid = await applySubscriptionPaid(order);
+  return {
+    received: true,
+    duplicate: false,
+    order: formatSubscriptionOrder(paid.order, paid.plan),
+    subscriptionId: paid.subscription.id
+  };
 }
 
 export async function createSubscriptionOrder(
@@ -390,7 +457,7 @@ export async function createSubscriptionOrder(
       paymentMethod: mapPaymentProvider(input.paymentMethod),
       expiresAt: addMinutes(new Date(), defaultPaymentWindowMinutes),
       metadata: {
-        paymentMode: "placeholder",
+        paymentMode: "provider_pending",
         planCode: plan.code,
         planName: plan.name
       }
@@ -410,19 +477,49 @@ export async function startSubscriptionPayment(userId: string, orderId: string) 
     throw new HttpError(404, "NOT_FOUND", "套餐订单不存在。");
   }
 
-  const qrPayload = createPlaceholderQr(order.orderNo, order.amount, order.paymentMethod);
+  if (order.status !== RechargeOrderStatus.PENDING) {
+    return {
+      order: formatSubscriptionOrder(order, order.plan),
+      payment: formatSubscriptionPayment(order)
+    };
+  }
+
+  if (order.expiresAt.getTime() <= Date.now()) {
+    const expired = await prisma.subscriptionOrder.update({
+      where: { id: order.id },
+      data: { status: RechargeOrderStatus.EXPIRED },
+      include: { plan: true }
+    });
+    return {
+      order: formatSubscriptionOrder(expired, expired.plan),
+      payment: formatSubscriptionPayment(expired)
+    };
+  }
+
+  const payment = await createPaymentIntent({
+    orderNo: order.orderNo,
+    amount: toNumber(order.amount),
+    subject: `${order.plan.name} subscription`,
+    method: normalizePaymentMethod(order.paymentMethod),
+    expiresAt: order.expiresAt,
+    callbackPath: `/api/v1/payment/callback/subscription/${normalizePaymentMethod(order.paymentMethod)}`
+  });
   const updated = await prisma.subscriptionOrder.update({
     where: { id: order.id },
     data: {
-      qrPayload,
-      paymentUrl: `https://citeox.com/pay/placeholder/${order.orderNo}`
+      qrPayload: payment.qrPayload,
+      paymentUrl: payment.paymentUrl,
+      metadata: {
+        ...toRecord(order.metadata),
+        paymentMode: payment.mode
+      }
     },
     include: { plan: true }
   });
 
   return {
     order: formatSubscriptionOrder(updated, updated.plan),
-    payment: formatSubscriptionPayment(updated)
+    payment: formatSubscriptionPayment(updated, payment)
   };
 }
 
@@ -502,6 +599,72 @@ async function applyRechargePaid(order: RechargeOrder) {
   return paid;
 }
 
+async function applySubscriptionPaid(order: SubscriptionOrder & { plan: Plan }) {
+  const result = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({
+      where: { id: order.userId },
+      select: { organizationId: true }
+    });
+
+    if (!user?.organizationId) {
+      throw new HttpError(400, "VALIDATION_ERROR", "账号组织信息缺失，请重新登录。");
+    }
+
+    await expireExistingSubscriptions(tx, user.organizationId);
+    const now = new Date();
+    const subscription = await tx.subscription.create({
+      data: {
+        organizationId: user.organizationId,
+        planId: order.planId,
+        status: SubscriptionStatus.ACTIVE,
+        provider: order.paymentMethod,
+        currentPeriodStart: now,
+        currentPeriodEnd: addBillingPeriod(now, order.billingCycle),
+        trialEndsAt: null,
+        usageCounters: {}
+      }
+    });
+
+    const paidOrder = await tx.subscriptionOrder.update({
+      where: { id: order.id },
+      data: {
+        status: RechargeOrderStatus.PAID,
+        paidAt: order.paidAt ?? now,
+        metadata: {
+          ...toRecord(order.metadata),
+          subscriptionId: subscription.id
+        }
+      },
+      include: { plan: true }
+    });
+
+    return { order: paidOrder, plan: paidOrder.plan, subscription };
+  });
+
+  await recordAuditEvent({
+    actorUserId: order.userId,
+    action: "subscriptions.order.paid",
+    resourceType: "subscription_order",
+    resourceId: order.id,
+    metadata: { orderNo: order.orderNo, planCode: order.plan.code, subscriptionId: result.subscription.id }
+  });
+
+  return result;
+}
+
+async function expireExistingSubscriptions(tx: Prisma.TransactionClient, organizationId: string) {
+  return tx.subscription.updateMany({
+    where: {
+      organizationId,
+      status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING] }
+    },
+    data: {
+      status: SubscriptionStatus.CANCELED,
+      currentPeriodEnd: new Date()
+    }
+  });
+}
+
 async function resolveSubscriptionPlan(planCode: string, billingCycle: string | undefined) {
   const code = planCode.trim().toLowerCase();
   const cycle = billingCycle === "yearly" || code.endsWith("_year") ? "year" : "month";
@@ -573,17 +736,17 @@ function formatRechargeOrder(order: RechargeOrder) {
   };
 }
 
-function formatPaymentPayload(order: RechargeOrder) {
+function formatPaymentPayload(order: RechargeOrder, payment?: PaymentIntent) {
   return {
     order: formatRechargeOrder(order),
-    payment: {
-      mode: "placeholder",
+    payment: payment ?? {
+      mode: paymentModeFromMetadata(order.metadata),
       provider: order.paymentMethod.toLowerCase(),
       qrPayload: order.qrPayload,
       paymentUrl: order.paymentUrl,
       pollIntervalSeconds: 3,
       expiresAt: order.expiresAt.toISOString(),
-      message: "真实支付宝/微信支付将在配置商户密钥后启用；当前返回安全占位支付信息。"
+      message: "Payment status is controlled by verified provider callback."
     }
   };
 }
@@ -605,15 +768,15 @@ function formatSubscriptionOrder(order: SubscriptionOrder, plan: Plan) {
   };
 }
 
-function formatSubscriptionPayment(order: SubscriptionOrder) {
-  return {
-    mode: "placeholder",
+function formatSubscriptionPayment(order: SubscriptionOrder, payment?: PaymentIntent) {
+  return payment ?? {
+    mode: paymentModeFromMetadata(order.metadata),
     provider: order.paymentMethod.toLowerCase(),
     qrPayload: order.qrPayload,
     paymentUrl: order.paymentUrl,
     pollIntervalSeconds: 3,
     expiresAt: order.expiresAt.toISOString(),
-    message: "套餐升级真实收银台已预留，生产环境需配置支付宝/微信商户密钥。"
+    message: "Subscription is activated only after a verified provider callback."
   };
 }
 
@@ -623,30 +786,6 @@ function formatBalance(balance: Prisma.Decimal | number | string) {
     amount,
     formatted: formatMoney(amount)
   };
-}
-
-function verifyCallback(provider: string, body: Record<string, unknown>) {
-  const secret = process.env.PAYMENT_CALLBACK_SECRET || providerSecret(provider);
-  const signature = stringFrom(body.signature, "");
-  const canonical = JSON.stringify(
-    Object.fromEntries(Object.entries(body).filter(([key]) => key !== "signature").sort(([a], [b]) => a.localeCompare(b)))
-  );
-
-  if (secret) {
-    const expected = createHash("sha256").update(`${secret}:${canonical}`).digest("hex");
-    return { verified: signature === expected };
-  }
-
-  return {
-    verified: process.env.NODE_ENV !== "production" && signature === "doc03-placeholder"
-  };
-}
-
-function providerSecret(provider: string) {
-  const normalized = provider.toLowerCase();
-  if (normalized.includes("ali")) return process.env.ALIPAY_CALLBACK_SECRET || process.env.ALIPAY_PUBLIC_KEY || "";
-  if (normalized.includes("wechat") || normalized.includes("wx")) return process.env.WECHAT_PAY_CALLBACK_SECRET || process.env.WECHAT_API_KEY || "";
-  return "";
 }
 
 function mapPaymentProvider(value: string | undefined): PaymentProvider {
@@ -686,17 +825,18 @@ function createOrderNo(prefix: "RC" | "SUB") {
   return `${prefix}${Date.now()}${randomUUID().slice(0, 6).toUpperCase()}`.slice(0, 32);
 }
 
-function createPlaceholderQr(orderNo: string, amount: Prisma.Decimal | number, provider: PaymentProvider) {
-  return JSON.stringify({
-    orderNo,
-    amount: formatMoney(amount),
-    provider: provider.toLowerCase(),
-    placeholder: true
-  });
-}
-
 function addMinutes(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60_000);
+}
+
+function addBillingPeriod(date: Date, interval: PlanInterval) {
+  const next = new Date(date);
+  if (interval === PlanInterval.YEAR) {
+    next.setFullYear(next.getFullYear() + 1);
+  } else {
+    next.setMonth(next.getMonth() + 1);
+  }
+  return next;
 }
 
 function dateKey(date: Date) {
@@ -722,6 +862,23 @@ function formatMoney(value: Prisma.Decimal | number | string) {
 
 function stringFrom(value: unknown, fallback: string) {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function isPaidCallback(body: Record<string, unknown>) {
+  const status = stringFrom(body.tradeStatus ?? body.trade_status ?? body.status ?? body.eventType, "").toUpperCase();
+  return paidCallbackStatuses.has(status);
+}
+
+function paymentModeFromMetadata(metadata: Prisma.JsonValue | null) {
+  const value = stringFrom(toRecord(metadata).paymentMode, "provider");
+  return value === "manual" ? "manual" : "provider";
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
 }
 
 function clampInt(value: number, min: number, max: number) {

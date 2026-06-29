@@ -11,6 +11,8 @@ type ExpressLayer = {
 
 const publicAuthPaths = new Set([
   "/check-username",
+  "/check-email",
+  "/check-phone",
   "/validate-invite-code",
   "/validate-industry",
   "/send-code",

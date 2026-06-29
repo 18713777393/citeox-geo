@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { checkEntitlement, type EntitlementKey } from "../services/entitlements.js";
+import { checkEntitlement, getEntitlementSnapshotForUser, type EntitlementKey } from "../services/entitlements.js";
 import { verifyAuthToken, type ApiRole, type TokenContext } from "../services/auth.js";
 
 export type UserRole = ApiRole;
@@ -74,6 +74,58 @@ export function requireEntitlement(featureKey: EntitlementKey) {
       next();
     });
   };
+}
+
+export type RequiredPlanLevel = "free" | "personal" | "pro" | "enterprise";
+
+const planLevelValue: Record<RequiredPlanLevel | "admin", number> = {
+  free: 0,
+  personal: 1,
+  pro: 2,
+  enterprise: 3,
+  admin: 99
+};
+
+export function requirePlanLevel(level: RequiredPlanLevel) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    requireAuth(req, res, async () => {
+      if (!req.auth) {
+        unauthenticated(res);
+        return;
+      }
+
+      const snapshot = await getEntitlementSnapshotForUser(req.auth.userId);
+      const currentPlan = planLevelFromCode(snapshot?.plan.code);
+
+      if (planLevelValue[currentPlan] < planLevelValue[level]) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: "AUTHORIZATION_ERROR",
+            message: `该功能需要升级到 ${level} 套餐。`,
+            requiredPlan: level,
+            currentPlan
+          }
+        });
+        return;
+      }
+
+      next();
+    });
+  };
+}
+
+export function checkUsageLimit(featureKey: EntitlementKey) {
+  return requireEntitlement(featureKey);
+}
+
+function planLevelFromCode(code: string | undefined): RequiredPlanLevel | "admin" {
+  const normalized = String(code ?? "free").toLowerCase();
+  if (normalized.includes("admin")) return "admin";
+  if (normalized.includes("enterprise")) return "enterprise";
+  if (normalized.includes("pro")) return "pro";
+  if (normalized.includes("personal") || normalized.includes("starter")) return "personal";
+  return "free";
 }
 
 function tokenFromRequest(req: Request) {

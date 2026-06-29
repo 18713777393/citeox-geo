@@ -13,6 +13,7 @@ import {
   getRechargeOrderStatus,
   getTransactions,
   processRechargeCallback,
+  processSubscriptionCallback,
   startRechargePayment,
   startSubscriptionPayment
 } from "../services/credits.js";
@@ -296,6 +297,30 @@ rechargeRouter.get(
     res.json({
       success: true,
       data: { order }
+    });
+  })
+);
+
+paymentCallbackRouter.post(
+  "/recharge/:provider",
+  asyncHandler(async (req, res) => {
+    const provider = requireRouteParam(req.params.provider, "payment provider");
+    const data = await processRechargeCallback(provider, req.body ?? {});
+    res.json({
+      success: true,
+      data
+    });
+  })
+);
+
+paymentCallbackRouter.post(
+  "/subscription/:provider",
+  asyncHandler(async (req, res) => {
+    const provider = requireRouteParam(req.params.provider, "payment provider");
+    const data = await processSubscriptionCallback(provider, req.body ?? {});
+    res.json({
+      success: true,
+      data
     });
   })
 );
