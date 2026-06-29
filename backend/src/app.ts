@@ -16,10 +16,13 @@ import {
 } from "./routes/account.js";
 import { assetsRouter } from "./routes/assets.js";
 import { billingRouter } from "./routes/billing.js";
+import { brandsRouter } from "./routes/brands.js";
 import { contentsRouter } from "./routes/contents.js";
 import { compatibilityRouter } from "./routes/compat.js";
+import { diagnosisTasksRouter } from "./routes/diagnosis.js";
 import { gapsRouter } from "./routes/gaps.js";
 import { healthRouter } from "./routes/health.js";
+import { industryRouter } from "./routes/industry.js";
 import { monitorRouter } from "./routes/monitor.js";
 import { projectsRouter } from "./routes/projects.js";
 import { questionsRouter } from "./routes/questions.js";
@@ -56,6 +59,9 @@ export function createApp() {
   app.use("/api/v1/recharge", rechargeRouter);
   app.use("/api/v1/subscriptions", subscriptionsRouter);
   app.use("/api/v1/payment/callback", paymentCallbackRouter);
+  app.use("/api/v1/brands", brandsRouter);
+  app.use("/api/v1/industry", industryRouter);
+  app.use("/api/v1/diagnosis/tasks", diagnosisTasksRouter);
   app.use("/api/projects", projectsRouter);
   app.use("/api/project", projectsRouter);
   app.use("/api/billing", billingRouter);

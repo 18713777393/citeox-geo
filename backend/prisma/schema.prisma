@@ -241,6 +241,8 @@ model User {
   authSessions           AuthSession[]
   verificationCodes      VerificationCode[]
   passwordResetTokens    PasswordResetToken[]
+  brandProjects          BrandProject[]
+  diagnosisTasks         DiagnosisTask[]
   sentInvites            InviteRecord[]  @relation("InviteInviter")
   receivedInvites        InviteRecord[]  @relation("InviteInvitee")
   createdInviteCodes     InviteCode[]     @relation("InviteCodeCreator")
@@ -388,10 +390,88 @@ model Project {
   collectionJobs CollectionJob[]
   collectionItems CollectionItem[]
   questionSources QuestionSource[]
+  brandProject    BrandProject?
 
   @@index([organizationId])
   @@index([ownerId])
   @@map("projects")
+}
+
+model BrandProject {
+  id              String          @id @default(uuid()) @db.Uuid
+  userId          String          @map("user_id") @db.Uuid
+  projectId       String?         @unique @map("project_id") @db.Uuid
+  industry        String          @db.VarChar(100)
+  subIndustry     String?         @map("sub_industry") @db.VarChar(100)
+  brandName       String          @map("brand_name") @db.VarChar(100)
+  website         String?         @db.VarChar(500)
+  goal            String          @db.VarChar(50)
+  platforms       Json            @default("[]")
+  diagnosisCount  Int             @default(0) @map("diagnosis_count")
+  maxDiagnosis    Int             @default(1) @map("max_diagnosis")
+  status          String          @default("active") @db.VarChar(20)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  deletedAt       DateTime?       @map("deleted_at")
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  competitors     Competitor[]
+  keywords        Keyword[]
+  diagnosisTasks  DiagnosisTask[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("brand_projects")
+}
+
+model Competitor {
+  id             String       @id @default(uuid()) @db.Uuid
+  brandProjectId String       @map("brand_project_id") @db.Uuid
+  name           String       @db.VarChar(100)
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  brandProject   BrandProject @relation(fields: [brandProjectId], references: [id], onDelete: Cascade)
+
+  @@index([brandProjectId])
+  @@map("competitors")
+}
+
+model Keyword {
+  id             String       @id @default(uuid()) @db.Uuid
+  brandProjectId String       @map("brand_project_id") @db.Uuid
+  keyword        String       @db.VarChar(100)
+  category       String       @default("brand") @db.VarChar(50)
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  brandProject   BrandProject @relation(fields: [brandProjectId], references: [id], onDelete: Cascade)
+
+  @@index([brandProjectId])
+  @@map("keywords")
+}
+
+model DiagnosisTask {
+  id             String       @id @default(uuid()) @db.Uuid
+  brandProjectId String       @map("brand_project_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  status         String       @default("pending") @db.VarChar(20)
+  progress       Int          @default(0)
+  currentStep    String?      @map("current_step") @db.VarChar(100)
+  totalCost      Decimal?     @map("total_cost") @db.Decimal(10, 2)
+  startedAt      DateTime?    @map("started_at")
+  completedAt    DateTime?    @map("completed_at")
+  errorMessage   String?      @map("error_message")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  brandProject   BrandProject @relation(fields: [brandProjectId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([brandProjectId])
+  @@index([userId])
+  @@index([status])
+  @@map("diagnosis_tasks")
 }
 
 model Question {

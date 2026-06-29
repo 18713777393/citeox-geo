@@ -197,6 +197,72 @@ export async function deductCredits(input: DeductCreditsInput) {
   };
 }
 
+export async function deductCreditsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: DeductCreditsInput & { amount: number | string | Prisma.Decimal }
+) {
+  const models = input.models?.length ? input.models : [input.model ?? "deepseek"];
+  const amount = toMoney(input.amount);
+
+  if (amount <= 0) {
+    throw new HttpError(400, "VALIDATION_ERROR", "扣费金额必须大于 0。");
+  }
+
+  let account = await tx.creditAccount.findUnique({ where: { userId: input.userId } });
+  if (!account) {
+    const user = await tx.user.findUnique({
+      where: { id: input.userId },
+      select: { apiBalance: true }
+    });
+    account = await tx.creditAccount.create({
+      data: {
+        userId: input.userId,
+        balance: user?.apiBalance ?? "0.00",
+        totalCharged: user?.apiBalance ?? "0.00"
+      }
+    });
+  }
+
+  await tx.$queryRaw<{ id: string }[]>`SELECT id FROM credit_accounts WHERE user_id = ${input.userId}::uuid FOR UPDATE`;
+  account = await tx.creditAccount.findUnique({ where: { userId: input.userId } });
+
+  if (!account || toNumber(account.balance) < amount) {
+    throw new HttpError(402, "INSUFFICIENT_BALANCE", `API 余额不足，当前操作需约 ${formatMoney(amount)}。`);
+  }
+
+  const balanceAfter = roundMoney(toNumber(account.balance) - amount);
+  const updated = await tx.creditAccount.update({
+    where: { userId: input.userId },
+    data: {
+      balance: balanceAfter,
+      totalConsumed: { increment: amount }
+    }
+  });
+
+  await tx.user.update({
+    where: { id: input.userId },
+    data: { apiBalance: balanceAfter }
+  });
+
+  const transaction = await tx.creditTransaction.create({
+    data: {
+      userId: input.userId,
+      type: CreditTransactionType.CONSUME,
+      amount: -amount,
+      balanceAfter,
+      relatedModel: models.map(normalizeModelKey).join("+"),
+      relatedOperation: input.operation,
+      relatedOperationId: input.operationId,
+      description: input.description ?? operationLabel(input.operation)
+    }
+  });
+
+  return {
+    balance: formatBalance(updated.balance),
+    transaction: formatTransaction(transaction)
+  };
+}
+
 export async function getTransactions(
   userId: string,
   query: { page?: number; pageSize?: number; type?: string; from?: Date; to?: Date } = {}

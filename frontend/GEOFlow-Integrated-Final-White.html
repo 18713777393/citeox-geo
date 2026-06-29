@@ -2843,6 +2843,471 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
 })();
 </script>
 
+<script id="citeox-doc02-brand-wizard">
+(function(){
+  var draftKey = "citeox_brand_create_draft";
+  var guideKey = "citeox_brand_create_guide_seen";
+  var draftTimer = null;
+  var validationTimer = null;
+  var diagnosisPoller = null;
+  var doc02PlatformLimits = { free: 1, personal: 2, pro: 4, enterprise: Infinity };
+  var platformPrices = { doubao:.15, deepseek:.50, wenxin:.80, zhipu:.40, yuanbao:.60, tongyi:.30, kimi:.50, metaso:.25, ai360:.20, xinghuo:.35 };
+  var doc02Industries = ["餐饮美食","零售电商","教育培训","医疗健康","本地生活","酒店旅游","房地产","汽车服务","金融服务","法律服务","企业服务","软件科技","工业制造","建筑工程","农业食品","个人IP","其他"];
+  var doc02Platforms = [
+    ["doubao","豆包"],["deepseek","DeepSeek"],["wenxin","文心一言"],["zhipu","智谱清言"],["yuanbao","腾讯元宝"],
+    ["tongyi","通义千问"],["kimi","Kimi"],["metaso","秘塔 AI 搜索"],["ai360","360智脑"],["xinghuo","讯飞星火"]
+  ];
+  var doc02Goals = [
+    ["exposure","🎯","增加品牌曝光","让更多用户在 AI 问答中看到我的品牌"],
+    ["traffic","🚀","带来用户流量","通过 AI 推荐引导用户访问我的网站/店铺"],
+    ["trust","🛡️","提升品牌信任","让 AI 更准确、正面地介绍我的品牌"],
+    ["competitive","🏆","压制竞品声量","在 AI 推荐中超越竞争对手"],
+    ["all","⭐","全部目标","品牌曝光+流量+信任+竞品超越全面提升"]
+  ];
+  var citeoxBrandWizard = window.citeoxBrandWizard || {
+    brandWizardStep: 1,
+    guideStep: 0,
+    dirty: false,
+    submitting: false,
+    categories: [],
+    limit: { planCode:"free", platformLimit:1, used:0, limit:1, canCreate:true },
+    balance: 0,
+    data: {
+      industry:"",
+      subIndustry:"",
+      brandName:"",
+      website:"",
+      goal:"",
+      platforms:[],
+      competitors:[""],
+      keywords:[]
+    },
+    errors: {}
+  };
+  window.citeoxBrandWizard = citeoxBrandWizard;
+
+  function $(id){ return document.getElementById(id); }
+  function escDoc02(v){ return String(v == null ? "" : v).replace(/[&<>"']/g,function(ch){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]; }); }
+  function moneyDoc02(v){ var n=Number(v||0); return "¥"+(Number.isFinite(n)?n:0).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function getDoc02PlanLevel(){
+    var plan = String((S && S.entitlements && (S.entitlements.planCode || S.entitlements.plan)) || citeoxBrandWizard.limit.planCode || "free").toLowerCase();
+    if(plan.indexOf("企业")>=0 || plan.indexOf("enterprise")>=0 || plan.indexOf("admin")>=0) return "enterprise";
+    if(plan.indexOf("专业")>=0 || plan.indexOf("pro")>=0) return "pro";
+    if(plan.indexOf("个人")>=0 || plan.indexOf("personal")>=0 || plan.indexOf("starter")>=0) return "personal";
+    return "free";
+  }
+  function doc02PlatformLimit(){
+    var serverLimit = citeoxBrandWizard.limit && citeoxBrandWizard.limit.platformLimit;
+    if(serverLimit === null) return Infinity;
+    if(Number.isFinite(Number(serverLimit))) return Number(serverLimit);
+    return doc02PlatformLimits[getDoc02PlanLevel()] || 1;
+  }
+  function estimateDoc02Cost(){
+    return citeoxBrandWizard.data.platforms.reduce(function(sum,key){ return sum + (platformPrices[key] || .5); },0);
+  }
+  function getDoc02Balance(){
+    var b = citeoxBrandWizard.balance;
+    try{
+      var state = window.ensureDoc03State ? ensureDoc03State() : null;
+      b = Number(state && state.credits && state.credits.balance && state.credits.balance.amount || b || 0);
+    }catch(e){}
+    return Number.isFinite(Number(b)) ? Number(b) : 0;
+  }
+  function brandPlaceholder(){
+    var industry = citeoxBrandWizard.data.industry;
+    if(industry.indexOf("餐饮")>=0) return "如：小张面馆、老李记火锅、幸福烘焙坊";
+    if(industry.indexOf("零售")>=0) return "如：艾琳衣服店、潮流鞋品店";
+    if(industry.indexOf("教育")>=0) return "如：卓越英语培训、阳光艺术中心";
+    if(industry.indexOf("医疗")>=0) return "如：康泰口腔诊所、美莱医美";
+    return "请输入您的品牌全称";
+  }
+  function collectDoc02Fields(){
+    var ids = ["industry","subIndustry","brandName","website"];
+    ids.forEach(function(name){ var el = $("doc02-"+name); if(el) citeoxBrandWizard.data[name] = el.value.trim(); });
+    var competitorInputs = [].slice.call(document.querySelectorAll("[data-doc02-competitor]"));
+    if(competitorInputs.length) citeoxBrandWizard.data.competitors = competitorInputs.map(function(el){ return el.value.trim(); }).filter(Boolean).slice(0,5);
+  }
+  function saveBrandWizardDraft(){
+    try{ collectDoc02Fields(); localStorage.setItem(draftKey, JSON.stringify(citeoxBrandWizard.data)); citeoxBrandWizard.dirty = false; }catch(e){}
+  }
+  function restoreBrandWizardDraft(){
+    try{
+      var raw = localStorage.getItem(draftKey);
+      if(!raw) return;
+      var data = JSON.parse(raw);
+      citeoxBrandWizard.data = Object.assign(citeoxBrandWizard.data, data || {});
+      if(!Array.isArray(citeoxBrandWizard.data.competitors) || !citeoxBrandWizard.data.competitors.length) citeoxBrandWizard.data.competitors = [""];
+      if(!Array.isArray(citeoxBrandWizard.data.keywords)) citeoxBrandWizard.data.keywords = [];
+      if(!Array.isArray(citeoxBrandWizard.data.platforms)) citeoxBrandWizard.data.platforms = [];
+    }catch(e){}
+  }
+  function markDoc02Dirty(){ citeoxBrandWizard.dirty = true; }
+  function handleDoc02BeforeUnload(event){
+    if(!$("doc02-wizard-overlay") || citeoxBrandWizard.submitting || !citeoxBrandWizard.dirty) return;
+    event.preventDefault();
+    event.returnValue = "品牌创建信息尚未保存，确定离开吗？";
+    return event.returnValue;
+  }
+  function validateBrandWizardField(field){
+    collectDoc02Fields();
+    var d = citeoxBrandWizard.data, errors = citeoxBrandWizard.errors;
+    if(field === "industry" || !field){
+      if(!d.industry) errors.industry = "请选择一级行业"; else delete errors.industry;
+      if(!d.subIndustry) errors.subIndustry = "请选择具体品类"; else delete errors.subIndustry;
+    }
+    if(field === "brandName" || !field){
+      if(!d.brandName) errors.brandName = "请输入品牌名称";
+      else if(d.brandName.length < 2 || d.brandName.length > 30) errors.brandName = "品牌名称需要2-30个字符";
+      else if(/^\d+$/.test(d.brandName)) errors.brandName = "品牌名称不能为纯数字";
+      else if(!/^[\u3400-\u9fffA-Za-z0-9 &-]+$/.test(d.brandName)) errors.brandName = "品牌名称仅支持中文、英文、数字、空格、&和-";
+      else delete errors.brandName;
+      var count = $("doc02-brand-count"); if(count) count.textContent = (d.brandName || "").length + "/30";
+    }
+    if(field === "website" || !field){
+      if(d.website){
+        try{ new URL(/^https?:\/\//i.test(d.website) ? d.website : "https://"+d.website); delete errors.website; }
+        catch(e){ errors.website = "请输入正确的网址格式（如 https://www.example.com）"; }
+      }else delete errors.website;
+    }
+    if(field === "goal" || !field){ if(!d.goal) errors.goal = "请选择品牌目标"; else delete errors.goal; }
+    if(field === "platforms" || !field){ if(!d.platforms.length) errors.platforms = "请至少选择一个目标 AI 平台"; else delete errors.platforms; }
+    renderDoc02Errors();
+    return !Object.keys(errors).length;
+  }
+  function debouncedBrandValidation(field){
+    clearTimeout(validationTimer);
+    validationTimer = setTimeout(function(){ validateBrandWizardField(field); saveBrandWizardDraft(); }, 300);
+  }
+  function renderDoc02Errors(){
+    ["industry","subIndustry","brandName","website","goal","platforms"].forEach(function(key){
+      var el = $("doc02-error-"+key);
+      if(el) el.textContent = citeoxBrandWizard.errors[key] || "";
+    });
+  }
+  function updateDoc02Field(field,value){
+    citeoxBrandWizard.data[field] = value;
+    markDoc02Dirty();
+    if(field === "industry"){
+      citeoxBrandWizard.data.subIndustry = "";
+      loadDoc02IndustryCategories(value);
+      return;
+    }
+    debouncedBrandValidation(field);
+  }
+  async function loadDoc02IndustryCategories(industry){
+    citeoxBrandWizard.categories = [];
+    if(!industry){ renderBrandCreateWizard(); return; }
+    try{
+      var res = await apiRequest("/api/v1/industry/categories?industry="+encodeURIComponent(industry));
+      citeoxBrandWizard.categories = res && res.data && Array.isArray(res.data.categories) ? res.data.categories : [];
+    }catch(e){
+      citeoxBrandWizard.categories = industry === "餐饮美食" ? ["中餐厅","西餐厅","快餐","咖啡厅","奶茶店","烘焙店","其他"] : ["综合服务","线上业务","线下门店","其他"];
+    }
+    renderBrandCreateWizard();
+  }
+  function normalizeDoc02Website(){
+    var el = $("doc02-website");
+    if(el && el.value.trim() && !/^https?:\/\//i.test(el.value.trim())){
+      el.value = "https://" + el.value.trim();
+      citeoxBrandWizard.data.website = el.value;
+    }
+    validateBrandWizardField("website");
+  }
+  function selectDoc02Goal(goal){
+    citeoxBrandWizard.data.goal = goal;
+    markDoc02Dirty();
+    renderBrandCreateWizard();
+    debouncedBrandValidation("goal");
+  }
+  function toggleDoc02Platform(key){
+    var selected = citeoxBrandWizard.data.platforms;
+    var exists = selected.indexOf(key) >= 0;
+    var limit = doc02PlatformLimit();
+    if(exists) citeoxBrandWizard.data.platforms = selected.filter(function(x){ return x !== key; });
+    else if(selected.length < limit) citeoxBrandWizard.data.platforms = selected.concat(key);
+    else { if(window.toastMsg) toastMsg("当前套餐已达到可选平台上限，升级后可解锁更多平台。"); }
+    markDoc02Dirty();
+    renderBrandCreateWizard();
+    debouncedBrandValidation("platforms");
+  }
+  function addDoc02Competitor(){
+    collectDoc02Fields();
+    if(citeoxBrandWizard.data.competitors.length >= 5) return;
+    citeoxBrandWizard.data.competitors.push("");
+    markDoc02Dirty();
+    renderBrandCreateWizard();
+  }
+  function removeDoc02Competitor(index){
+    collectDoc02Fields();
+    citeoxBrandWizard.data.competitors.splice(index,1);
+    if(!citeoxBrandWizard.data.competitors.length) citeoxBrandWizard.data.competitors = [""];
+    markDoc02Dirty();
+    renderBrandCreateWizard();
+  }
+  function addDoc02Keyword(value){
+    var input = $("doc02-keyword-input");
+    var text = String(value || (input && input.value) || "").trim();
+    if(!text) return;
+    text.split(/[,\uFF0C]/).map(function(x){ return x.trim(); }).filter(Boolean).forEach(function(item){
+      if(citeoxBrandWizard.data.keywords.length < 10 && citeoxBrandWizard.data.keywords.indexOf(item) < 0) citeoxBrandWizard.data.keywords.push(item);
+    });
+    if(input) input.value = "";
+    markDoc02Dirty();
+    renderBrandCreateWizard();
+  }
+  function handleDoc02KeywordKey(event){
+    if(event.key === "Enter" || event.key === "," || event.key === "，"){
+      event.preventDefault();
+      addDoc02Keyword(event.target.value);
+    }
+  }
+  function removeDoc02Keyword(index){
+    citeoxBrandWizard.data.keywords.splice(index,1);
+    markDoc02Dirty();
+    renderBrandCreateWizard();
+  }
+  function setDoc02Step(step){
+    collectDoc02Fields();
+    if(step > citeoxBrandWizard.brandWizardStep && !validateDoc02Step(citeoxBrandWizard.brandWizardStep)) return;
+    citeoxBrandWizard.brandWizardStep = Math.max(1, Math.min(3, step));
+    renderBrandCreateWizard();
+    saveBrandWizardDraft();
+  }
+  function validateDoc02Step(step){
+    collectDoc02Fields();
+    citeoxBrandWizard.errors = {};
+    if(step === 1){
+      validateBrandWizardField(null);
+      return !Object.keys(citeoxBrandWizard.errors).length;
+    }
+    if(step === 2){
+      return true;
+    }
+    return validateBrandWizardField(null);
+  }
+  function renderStepProgress(){
+    var steps = [["品牌信息","第一步"],["竞品关键词","第二步"],["确认提交","第三步"]];
+    return '<div class="doc02-step-progress">'+steps.map(function(s,i){
+      var n=i+1, cls=n<citeoxBrandWizard.brandWizardStep?"done":n===citeoxBrandWizard.brandWizardStep?"current":"todo";
+      return '<div class="doc02-step '+cls+'"><span class="dot '+(cls==="current"?"pulse-brand-step":"")+'">'+(cls==="done"?"✓":n)+'</span><b>'+s[1]+'</b><small>'+s[0]+'</small></div>';
+    }).join('<span class="doc02-line"></span>')+'</div>';
+  }
+  function renderStepOne(){
+    var d = citeoxBrandWizard.data, limit = doc02PlatformLimit();
+    var categories = citeoxBrandWizard.categories.length ? citeoxBrandWizard.categories : (d.industry ? ["加载品类中..."] : []);
+    return '<div class="doc02-form"><h1>第一步：告诉我们您的品牌</h1><p class="doc02-sub">我们将根据这些信息在各大 AI 平台监测您品牌的表现。请务必真实填写，信息提交后将不可自行修改。</p>'+
+      '<div class="doc02-grid doc02-grid-2"><label>行业选择 <em>*</em><select id="doc02-industry" onchange="updateDoc02Field(\'industry\',this.value)"><option value="">选择一级行业</option>'+doc02Industries.map(function(x){ return '<option '+(d.industry===x?'selected':'')+'>'+escDoc02(x)+'</option>'; }).join("")+'</select><small>选择与您品牌最匹配的行业，这将影响 AI 对您品牌的识别准确度</small><span id="doc02-error-industry" class="doc02-error"></span></label>'+
+      '<label class="doc02-slideDown">品牌类型/品类 <em>*</em><select id="doc02-subIndustry" onchange="updateDoc02Field(\'subIndustry\',this.value)"><option value="">请选择具体品类</option>'+categories.map(function(x){ return '<option '+(d.subIndustry===x?'selected':'')+'>'+escDoc02(x)+'</option>'; }).join("")+'</select><small>选择您的具体经营品类，帮助 AI 更精准地定位您的业务</small><span id="doc02-error-subIndustry" class="doc02-error"></span></label></div>'+
+      '<label>品牌名称 <em>*</em><div class="doc02-input-wrap"><input id="doc02-brandName" value="'+escDoc02(d.brandName)+'" maxlength="30" placeholder="'+escDoc02(brandPlaceholder())+'" oninput="updateDoc02Field(\'brandName\',this.value)" onblur="validateBrandWizardField(\'brandName\')"><span id="doc02-brand-count">'+(d.brandName||"").length+'/30</span></div><small>填写品牌全称，这将是 AI 识别您品牌的核心关键词。请使用真实品牌名称。</small><span id="doc02-error-brandName" class="doc02-error"></span></label>'+
+      '<label>品牌网址（选填） <span class="doc02-tip" title="实体店铺如无网站可跳过，系统仍可监测品牌">?</span><input id="doc02-website" value="'+escDoc02(d.website)+'" placeholder="如：https://www.yourbrand.com" oninput="updateDoc02Field(\'website\',this.value)" onblur="normalizeDoc02Website()"><span id="doc02-error-website" class="doc02-error"></span></label>'+
+      '<div><div class="doc02-label">品牌目标 <em>*</em></div><div class="doc02-goal-grid">'+doc02Goals.map(function(g){ var on=d.goal===g[0]; return '<button type="button" class="doc02-goal '+(on?'selected':'')+'" onclick="selectDoc02Goal(\''+g[0]+'\')"><i>'+g[1]+'</i><b>'+g[2]+'</b><span>'+g[3]+'</span>'+(on?'<strong>✓</strong>':'')+'</button>'; }).join("")+'</div><span id="doc02-error-goal" class="doc02-error"></span></div>'+
+      '<div class="doc02-platform-block"><div class="doc02-warning">⚠️ 注意：每增加一个监测平台将消耗更多 API 调用费用（从您的余额中扣除）。建议先选择最关注的平台。当前余额：'+moneyDoc02(getDoc02Balance())+'（注册后请先充值）</div><div class="doc02-label">目标 AI 平台 <em>*</em><small>已选 '+d.platforms.length+'/'+(limit===Infinity?"不限":limit)+' 个</small></div><div class="doc02-platform-grid">'+doc02Platforms.map(function(p){ var on=d.platforms.indexOf(p[0])>=0, disabled=!on&&d.platforms.length>=limit; return '<button type="button" title="'+(disabled?'升级套餐可解锁更多平台':'')+'" class="doc02-platform '+(on?'selected':'')+' '+(disabled?'disabled':'')+'" onclick="toggleDoc02Platform(\''+p[0]+'\')"><span>'+(disabled?'🔒':'')+'</span><b>'+p[1]+'</b>'+(on?'<i>✓</i>':'')+'</button>'; }).join("")+'</div><span id="doc02-error-platforms" class="doc02-error"></span></div></div>';
+  }
+  function renderStepTwo(){
+    var d = citeoxBrandWizard.data, comps = d.competitors && d.competitors.length ? d.competitors : [""];
+    return '<div class="doc02-form"><h1>第二步：设置竞品对标与关键词</h1><p class="doc02-sub">以下均为选填，可在后续在品牌项目（DOC-05）中补充。</p>'+
+      '<div class="doc02-important"><b>⚠️ 重要提示</b><p>• 新用户仅可创建 1个品牌，品牌核心信息提交后不可自行修改（如需修改请联系客服：support@citeox.com）</p><p>• 品牌诊断将调用AI平台API，费用从您的API余额中扣除 当前余额：'+moneyDoc02(getDoc02Balance())+'（注册完成后请先充值）</p><p>• 首次诊断预计耗时 3-5 分钟，请耐心等待</p><p>• 填写的所有内容将直接影响AI对您品牌的识别和分析结果，请务必保证信息真实、准确、完整</p></div>'+
+      '<div class="doc02-panel"><div class="doc02-head"><div><h2>竞品品牌名称</h2><p>填写您的主要竞品品牌名称，系统将对比您与竞品在各 AI 平台上的表现差异。</p></div><button type="button" class="doc02-link" '+(comps.length>=5?'disabled':'')+' onclick="addDoc02Competitor()">'+(comps.length>=5?'最多添加5个竞品':'+ 添加竞品')+'</button></div>'+comps.map(function(v,i){ return '<div class="doc02-competitor-row"><input data-doc02-competitor value="'+escDoc02(v)+'" placeholder="如：XX 面馆、YY 拉面" oninput="markDoc02Dirty()"><button type="button" onclick="removeDoc02Competitor('+i+')">×</button></div>'; }).join("")+'</div>'+
+      '<div class="doc02-panel"><h2>核心关键词</h2><p>添加品牌核心关键词，用于精准监测。建议添加3-5个最核心的词。</p><div class="doc02-tags">'+d.keywords.map(function(k,i){ return '<span>'+escDoc02(k)+'<button type="button" onclick="removeDoc02Keyword('+i+')">×</button></span>'; }).join("")+'</div><input id="doc02-keyword-input" '+(d.keywords.length>=10?'disabled':'')+' placeholder="'+(d.keywords.length>=10?'最多10个关键词':'输入关键词后按回车添加，如：GEO 优化、AI 搜索')+'" onkeydown="handleDoc02KeywordKey(event)" onblur="addDoc02Keyword(this.value)"></div></div>';
+  }
+  function renderStepThree(){
+    collectDoc02Fields();
+    var d = citeoxBrandWizard.data;
+    var goal = (doc02Goals.find(function(x){return x[0]===d.goal;})||[])[2] || "未填写";
+    var platformNames = d.platforms.map(function(key){ var p=doc02Platforms.find(function(x){return x[0]===key;}); return p?p[1]:key; });
+    return '<div class="doc02-form"><h1>第三步：确认提交</h1><p class="doc02-sub">请最后核对品牌核心信息。提交后将立即启动诊断，并从 API 余额扣费。</p>'+
+      '<div class="doc02-summary"><h2>📋 品牌基本信息</h2>'+summaryRow("行业 > 品类",d.industry+" > "+d.subIndustry,1)+summaryRow("品牌名称",d.brandName,1)+summaryRow("网址",d.website||"未填写",1)+summaryRow("品牌目标",goal,1)+summaryRow("监测平台",platformNames.join("、"),1)+'</div>'+
+      '<div class="doc02-summary"><h2>🎯 竞品与关键词</h2>'+summaryRow("竞品列表",(d.competitors||[]).filter(Boolean).join("、")||"未填写",2)+summaryRow("关键词标签",(d.keywords||[]).join("、")||"未填写",2)+'</div></div>';
+  }
+  function summaryRow(label,value,step){ return '<div class="doc02-summary-row"><span>'+escDoc02(label)+'</span><b>'+escDoc02(value||"未填写")+'</b><button type="button" onclick="setDoc02Step('+step+')">修改</button></div>'; }
+  function renderBottomActions(){
+    return '<div class="doc02-bottom-actions">'+(citeoxBrandWizard.brandWizardStep>1?'<button type="button" class="doc02-secondary" onclick="setDoc02Step('+(citeoxBrandWizard.brandWizardStep-1)+')">← 上一步</button>':'<span></span>')+'<button type="button" class="doc02-primary" onclick="'+(citeoxBrandWizard.brandWizardStep<3?'setDoc02Step('+(citeoxBrandWizard.brandWizardStep+1)+')':'openDoc02ConfirmModal()')+'">'+(citeoxBrandWizard.brandWizardStep<3?'下一步 →':'确认提交')+'</button></div>';
+  }
+  function renderBrandCreateWizard(){
+    var old = $("doc02-wizard-overlay");
+    if(!old){
+      old = document.createElement("div");
+      old.id = "doc02-wizard-overlay";
+      old.className = "doc02-wizard-overlay";
+      document.body.appendChild(old);
+    }
+    old.innerHTML = renderStepProgress()+'<main class="doc02-card">'+(citeoxBrandWizard.brandWizardStep===1?renderStepOne():citeoxBrandWizard.brandWizardStep===2?renderStepTwo():renderStepThree())+'</main>'+renderBottomActions();
+    document.body.classList.add("doc02-active");
+    renderDoc02Errors();
+    if(citeoxBrandWizard.brandWizardStep === 1 && citeoxBrandWizard.data.industry && !citeoxBrandWizard.categories.length) loadDoc02IndustryCategories(citeoxBrandWizard.data.industry);
+    if(!localStorage.getItem(guideKey)) openDoc02GuideModal(false);
+  }
+  async function loadDoc02IndustrySearch(q){
+    try{
+      var res = await apiRequest("/api/v1/industry/search?q="+encodeURIComponent(q || ""));
+      var items = res && res.data && Array.isArray(res.data.industries) ? res.data.industries : [];
+      if(items.length) doc02Industries = items.map(function(item){ return item.primary; }).filter(Boolean);
+    }catch(e){}
+  }
+  function openDoc02GuideModal(skip){
+    if(skip){ localStorage.setItem(guideKey,"1"); var old=$("doc02-guide-modal"); if(old) old.remove(); return; }
+    var steps = [
+      ["欢迎来到 Citeox！让我们先配置您的品牌","填写真实品牌信息，后续监测和诊断会围绕它展开。"],
+      ["填写品牌信息，我们将帮您监测 AI 平台表现","系统会根据行业、品类、品牌目标和平台选择生成诊断任务。"],
+      ["提交后系统自动采集数据并诊断，预计3-5分钟","诊断进度会在弹窗内同步，完成后进入数据总览。"]
+    ];
+    var i = citeoxBrandWizard.guideStep || 0;
+    var wrap = $("doc02-guide-modal") || document.createElement("div");
+    wrap.id = "doc02-guide-modal";
+    wrap.className = "doc02-guide-modal";
+    wrap.innerHTML = '<div><div class="doc02-guide-logo">Citeox</div><h2>'+steps[i][0]+'</h2><p>'+steps[i][1]+'</p><div class="doc02-guide-progress">'+steps.map(function(_,idx){return '<span class="'+(idx===i?'on':'')+'"></span>';}).join("")+'</div><div class="doc02-guide-actions"><button onclick="openDoc02GuideModal(true)">跳过</button><button class="doc02-primary" onclick="'+(i>=2?'openDoc02GuideModal(true)':'nextDoc02GuideStep()')+'">'+(i>=2?'开始填写':'下一步')+'</button></div></div>';
+    if(!wrap.parentNode) document.body.appendChild(wrap);
+  }
+  function nextDoc02GuideStep(){ citeoxBrandWizard.guideStep = Math.min(2,(citeoxBrandWizard.guideStep||0)+1); openDoc02GuideModal(false); }
+  function openDoc02ConfirmModal(){
+    collectDoc02Fields();
+    if(!validateBrandWizardField(null)) return;
+    var cost = estimateDoc02Cost(), balance = getDoc02Balance(), insufficient = balance < cost;
+    var old = $("doc02-confirm-modal"); if(old) old.remove();
+    var wrap = document.createElement("div");
+    wrap.id = "doc02-confirm-modal";
+    wrap.className = "doc02-modal";
+    wrap.innerHTML = '<div class="doc02-modal-card"><h2>🔔 确认提交品牌信息？</h2><p>提交后将立即启动品牌诊断，从您的API余额扣费。品牌核心信息提交后不可自行修改。</p><div class="doc02-cost">预计消耗：约 '+moneyDoc02(cost)+'（'+citeoxBrandWizard.data.platforms.length+'个AI平台×单次诊断）<br>当前余额：'+moneyDoc02(balance)+(insufficient?' <b>⚠️ 余额不足，请先充值</b>':'')+'</div><div class="doc02-modal-actions"><button onclick="closeDoc02Modal()">取消</button>'+(insufficient?'<button class="doc02-secondary" onclick="goDoc02Recharge()">去充值</button><button disabled>确认提交</button>':'<button class="doc02-primary" onclick="submitDoc02Brand()">确认提交，开始诊断</button>')+'</div></div>';
+    document.body.appendChild(wrap);
+  }
+  function closeDoc02Modal(){ ["doc02-confirm-modal","doc02-progress-modal"].forEach(function(id){ var el=$(id); if(el) el.remove(); }); }
+  function goDoc02Recharge(){
+    closeDoc02Modal();
+    if(window.openRechargeModal) openRechargeModal(100);
+    else location.href = "/account/credits";
+  }
+  function showDoc02Progress(progress,message,failed){
+    var wrap = $("doc02-progress-modal") || document.createElement("div");
+    wrap.id = "doc02-progress-modal";
+    wrap.className = "doc02-modal";
+    wrap.innerHTML = '<div class="doc02-modal-card"><h2>'+(failed?'❌ 诊断启动失败':'🔄 品牌诊断进度')+'</h2><p id="doc02-progress-message">'+escDoc02(message||"正在保存品牌信息...")+'</p><div class="doc02-progress"><span style="width:'+Math.max(0,Math.min(progress||0,100))+'%"></span></div><p class="doc02-sub">WebSocket 实时推送不可用时，系统会自动轮询诊断状态。</p>'+(failed?'<div class="doc02-modal-actions"><button class="doc02-secondary" onclick="location.href = \'/dashboard\'">进入数据总览</button><button class="doc02-primary" onclick="submitDoc02Brand()">重试</button></div>':'')+'</div>';
+    if(!wrap.parentNode) document.body.appendChild(wrap);
+  }
+  async function submitDoc02Brand(){
+    if(citeoxBrandWizard.submitting) return;
+    citeoxBrandWizard.submitting = true;
+    closeDoc02Modal();
+    showDoc02Progress(15,"正在保存品牌信息...");
+    try{
+      collectDoc02Fields();
+      var payload = Object.assign({}, citeoxBrandWizard.data, { competitors:(citeoxBrandWizard.data.competitors||[]).filter(Boolean), keywords:citeoxBrandWizard.data.keywords||[] });
+      var res = await apiRequest("/api/v1/brands", { method:"POST", body:JSON.stringify(payload) });
+      showDoc02Progress(40,"正在启动数据采集...");
+      localStorage.removeItem(draftKey);
+      citeoxBrandWizard.dirty = false;
+      var taskId = res && res.data && res.data.diagnosisTaskId;
+      if(taskId) startDoc02DiagnosisPolling(taskId);
+      setTimeout(function(){ showDoc02Progress(100,"✅ 品牌创建成功！3秒后进入数据总览..."); }, 800);
+      setTimeout(function(){ location.href = "/dashboard"; }, 3000);
+    }catch(e){
+      var msg = e && e.message ? e.message : "诊断启动失败，系统将自动重试。您可先进入数据总览查看。";
+      showDoc02Progress(100,"诊断启动失败："+msg+"，系统将自动重试。您可先进入数据总览查看。",true);
+    }finally{
+      citeoxBrandWizard.submitting = false;
+    }
+  }
+  function startDoc02DiagnosisPolling(taskId){
+    if(diagnosisPoller) clearInterval(diagnosisPoller);
+    diagnosisPoller = setInterval(async function(){
+      try{
+        var res = await apiRequest("/api/v1/diagnosis/tasks/"+encodeURIComponent(taskId)+"/status");
+        var task = res && res.data && res.data.task;
+        if(!task) return;
+        showDoc02Progress(task.progress || 0, task.currentStep || "正在启动数据采集...");
+        if(task.status === "completed" || task.progress >= 100){ clearInterval(diagnosisPoller); diagnosisPoller = null; }
+      }catch(e){}
+    }, 3000);
+  }
+  async function loadDoc02AccountContext(){
+    try{
+      var limit = await apiRequest("/api/v1/brands/check-limit");
+      if(limit && limit.data) citeoxBrandWizard.limit = limit.data;
+    }catch(e){}
+    try{
+      var credits = await apiRequest("/api/v1/account/credits");
+      citeoxBrandWizard.balance = Number(credits && credits.data && credits.data.credits && credits.data.credits.balance && credits.data.credits.balance.amount || 0);
+    }catch(e){}
+  }
+  async function bootDoc02Route(){
+    if(location.pathname.toLowerCase().indexOf("/brand/create") !== 0) return;
+    restoreBrandWizardDraft();
+    if(!(S && S.session && S.session.logged)){
+      S.doc02AfterLogin = true;
+      if(window.save) save();
+      if(window.showLogin) showLogin("personal","login");
+      return;
+    }
+    await loadDoc02IndustrySearch("");
+    await loadDoc02AccountContext();
+    renderBrandCreateWizard();
+  }
+  function ensureDoc02Style(){
+    if($("doc02BrandWizardStyle")) return;
+    var style = document.createElement("style");
+    style.id = "doc02BrandWizardStyle";
+    style.textContent = [
+      "body.doc02-active{overflow:hidden}",
+      ".doc02-wizard-overlay{position:fixed;inset:0;z-index:50;background:#fff;color:#172033;overflow:auto;padding:32px 24px 92px}",
+      ".doc02-card{max-width:1120px;margin:28px auto 0}",
+      ".doc02-step-progress{max-width:720px;margin:8px auto 0;display:grid;grid-template-columns:1fr 80px 1fr 80px 1fr;align-items:center;text-align:center}",
+      ".doc02-step{display:grid;gap:5px;justify-items:center;color:#6b7280}.doc02-step b{font-size:13px}.doc02-step small{font-size:12px}.doc02-step.current{color:#1d4ed8}.doc02-step .dot{width:30px;height:30px;border-radius:999px;border:2px solid #d1d5db;display:grid;place-items:center;background:#fff}.doc02-step.done .dot{background:#3b82f6;border-color:#3b82f6;color:#fff}.doc02-step.current .dot{border-color:#3b82f6;color:#1d4ed8}.doc02-line{height:2px;background:#d1d5db}.doc02-step.done+.doc02-line{background:#3b82f6}@keyframes pulse-brand-step{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.6}}.pulse-brand-step{animation:pulse-brand-step 1.5s infinite}",
+      ".doc02-form h1{font-size:28px;margin:0 0 8px}.doc02-sub{color:#6b7280;font-size:14px;margin:0 0 22px}.doc02-form label,.doc02-label{display:grid;gap:8px;font-weight:700;margin-bottom:18px}.doc02-form em{color:#ef4444;font-style:normal}.doc02-form small{font-weight:400;color:#6b7280}.doc02-form input,.doc02-form select{height:44px;border:1px solid #d1d5db;border-radius:8px;padding:0 12px;font-size:14px;background:#fff}.doc02-grid{display:grid;gap:14px}.doc02-grid-2{grid-template-columns:1fr 1fr}.doc02-slideDown{max-height:160px;transition:max-height 200ms ease}",
+      ".doc02-input-wrap{position:relative}.doc02-input-wrap input{width:100%;box-sizing:border-box}.doc02-input-wrap span{position:absolute;right:10px;bottom:8px;color:#9ca3af;font-size:12px}.doc02-tip{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:999px;background:#eef2ff;color:#1d4ed8;font-size:12px}",
+      ".doc02-error{min-height:16px;color:#dc2626;font-size:12px;font-weight:500}.doc02-goal-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.doc02-goal{position:relative;text-align:left;border:1px solid #d1d5db;border-radius:12px;background:#fff;padding:16px;display:grid;gap:6px;min-height:132px;transition:200ms ease}.doc02-goal:hover{border-color:#3b82f6;box-shadow:0 4px 12px rgba(59,130,246,.15)}.doc02-goal.selected{border:2px solid #3b82f6;background:#eff6ff}.doc02-goal i{font-style:normal;font-size:28px}.doc02-goal b{font-size:15px}.doc02-goal span{font-size:12px;color:#667085}.doc02-goal strong{position:absolute;right:10px;top:10px;width:24px;height:24px;border-radius:999px;background:#3b82f6;color:#fff;display:grid;place-items:center}",
+      ".doc02-warning{background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin:8px 0 14px;color:#92400e}.doc02-platform-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.doc02-platform{height:54px;border:1px solid #d1d5db;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px;position:relative;transition:180ms ease}.doc02-platform.selected{background:#2563eb;color:#fff;border-color:#2563eb}.doc02-platform.disabled{opacity:.5;cursor:not-allowed}.doc02-platform i{position:absolute;right:9px;top:8px;font-style:normal}",
+      ".doc02-important{border:2px solid #f59e0b;background:#fff7ed;border-radius:8px;padding:16px;margin-bottom:18px}.doc02-important p{margin:8px 0;color:#7c2d12}.doc02-panel,.doc02-summary{border:1px solid #e5e7eb;border-radius:8px;padding:18px;margin-bottom:16px;background:#fff}.doc02-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.doc02-link{border:0;background:transparent;color:#2563eb;font-weight:700;cursor:pointer}.doc02-link:disabled{color:#9ca3af;cursor:not-allowed}.doc02-competitor-row{display:flex;gap:10px;margin-top:10px}.doc02-competitor-row input{flex:1}.doc02-competitor-row button{width:28px;height:28px;border:0;border-radius:999px;color:#ef4444;background:#fee2e2;margin-top:8px}.doc02-tags{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.doc02-tags span{background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:5px 8px}.doc02-tags button{border:0;background:transparent;color:#1d4ed8;margin-left:6px}",
+      ".doc02-summary-row{display:grid;grid-template-columns:130px 1fr 48px;gap:10px;align-items:center;border-top:1px solid #eef2f7;padding:12px 0}.doc02-summary-row span{color:#6b7280}.doc02-summary-row button{border:0;background:transparent;color:#2563eb;font-weight:700}",
+      ".doc02-bottom-actions{position:fixed;left:0;right:0;bottom:0;z-index:55;background:#fff;box-shadow:0 -4px 12px rgba(0,0,0,.05);padding:16px 24px;display:flex;justify-content:space-between}.doc02-primary,.doc02-secondary,.doc02-bottom-actions button{min-width:120px;height:44px;border-radius:8px;padding:0 16px;font-weight:700}.doc02-primary{background:#3b82f6;color:#fff;border:1px solid #3b82f6}.doc02-secondary{background:#fff;color:#374151;border:1px solid #d1d5db}",
+      ".doc02-guide-modal,.doc02-modal{position:fixed;inset:0;z-index:70;background:rgba(15,23,42,.36);display:grid;place-items:center;padding:24px}.doc02-guide-modal>div,.doc02-modal-card{max-width:460px;width:100%;background:#fff;border-radius:8px;box-shadow:0 20px 60px rgba(15,23,42,.2);padding:24px}.doc02-guide-logo{font-weight:800;color:#1d4ed8;margin-bottom:8px}.doc02-guide-progress{display:flex;gap:6px;margin:18px 0}.doc02-guide-progress span{height:6px;flex:1;border-radius:999px;background:#e5e7eb}.doc02-guide-progress span.on{background:#3b82f6}.doc02-guide-actions,.doc02-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.doc02-guide-actions button,.doc02-modal-actions button{height:40px;border-radius:8px;border:1px solid #d1d5db;padding:0 14px;background:#fff}.doc02-cost{border-radius:8px;background:#f8fafc;padding:14px;margin-top:12px}.doc02-cost b{color:#dc2626}.doc02-progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.doc02-progress span{display:block;height:100%;background:#3b82f6;transition:width 300ms ease}",
+      "@media(max-width:900px){.doc02-grid-2{grid-template-columns:1fr}.doc02-goal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.doc02-platform-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.doc02-step-progress{grid-template-columns:1fr 30px 1fr 30px 1fr}.doc02-line{width:30px}}@media(max-width:560px){.doc02-wizard-overlay{padding:22px 14px 96px}.doc02-goal-grid{grid-template-columns:1fr}.doc02-summary-row{grid-template-columns:1fr}.doc02-bottom-actions{padding:12px}.doc02-bottom-actions button{min-width:104px}}"
+    ].join("");
+    document.head.appendChild(style);
+  }
+  var oldFinishAuth = window.finishAuth;
+  window.finishAuth = function(message,target){
+    var result = oldFinishAuth ? oldFinishAuth(message,target) : null;
+    if(target === "brandCreate" || target === "project" || S.doc02AfterLogin || location.pathname.toLowerCase().indexOf("/brand/create") === 0){
+      S.doc02AfterLogin = false;
+      setTimeout(function(){ history.replaceState(null,"","/brand/create"); bootDoc02Route(); },0);
+    }
+    return result;
+  };
+  try{ finishAuth = window.finishAuth; }catch(e){}
+  Object.assign(window,{
+    renderBrandCreateWizard: renderBrandCreateWizard,
+    openDoc02GuideModal: openDoc02GuideModal,
+    nextDoc02GuideStep: nextDoc02GuideStep,
+    saveBrandWizardDraft: saveBrandWizardDraft,
+    restoreBrandWizardDraft: restoreBrandWizardDraft,
+    validateBrandWizardField: validateBrandWizardField,
+    debouncedBrandValidation: debouncedBrandValidation,
+    loadDoc02IndustryCategories: loadDoc02IndustryCategories,
+    updateDoc02Field: updateDoc02Field,
+    normalizeDoc02Website: normalizeDoc02Website,
+    selectDoc02Goal: selectDoc02Goal,
+    toggleDoc02Platform: toggleDoc02Platform,
+    addDoc02Competitor: addDoc02Competitor,
+    removeDoc02Competitor: removeDoc02Competitor,
+    addDoc02Keyword: addDoc02Keyword,
+    handleDoc02KeywordKey: handleDoc02KeywordKey,
+    removeDoc02Keyword: removeDoc02Keyword,
+    openDoc02ConfirmModal: openDoc02ConfirmModal,
+    closeDoc02Modal: closeDoc02Modal,
+    goDoc02Recharge: goDoc02Recharge,
+    submitDoc02Brand: submitDoc02Brand,
+    startDoc02DiagnosisPolling: startDoc02DiagnosisPolling,
+    handleDoc02BeforeUnload: handleDoc02BeforeUnload,
+    setDoc02Step: setDoc02Step,
+    markDoc02Dirty: markDoc02Dirty
+  });
+  ensureDoc02Style();
+  window.addEventListener("beforeunload", handleDoc02BeforeUnload);
+  if(!draftTimer) draftTimer = setInterval(saveBrandWizardDraft, 30000);
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootDoc02Route);
+  else bootDoc02Route();
+})();
+</script>
+
 </body>
 </html>
 
