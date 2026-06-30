@@ -208,13 +208,13 @@ export function validateBrandCreateInput(input: BrandCreateInput) {
     throw new HttpError(400, "VALIDATION_ERROR", "请输入品牌名称。");
   }
   if (brandName.length < 2 || brandName.length > 30) {
-    throw new HttpError(400, "VALIDATION_ERROR", "品牌名称需要2-30个字符。");
+    throw new HttpError(400, "VALIDATION_ERROR", "品牌名称需要 2-30 个字符。");
   }
   if (/^\d+$/.test(brandName)) {
     throw new HttpError(400, "VALIDATION_ERROR", "品牌名称不能为纯数字。");
   }
   if (!/^[\u3400-\u9fffA-Za-z0-9 &-]+$/.test(brandName)) {
-    throw new HttpError(400, "VALIDATION_ERROR", "品牌名称仅支持中文、英文、数字、空格、&和-。");
+    throw new HttpError(400, "VALIDATION_ERROR", "品牌名称仅支持中文、英文、数字、空格、& 和 -。");
   }
   if (!validGoals.has(goal)) {
     throw new HttpError(400, "VALIDATION_ERROR", "请选择品牌目标。");

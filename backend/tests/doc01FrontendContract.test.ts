@@ -236,20 +236,20 @@ assert.ok(
   "DOC-01 logout should show the login form after clearing the session."
 );
 assert.ok(
-  html.includes("function hideForgotPasswordShortcut()"),
-  "DOC-01 login page must remove the forgot-password shortcut from the visible login form."
+  html.includes("function showForgotPasswordShortcut()"),
+  "DOC-01 login page must keep the forgot-password shortcut visible."
 );
 assert.ok(
-  html.includes("#forgotPasswordFinal{display:none!important}"),
-  "DOC-01 login page must hide the visible forgot-password button."
+  !html.includes("#forgotPasswordFinal{display:none!important}"),
+  "DOC-01 login page must not hide the visible forgot-password button."
 );
 assert.ok(
-  html.includes("function removeClearAccountButton()"),
-  "DOC-01 auth form must remove the unused clear-account button."
+  html.includes("function ensureClearAccountButton()"),
+  "DOC-01 auth form must keep the one-click clear-account button available."
 );
 assert.ok(
-  html.includes("#clearAccountBtn{display:none!important}"),
-  "DOC-01 auth form must not show the clear-account button."
+  !html.includes("#clearAccountBtn{display:none!important}"),
+  "DOC-01 auth form must not globally hide the clear-account button."
 );
 assert.ok(
   html.includes("function clearRegisterExperienceFields()"),

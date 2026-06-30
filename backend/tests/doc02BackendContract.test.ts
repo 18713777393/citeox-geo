@@ -78,6 +78,16 @@ for (const behavior of [
   assert.ok(brandService.includes(behavior), `DOC-02 brand service must include ${behavior}.`);
 }
 
+for (const text of [
+  "余额不足",
+  "当前套餐可创建品牌数量已用完",
+  "专业版仅支持豆包、腾讯元宝、DeepSeek、通义千问",
+  "正在保存品牌信息",
+  "品牌首次诊断"
+]) {
+  assert.ok(brandService.includes(text) || diagnosisService.includes(text), `DOC-02 backend user-facing text must include ${text}.`);
+}
+
 assert.ok(brandService.includes("brand_diagnosis"), "DOC-02 creation must bill diagnosis as brand_diagnosis.");
 assert.ok(brandService.includes("estimatedDuration: 300"), "DOC-02 create response must include estimatedDuration: 300.");
 assert.ok(diagnosisService.includes("diagnosis-queue"), "DOC-02 diagnosis queue must be named diagnosis-queue.");

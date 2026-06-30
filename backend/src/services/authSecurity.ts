@@ -18,8 +18,18 @@ const commonEmailDomains = [
   "hotmail.com",
   "icloud.com",
   "proton.me",
+  "mail.com",
   "zoho.com",
-  "yahoo.com"
+  "yahoo.com",
+  "yandex.com",
+  "aol.com",
+  "company.com",
+  "enterprise.com",
+  "corp.com",
+  "live.com",
+  "msn.com",
+  "yeah.net",
+  "189.cn"
 ];
 
 const disposableDomainSeeds = [
@@ -73,12 +83,100 @@ const disposableDomainSeeds = [
   "spam4.me",
   "tempinbox.com",
   "nowmymail.com",
-  "jetable.org"
+  "jetable.org",
+  "discard.email",
+  "mailnesia.com",
+  "spam.la",
+  "spamfree24.org",
+  "spamfree24.com",
+  "spamfree24.net",
+  "mailnull.com",
+  "boun.cr",
+  "harakirimail.com",
+  "mailimate.com",
+  "emailgo.de",
+  "trashmail.de",
+  "wegwerfmail.de",
+  "wegwerfmail.net",
+  "wegwerfmail.org",
+  "kurzepost.de",
+  "sofort-mail.de",
+  "rcpt.at",
+  "maildu.de",
+  "mailbox92.biz",
+  "spambox.us",
+  "tempail.com",
+  "temp-mail.io",
+  "temp-mail.com",
+  "tempmail.dev",
+  "temporaryemail.net",
+  "tmpeml.com",
+  "emailfake.com",
+  "emailtemporario.com.br",
+  "mail-temp.com",
+  "tempmailaddress.com",
+  "tempmail.net",
+  "tmpbox.net",
+  "trashmailer.com",
+  "trashmail.ws",
+  "trbvm.com",
+  "youmailr.com",
+  "mailzi.ru",
+  "inboxalias.com",
+  "mailmetrash.com"
 ];
 
-const disposableDomains = new Set(disposableDomainSeeds);
+const disposableNamePrefixes = [
+  "temp",
+  "tempmail",
+  "temporary",
+  "throwaway",
+  "trash",
+  "trashmail",
+  "disposable",
+  "burner",
+  "fake",
+  "spam",
+  "maildrop",
+  "dropmail",
+  "quickmail",
+  "minute",
+  "tenminute",
+  "mailbox",
+  "inbox",
+  "nowmail",
+  "nomail",
+  "noreply",
+  "getmail",
+  "fastmail",
+  "onetime",
+  "privacy"
+];
 
-const sensitiveWords = [
+const disposableNameRoots = [
+  "mail",
+  "email",
+  "inbox",
+  "post",
+  "box",
+  "relay",
+  "mx",
+  "letter",
+  "webmail",
+  "sender",
+  "message",
+  "receive"
+];
+
+const disposableTlds = ["com", "net", "org", "co", "cc", "io", "me", "info"];
+
+const generatedDisposableDomains = disposableNamePrefixes.flatMap((prefix) =>
+  disposableNameRoots.flatMap((root) => disposableTlds.map((tld) => `${prefix}-${root}.${tld}`))
+);
+
+const disposableDomains = new Set([...disposableDomainSeeds, ...generatedDisposableDomains]);
+
+const sensitiveWordSeeds = [
   "admin",
   "administrator",
   "root",
@@ -103,6 +201,81 @@ const sensitiveWords = [
   "灰产",
   "刷单",
   "薅羊毛"
+];
+
+const sensitiveRoleWords = [
+  "平台",
+  "官方",
+  "客服",
+  "管理员",
+  "运营",
+  "财务",
+  "支付",
+  "风控",
+  "安全",
+  "审核",
+  "超管",
+  "系统",
+  "售后",
+  "代理",
+  "商户",
+  "银行",
+  "微信",
+  "支付宝",
+  "公安",
+  "税务",
+  "法院",
+  "政府",
+  "认证",
+  "通知"
+];
+
+const sensitiveRiskWords = [
+  "欺诈",
+  "套现",
+  "盗号",
+  "撞库",
+  "免密",
+  "破解",
+  "代刷",
+  "代付",
+  "黑卡",
+  "洗号",
+  "引流",
+  "博彩",
+  "赌博",
+  "盘口",
+  "私彩",
+  "返利",
+  "返现",
+  "灰产",
+  "黑产",
+  "木马",
+  "病毒",
+  "钓鱼",
+  "诈骗",
+  "色情",
+  "毒品",
+  "枪支",
+  "暴恐",
+  "外挂",
+  "外挂群",
+  "羊毛党",
+  "假冒"
+];
+
+const sensitiveWords = [
+  ...sensitiveWordSeeds,
+  ...sensitiveRoleWords.flatMap((word) => [
+    word,
+    `citeox${word}`,
+    `${word}账号`,
+    `${word}中心`,
+    `${word}团队`,
+    `${word}通知`,
+    `${word}服务`
+  ]),
+  ...sensitiveRiskWords.flatMap((word) => [word, `${word}教程`, `${word}服务`, `${word}平台`])
 ];
 
 const weakPasswordSeeds = [
@@ -136,11 +309,13 @@ const weakPasswordSeeds = [
 const weakPasswords = new Set([
   ...weakPasswordSeeds,
   ...weakPasswordSeeds.map((value) => `${value}!`),
-  ...Array.from({ length: 200 }, (_, index) => `password${index + 1}`),
-  ...Array.from({ length: 200 }, (_, index) => `admin${1000 + index}`)
+  ...Array.from({ length: 260 }, (_, index) => `password${index + 1}`),
+  ...Array.from({ length: 260 }, (_, index) => `admin${1000 + index}`),
+  ...Array.from({ length: 120 }, (_, index) => `qwerty${index + 1}`),
+  ...Array.from({ length: 120 }, (_, index) => `abc${10000 + index}`)
 ]);
 
-const industryTerms = [
+const primaryIndustryTerms = [
   "制造业",
   "智能制造",
   "医疗健康",
@@ -170,8 +345,75 @@ const industryTerms = [
   "人力资源",
   "法律服务",
   "咨询服务",
-  "旅游服务"
+  "旅游服务",
+  "汽车服务",
+  "生活服务",
+  "家政服务",
+  "宠物服务",
+  "文化传媒",
+  "广告公关",
+  "游戏娱乐",
+  "体育健身",
+  "物流仓储",
+  "农林牧渔",
+  "食品饮料",
+  "美妆个护",
+  "服装鞋帽",
+  "珠宝饰品",
+  "母婴亲子",
+  "数码家电",
+  "软件开发",
+  "云计算",
+  "人工智能",
+  "数据服务",
+  "网络安全",
+  "建筑工程",
+  "物业管理",
+  "酒店住宿",
+  "会展服务",
+  "政企服务",
+  "公益组织",
+  "招聘服务",
+  "财税服务",
+  "知识产权",
+  "直播电商",
+  "社区团购",
+  "短视频运营",
+  "品牌营销",
+  "客户成功",
+  "售前顾问",
+  "售后服务"
 ];
+
+const industrySubTerms = [
+  "综合",
+  "平台",
+  "门店",
+  "连锁",
+  "SaaS",
+  "工具",
+  "服务商",
+  "解决方案",
+  "咨询",
+  "培训",
+  "运营",
+  "供应链"
+];
+
+const industryTerms = Array.from(
+  new Set([
+    ...primaryIndustryTerms,
+    ...primaryIndustryTerms.flatMap((industry) => industrySubTerms.map((sub) => `${industry}${sub}`))
+  ])
+);
+
+export const authSecurityPolicyStats = {
+  commonEmailDomains: commonEmailDomains.length,
+  disposableDomains: disposableDomains.size,
+  sensitiveWords: new Set(sensitiveWords).size,
+  weakPasswords: weakPasswords.size,
+  industryTerms: industryTerms.length
+};
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();

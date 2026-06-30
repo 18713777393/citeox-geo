@@ -41,7 +41,7 @@ const envSchema = z
     SERPAPI_API_KEY: z.string().optional(),
     EMAIL_PROVIDER: z.string().optional(),
     RESEND_API_KEY: z.string().optional(),
-    EMAIL_FROM: z.string().optional(),
+    EMAIL_FROM: z.string().default("Citeox <noreply@citeox.com>"),
     SMS_PROVIDER: z.string().optional(),
     SMS_ACCESS_KEY: z.string().optional(),
     SMS_SECRET_KEY: z.string().optional(),

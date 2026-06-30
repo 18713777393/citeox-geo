@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>智引GEO - GEO 自动优化系统</title>
-  <script>if(/[?&]entry=(login|personal|enterprise|admin)\b|[?&]action=register\b/.test(location.search))document.documentElement.classList.add("auth-boot");</script>
+  <script>if(/[?&]entry=(login|personal|enterprise|admin)\b|[?&]action=register\b/.test(location.search))document.documentElement.classList.add("auth-boot");if(location.protocol==="file:"||/[?&]doc02=1\b/.test(location.search))document.documentElement.classList.add("doc02-boot-lock");</script>
   <style>
+    html.doc02-boot-lock body{visibility:hidden}
     *{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei",Arial,sans-serif;background:#f7f9fc;color:#172033;letter-spacing:0}button,input,textarea,select{font:inherit}button{cursor:pointer}textarea{resize:vertical}.landing{min-height:100vh;background:linear-gradient(180deg,#fbfdff,#eef5ff);padding:24px;display:block}.landingNav{width:min(1180px,100%);margin:0 auto 34px;display:flex;align-items:center;justify-content:space-between;gap:16px}.landingHero{width:min(1180px,100%);margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:22px;align-items:center}.landingCopy h1{font-size:52px;line-height:1.08;margin:18px 0 16px}.landingCopy p{font-size:17px;color:#5f6b80;line-height:1.9;margin:0 0 22px}.landingActions{display:flex;gap:12px;flex-wrap:wrap}.landingStats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:26px}.landingStats .mini strong{display:block;font-size:28px;color:#172033}.landingBoard{background:#fff;border:1px solid #e5ebf3;border-radius:8px;box-shadow:0 18px 48px rgba(42,72,118,.08);padding:18px}.landingBoard .row{margin-bottom:10px}.landingFeatures{width:min(1180px,100%);margin:28px auto 0;display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.landingFeature{background:#fff;border:1px solid #e5ebf3;border-radius:8px;padding:18px;box-shadow:0 10px 28px rgba(42,72,118,.05)}.landingFeature h3{margin:0 0 8px}.landingFeature p{color:#687386;line-height:1.65;margin:0}.login{min-height:100vh;padding:26px;background:linear-gradient(180deg,#fbfdff,#eef5ff);display:none;place-items:center}.show-auth .login{display:grid}.show-auth .landing{display:none}.loginBox{width:min(1180px,100%);display:grid;grid-template-columns:1fr 1fr;gap:18px}.loginHero,.loginCard,.panel,.card,.price{background:#fff;border:1px solid #e5ebf3;border-radius:8px;box-shadow:0 14px 38px rgba(42,72,118,.06)}.loginHero{padding:34px}.brandMark{display:inline-flex;align-items:center;gap:10px;font-weight:900}.mark,.logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#5969f3,#22b8a7);color:#fff;display:grid;place-items:center;font-weight:900}.loginHero h1{font-size:42px;margin:16px 0 12px}.loginHero p{color:#5f6b80;line-height:1.8}.loginBullets{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:22px}.mini{padding:14px;border:1px solid #e8edf5;border-radius:8px;background:#fbfcff}.mini b{display:block;margin-bottom:6px}.loginCard{padding:26px}.modeTabs{display:none;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}.modeTabs .admin-tab{display:none}.admin-entry .modeTabs{display:grid;grid-template-columns:repeat(3,1fr)}.admin-entry .modeTabs .admin-tab{display:block}.modeTabs button{border:1px solid #dfe7f2;background:#fff;border-radius:8px;padding:10px;font-weight:800}.modeTabs button.active{background:#eef2ff;color:#4f5eea;border-color:#bec7ff}.formGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.field{margin:10px 0}.field label{display:block;font-size:13px;color:#647086;margin-bottom:6px}.field input,.field select,.field textarea{width:100%;border:1px solid #dbe4ef;border-radius:8px;background:#fff;padding:11px;outline:none}.field textarea{min-height:76px}.remember{display:flex;gap:8px;align-items:center;color:#5f6b80;font-size:13px;line-height:1.5;margin:10px 0}.legal{display:flex;gap:8px;align-items:flex-start;color:#5f6b80;font-size:13px;line-height:1.5;margin:12px 0}.strength{height:8px;background:#edf1f7;border-radius:999px;overflow:hidden;margin-top:8px}.strength i{display:block;width:0;height:100%;border-radius:999px;background:#c34242;transition:width .2s,background .2s}.navbtn.locked{opacity:.56;position:relative}.navbtn.locked:after{content:"未解锁";font-size:11px;color:#9a6400;background:#fff7e6;border:1px solid #f3d18b;border-radius:999px;padding:2px 6px;margin-left:8px}.lockedPanel{border:1px dashed #cfd8e6;background:#fbfcff;border-radius:8px;padding:22px;margin-bottom:16px}.lockedPanel h2{margin:0 0 8px}.lockedPanel p{color:#687386;line-height:1.7;margin:0 0 14px}.legal input{margin-top:3px}.app{display:none;min-height:100vh;grid-template-columns:248px 1fr}.logged-in .app{display:grid}.logged-in .login,.logged-in .landing{display:none}.side{background:#fff;border-right:1px solid #e6ebf2;padding:18px 14px;position:sticky;top:0;height:100vh;overflow:auto}.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:900;margin-bottom:18px}.gtitle{font-size:12px;font-weight:900;color:#8b95a7;margin:18px 10px 8px}.navbtn{width:100%;border:0;background:transparent;color:#40506a;display:flex;justify-content:space-between;align-items:center;padding:11px 12px;border-radius:8px;text-align:left;margin:3px 0}.navbtn:hover,.navbtn.active{background:#eef2ff;color:#4f5eea;font-weight:900}.navbtn small{color:#9ba6b7}.sideCard{border:1px solid #e5ebf3;border-radius:8px;padding:12px;background:#fbfcff;margin-top:18px}.sideCard p{margin:6px 0 0;color:#657086;font-size:12px}.top{min-height:64px;background:rgba(255,255,255,.94);border-bottom:1px solid #e6ebf2;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 24px;position:sticky;top:0;z-index:5}.crumb{font-weight:900;color:#30394c}.user{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.avatar{width:32px;height:32px;border-radius:50%;background:#e9eff7;display:grid;place-items:center;font-weight:900}.content{padding:24px}.title{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:18px}.title h1{font-size:30px;margin:0 0 8px}.title p{margin:0;color:#647086}.btn{border:1px solid #d9e2ee;background:#fff;border-radius:8px;padding:10px 14px;color:#1f2937;font-weight:900;box-shadow:0 2px 8px rgba(20,31,55,.04)}.btn:disabled{opacity:.62;cursor:not-allowed;box-shadow:none}.smsRow .btn{min-width:92px}.btn.primary{background:#5969f3;color:#fff;border-color:#5969f3}.btn.green{background:#20aa8a;color:#fff;border-color:#20aa8a}.btn.warn{background:#fff7e6;color:#9a6400;border-color:#f3d18b}.btn.dark{background:#111827;color:#fff;border-color:#111827}.btn.soft{background:#f6f8fb}.hero{background:#fff;border:1px solid #e6ebf2;border-radius:8px;padding:22px;box-shadow:0 16px 42px rgba(42,72,118,.06);margin-bottom:18px}.hero h2{margin:0 0 10px;font-size:24px}.hero p{color:#5d687a;line-height:1.8;margin:0}.notice{margin-top:14px;padding:12px 14px;border-left:4px solid #5969f3;background:#f3f5ff;border-radius:6px;color:#37415b}.flow,.stats,.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.flow{margin-top:18px}.step{border:1px solid #e6ebf2;border-radius:8px;padding:12px;background:#fbfcff;min-height:80px}.step.done{background:#effaf6;border-color:#bdebdc}.step.active{background:#eef2ff;border-color:#bec7ff}.step b{font-size:13px}.step p{font-size:12px;color:#788498}.stats{margin-bottom:18px}.stat{background:#fff;border:1px solid #e6ebf2;border-radius:8px;padding:18px;display:flex;gap:14px;align-items:center}.ico{width:46px;height:46px;border-radius:8px;background:#f1f4f9;color:#5969f3;display:grid;place-items:center;font-size:22px}.stat small{color:#778296}.stat strong{display:block;font-size:30px;margin-top:4px}.tabs{display:flex;gap:8px;overflow:auto;margin-bottom:18px}.tab{border:1px solid #dfe7f2;background:#fff;border-radius:8px;padding:9px 12px;white-space:nowrap;color:#47536b}.tab.active{background:#eef2ff;color:#4f5eea;font-weight:900}.section{display:none}.section.active{display:block}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.panel,.card,.price{padding:18px}.panel h2,.card h3,.price h3{margin:0 0 10px}.card p,.hint{color:#687386;line-height:1.65;margin:4px 0}.head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.progress{height:9px;background:#edf1f7;border-radius:999px;overflow:hidden;margin-top:10px}.bar{height:100%;background:#5969f3;border-radius:999px}.bar.green{background:#20aa8a}.bar.gold{background:#d8a21c}.tag{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:900;background:#eef2ff;color:#4f5eea}.tag.green{background:#e9fbf5;color:#15866d}.tag.amber{background:#fff7e6;color:#9a6400}.tag.red{background:#fff0f0;color:#c34242}.table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e6ebf2;border-radius:8px;overflow:hidden}.table th,.table td{border-bottom:1px solid #edf1f6;padding:12px;text-align:left;font-size:13px;vertical-align:top}.table th{background:#f7f9fc;color:#667085}.code{background:#101827;color:#eef4ff;border-radius:8px;padding:14px;overflow:auto;white-space:pre-wrap;min-height:210px;line-height:1.55}.list{display:grid;gap:10px}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #e8edf5;border-radius:8px;padding:12px;background:#fbfcff}.empty{border:1px dashed #cfd8e6;border-radius:8px;padding:24px;text-align:center;color:#758197;background:#fbfcff}.price strong{font-size:28px}.price ul{margin:12px 0 0;padding-left:18px;color:#687386;line-height:1.8}.progressMask{position:fixed;inset:0;background:rgba(15,23,42,.28);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:30;padding:18px}.progressBox{width:min(460px,100%);background:#fff;border:1px solid #e5ebf3;border-radius:12px;box-shadow:0 24px 80px rgba(15,23,42,.18);padding:20px}.progressBox h3{margin:0 0 6px;font-size:20px}.progressBox p{margin:0;color:#667085;line-height:1.6}.progressList{display:grid;gap:8px;margin-top:16px}.progressItem{display:flex;align-items:center;gap:10px;color:#667085;font-weight:800}.progressDot{width:22px;height:22px;border-radius:50%;background:#edf1f7;color:#7a8699;display:grid;place-items:center;font-size:12px}.progressItem.active{color:#4f5eea}.progressItem.active .progressDot{background:#eef2ff;color:#4f5eea}.progressItem.done{color:#15866d}.progressItem.done .progressDot{background:#e9fbf5;color:#15866d}.progressMeter{height:8px;background:#edf1f7;border-radius:999px;overflow:hidden;margin-top:16px}.progressMeter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5969f3,#20aa8a,#5969f3);background-size:200% 100%;border-radius:999px;animation:progressFlow 1.1s linear infinite;transition:width .35s}@keyframes progressFlow{0%{background-position:0% 50%}100%{background-position:200% 50%}}.toast{position:fixed;right:24px;bottom:24px;background:#111827;color:#fff;border-radius:8px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.18);display:none;z-index:20}@media(max-width:1100px){.landingHero{grid-template-columns:1fr}.landingFeatures{grid-template-columns:repeat(2,1fr)}.app{grid-template-columns:1fr}.side{position:relative;height:auto;max-height:44vh;border-right:0;border-bottom:1px solid #e6ebf2}.brand{position:sticky;top:0;background:#fff;padding-bottom:8px;z-index:2}.loginBox,.grid2,.grid3{grid-template-columns:1fr}.flow,.stats,.grid4{grid-template-columns:repeat(2,1fr)}}@media(max-width:720px){.landing{padding:16px}.landingNav{align-items:flex-start;flex-direction:column}.landingCopy h1{font-size:34px}.landingStats,.landingFeatures{grid-template-columns:1fr}.login{padding:14px}.loginHero h1{font-size:30px}.loginBullets,.formGrid,.flow,.stats,.grid4{grid-template-columns:1fr}.content{padding:16px}.top,.title,.user{align-items:flex-start;flex-direction:column}.btn{width:auto}.modeTabs{grid-template-columns:1fr}.side{max-height:38vh}.navbtn{padding:9px 10px}}
     .loginCard .authForm{grid-template-columns:1fr;gap:6px;margin-top:14px}
     .loginCard .authForm .field{margin:6px 0}
@@ -1896,17 +1897,36 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       else if(window.S && window.key) localStorage.setItem(window.key, JSON.stringify(window.S));
     }catch(e){}
   }
-  function hideForgotPasswordShortcut(){
+  function showForgotPasswordShortcut(){
     var forgot = $("forgotPasswordFinal");
     if(forgot){
-      forgot.style.display = "none";
-      forgot.setAttribute("aria-hidden", "true");
-      forgot.onclick = null;
+      forgot.style.display = "";
+      forgot.removeAttribute("aria-hidden");
+      forgot.onclick = function(){ if(window.forgotPassword) window.forgotPassword(); };
     }
   }
-  function removeClearAccountButton(){
+  function ensureClearAccountButton(){
     var clear = $("clearAccountBtn");
-    if(clear && clear.parentNode) clear.parentNode.removeChild(clear);
+    var account = $("regName");
+    if(!clear && account){
+      clear = document.createElement("button");
+      clear.id = "clearAccountBtn";
+      clear.type = "button";
+      clear.className = "auth-clear";
+      clear.textContent = "✕ 一键清空";
+      account.insertAdjacentElement("afterend", clear);
+    }
+    if(clear){
+      clear.style.display = account && account.value ? "" : "none";
+      clear.onclick = function(){ if(account){ account.value = ""; clear.style.display = "none"; account.focus(); } };
+    }
+    if(account && account.dataset.clearAccountBound !== "1"){
+      account.dataset.clearAccountBound = "1";
+      account.addEventListener("input", function(){
+        var btn = $("clearAccountBtn");
+        if(btn) btn.style.display = account.value ? "" : "none";
+      });
+    }
   }
   function clearRegisterExperienceFields(){
     if(window.S) S.authVariant = "register";
@@ -2022,8 +2042,8 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   }
   function afterAuthModeChange(){
     ensureAuthBackHomeButton();
-    hideForgotPasswordShortcut();
-    removeClearAccountButton();
+    showForgotPasswordShortcut();
+    ensureClearAccountButton();
     hideLoginPasswordStrengthHint();
   }
   function wrapFunction(name){
@@ -2046,8 +2066,8 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   }
   window.returnHomeFromAuth = returnHomeFromAuth;
   window.navigateToPromoHome = navigateToPromoHome;
-  window.hideForgotPasswordShortcut = hideForgotPasswordShortcut;
-  window.removeClearAccountButton = removeClearAccountButton;
+  window.showForgotPasswordShortcut = showForgotPasswordShortcut;
+  window.ensureClearAccountButton = ensureClearAccountButton;
   window.clearRegisterExperienceFields = clearRegisterExperienceFields;
   window.hideLoginPasswordStrengthHint = hideLoginPasswordStrengthHint;
   window.logoutToLoginPage = logoutToLoginPage;
@@ -2058,18 +2078,438 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   wrapFunction("updatePasswordStrength");
   var style = document.createElement("style");
   style.id = "citeoxAuthLoginPolishStyle";
-  style.textContent = "html.return-home-pending body{visibility:hidden!important}.loginCard.login-mode #passwordStrengthText{display:none!important}.loginCard.login-mode .strength{display:none!important}#forgotPasswordFinal{display:none!important}#clearAccountBtn{display:none!important}.auth-back-home-final{display:block}";
+  style.textContent = "html.return-home-pending body{visibility:hidden!important}.loginCard.login-mode #passwordStrengthText{display:none!important}.loginCard.login-mode .strength{display:none!important}.auth-back-home-final{display:block}";
   document.head.appendChild(style);
   function boot(){
     if(card() && card().classList.contains("register-mode")) clearRegisterExperienceFields();
     ensureAuthBackHomeButton();
-    hideForgotPasswordShortcut();
-    removeClearAccountButton();
+    showForgotPasswordShortcut();
+    ensureClearAccountButton();
     hideLoginPasswordStrengthHint();
   }
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
   setTimeout(boot, 250);
+})();
+</script>
+
+<script id="citeox-doc01-strict-auth-final">
+(function(){
+  var emailCorrectionMethod = "Levenshtein";
+  var emailTypoExamples = ["gmial.com","qq.con","163.cm","163.con","hotmai.com","outloo.com"];
+  var usernameDuplicateCount = 0;
+  var lastDuplicateUsername = "";
+  var industryOptions = ["制造业","医疗健康","教育培训","科技互联网","金融服务","零售电商","餐饮美食","房地产","交通运输","能源环保","运营","销售","市场营销","产品经理","SaaS","企业服务"];
+  var industryActiveIndex = -1;
+  function $(id){ return document.getElementById(id); }
+  function qs(sel){ return document.querySelector(sel); }
+  function value(id){ return ($(id) && $(id).value || "").trim(); }
+  function rawValue(id){ return ($(id) && $(id).value || ""); }
+  function setText(id,text){ var el=$(id); if(el) el.textContent=text; }
+  function normalizePhone(v){ return String(v || "").replace(/\D/g,""); }
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim()); }
+  function validPhone(v){ return /^1[3-9]\d{9}$/.test(normalizePhone(v)); }
+  function debounce(fn, delay){ var timer; return function(){ var args=arguments; clearTimeout(timer); timer=setTimeout(function(){ fn.apply(null,args); }, delay); }; }
+
+  function ensureDoc01StrictAuth(){
+    if(!$("doc01StrictAuthStyle")){
+      var style = document.createElement("style");
+      style.id = "doc01StrictAuthStyle";
+      style.textContent = [
+        ".show-auth .loginBox{grid-template-columns:40% 60%;gap:0;min-height:calc(100vh - 52px);background:#fff;border-radius:8px;overflow:hidden}",
+        ".show-auth .loginHero{background:linear-gradient(135deg,#1e40af 0%,#7c3aed 100%);color:#fff;border:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;justify-content:center}",
+        ".show-auth .loginHero p,.show-auth .loginHero .mini span{color:rgba(255,255,255,.84)}.show-auth .loginHero .mini{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.18);color:#fff}",
+        ".show-auth .loginCard{max-width:440px;width:100%;margin:auto;border:0;box-shadow:none}.show-auth .loginCard.reset-mode{max-width:480px}",
+        ".show-auth .loginCard .authForm{grid-template-columns:1fr;gap:12px}.show-auth .field{margin:0 0 12px}.show-auth .field input{height:44px;border:1px solid #D1D5DB;border-radius:8px}",
+        ".show-auth #registerBtn,.show-auth #loginBtn{height:48px;border-radius:8px;font-size:16px;font-weight:800}.show-auth #registerBtn{background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff;border-color:#2563EB}",
+        ".show-auth button:disabled{background:#9CA3AF!important;cursor:not-allowed!important;opacity:1}",
+        ".code-boxes{display:flex;gap:8px;margin-top:8px}.code-boxes input{width:44px;height:44px;text-align:center;font-size:20px;font-weight:900;border-radius:6px;border:1px solid #D1D5DB}.code-boxes input:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}",
+        ".auth-tip{font-size:12px}.username-suggestions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.username-suggestions button{border:0;border-radius:999px;background:#EFF6FF;color:#1D4ED8;padding:5px 9px;font-weight:800}",
+        "#authIndustryPanel{position:absolute;z-index:80;background:#fff;border:1px solid #D1D5DB;border-radius:8px;box-shadow:0 12px 30px rgba(15,23,42,.12);padding:6px;display:none;max-height:230px;overflow:auto}#authIndustryPanel button{display:block;width:100%;text-align:left;border:0;background:#fff;padding:9px 10px;border-radius:6px}#authIndustryPanel button.active,#authIndustryPanel button:hover{background:#EFF6FF;color:#1D4ED8}",
+        "#inviteTooltip{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#EEF2FF;color:#1D4ED8;margin-left:6px;position:relative;font-size:12px}#inviteTooltip span{position:absolute;right:0;bottom:24px;width:230px;background:#fff;color:#374151;border:1px solid #E5E7EB;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.12);padding:8px 10px;opacity:0;pointer-events:none;transition:opacity 200ms ease;transition-delay:300ms}#inviteTooltip:hover span{opacity:1}",
+        ".legal.shake{animation:shake 500ms ease-in-out;border:2px solid #EF4444;border-radius:8px;padding:8px;color:#EF4444}@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}",
+        ".toast{right:24px!important;top:24px!important;bottom:auto!important;border-radius:8px!important}",
+        "@media(max-width:1279px){.show-auth .loginBox{grid-template-columns:1fr}.show-auth .loginHero{display:none}.show-auth .loginCard{max-width:480px}}@media(max-width:768px){.show-auth .login{padding:0!important}.show-auth .loginBox{width:100%;min-height:100vh;border-radius:0}.show-auth .loginCard{max-width:none;padding:20px;width:100%}}"
+      ].join("");
+      document.head.appendChild(style);
+    }
+    var heroTitle = qs(".loginHero h1");
+    if(heroTitle) heroTitle.textContent = "让品牌在 AI 时代被看见、理解、引用、推荐";
+    var mark = qs(".loginHero .brandMark span:last-child");
+    if(mark) mark.textContent = "Citeox";
+    ensureAuthLabels();
+    ensureInviteTooltip();
+    ensureIndustryCombobox();
+    ensureClearAccountButtonDoc01();
+    showForgotPasswordDoc01();
+  }
+
+  function toastDoc01(message, type){
+    var toast = $("toast");
+    if(!toast) return alert(message);
+    var inferred = type || (/失败|错误|不正确|超时|失效|过期|不足|频繁|不可用|请先|请填写|请重新/.test(String(message)) ? "error" : "success");
+    toast.textContent = message;
+    toast.style.display = "block";
+    toast.style.right = "24px";
+    toast.style.top = "24px";
+    toast.style.bottom = "auto";
+    toast.style.background = inferred === "error" ? "#EF4444" : inferred === "warning" ? "#F59E0B" : inferred === "success" ? "#10B981" : "#111827";
+    clearTimeout(toast._doc01Timer);
+    toast._doc01Timer = setTimeout(function(){ toast.style.display = "none"; }, type === "error" ? 5000 : type === "warning" ? 5000 : 3000);
+  }
+  window.toastDoc01 = toastDoc01;
+  window.toastMsg = function(message,type){ toastDoc01(message,type); };
+  try{ toastMsg = window.toastMsg; }catch(e){}
+
+  function labelFor(inputId, text){
+    var input = $(inputId);
+    var label = input && input.closest(".field") && input.closest(".field").querySelector("label");
+    if(label) label.textContent = text;
+  }
+  function ensureTip(inputId, tipId, text){
+    var input = $(inputId);
+    if(!input) return;
+    var tip = $(tipId);
+    if(!tip){
+      tip = document.createElement("div");
+      tip.id = tipId;
+      tip.className = "auth-tip";
+      input.closest(".field").appendChild(tip);
+    }
+    if(text) tip.textContent = text;
+  }
+  function ensureAuthLabels(){
+    var isRegister = !qs(".loginCard") || qs(".loginCard").classList.contains("register-mode");
+    setText("accountLabel", isRegister ? "账号名称 *" : "账号");
+    labelFor("regEmail","邮箱 *");
+    labelFor("regPhone","手机号 *");
+    labelFor("smsCode","邮箱验证码 *");
+    labelFor("regPassword","密码 *");
+    labelFor("regPasswordConfirm","确认密码 *");
+    labelFor("regIndustry","行业 *");
+    if($("regName")) $("regName").placeholder = isRegister ? "请输入账号名称（2-20个字符）" : "请输入账号（用户名/邮箱/手机号）";
+    if($("regPhone")) $("regPhone").placeholder = "请输入手机号（必填，方便我们后续为您提供服务）";
+    ensureTip("regName","usernameTip","支持中文、英文、数字、下划线，不能纯数字");
+    ensureTip("regPhone","phoneTip","手机号仅用于账号安全和重要通知，我们将严格保密。示例：138 1234 5678");
+    ensureTip("regIndustry","industryTip","如：制造业、医疗、运营、销售等");
+    ensureTip("regInvite","inviteTip","如果您有邀请码，填写后可获得额外权益");
+    var buttons = document.querySelectorAll('.smsRow button[onclick*="togglePassword"]');
+    buttons.forEach(function(btn){ btn.textContent = "👁️"; btn.setAttribute("aria-label","显示或隐藏密码"); });
+  }
+
+  function setTip(id, text, type){
+    var el = $(id);
+    if(!el) return;
+    el.textContent = text || "";
+    el.className = "auth-tip" + (type ? " " + type : "");
+  }
+  function setUsernameStatus(text, type){
+    var input = $("regName");
+    if(!input) return;
+    var status = $("usernameStatus");
+    if(!status){
+      status = document.createElement("span");
+      status.id = "usernameStatus";
+      status.className = "username-status";
+      input.insertAdjacentElement("afterend", status);
+    }
+    status.textContent = text || "";
+    status.className = "username-status " + (type || "");
+  }
+  function showUsernameSuggestions(suggestions){
+    var tip = $("usernameTip");
+    if(!tip) return;
+    var old = $("usernameSuggestions");
+    if(old) old.remove();
+    var wrap = document.createElement("div");
+    wrap.id = "usernameSuggestions";
+    wrap.className = "username-suggestions";
+    wrap.innerHTML = '<span>试试这些名称：</span>' + suggestions.slice(0,3).map(function(name){ return '<button type="button">'+name+'</button>'; }).join("");
+    tip.insertAdjacentElement("afterend", wrap);
+    wrap.querySelectorAll("button").forEach(function(btn){
+      btn.onclick = function(){ if($("regName")) $("regName").value = btn.textContent || ""; usernameDuplicateCount = 0; checkUsernameStrict(); };
+    });
+  }
+  function validateUsernameLocal(username){
+    if(!username) return "请输入账号名称";
+    if(username.length < 2 || username.length > 20) return "账号名称需要2-20个字符";
+    if(!/^[\u4e00-\u9fa5A-Za-z0-9_]+$/.test(username)) return "账号名称仅支持中文、英文、数字和下划线";
+    if(/^\d+$/.test(username)) return "账号名称不能为纯数字";
+    return "";
+  }
+  async function checkUsernameStrict(){
+    var card = qs(".loginCard");
+    if(card && !card.classList.contains("register-mode")) return;
+    var username = value("regName");
+    var localError = validateUsernameLocal(username);
+    var suggestionsNode = $("usernameSuggestions");
+    if(suggestionsNode) suggestionsNode.remove();
+    if(localError){ setUsernameStatus("不可用","error"); setTip("usernameTip", localError, "error"); return; }
+    if(/^(aa|ab|aaa|test|ceshi|测试|用户|user)$/i.test(username)){ setTip("usernameTip","账号名称过于简单，建议使用更有辨识度的名称","warning"); }
+    setUsernameStatus("检测中","checking");
+    try{
+      var data = await doc01AuthApi("/api/v1/auth/check-username", { username: username }, 15000);
+      if(data.available){
+        usernameDuplicateCount = 0;
+        setUsernameStatus("可用","success");
+        setTip("usernameTip", data.reason || "账号名称可用", data.severity === "warning" ? "warning" : "success");
+        return;
+      }
+      usernameDuplicateCount = lastDuplicateUsername === username ? usernameDuplicateCount + 1 : 1;
+      lastDuplicateUsername = username;
+      setUsernameStatus("不可用","error");
+      setTip("usernameTip", data.reason || "该账号名称已被使用，请更换", "error");
+      if(usernameDuplicateCount >= 3 && data.suggestions) showUsernameSuggestions(data.suggestions);
+    }catch(e){
+      setUsernameStatus("需重试","warning");
+      setTip("usernameTip","账号名称检测暂时不可用，请稍后重试","warning");
+    }
+  }
+  window.checkUsernameStrict = checkUsernameStrict;
+
+  function levenshteinDoc01(a,b){
+    var dp = Array.from({length:a.length+1}, function(){ return Array(b.length+1).fill(0); });
+    for(var i=0;i<=a.length;i++) dp[i][0]=i;
+    for(var j=0;j<=b.length;j++) dp[0][j]=j;
+    for(i=1;i<=a.length;i++) for(j=1;j<=b.length;j++) dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+    return dp[a.length][b.length];
+  }
+  function suggestEmailDomain(email){
+    var common = ["qq.com","163.com","126.com","sina.com","sohu.com","aliyun.com","foxmail.com","tencent.com","feishu.cn","larkoffice.com","gmail.com","outlook.com","hotmail.com","yahoo.com","icloud.com","proton.me","mail.com","zoho.com","yandex.com","aol.com"];
+    var parts = String(email || "").trim().toLowerCase().split("@");
+    if(parts.length !== 2) return "";
+    var best = common.map(function(domain){ return { domain:domain, distance:levenshteinDoc01(parts[1], domain) }; }).filter(function(x){ return x.distance <= 2; }).sort(function(a,b){ return a.distance-b.distance; })[0];
+    return best && best.domain !== parts[1] ? parts[0] + "@" + best.domain : "";
+  }
+  function checkEmailCorrection(){
+    var email = value("regEmail").toLowerCase();
+    if($("regEmail")) $("regEmail").value = email;
+    var suggestion = suggestEmailDomain(email);
+    var box = $("emailSuggestion");
+    if(!box || !suggestion) return;
+    box.innerHTML = "您是否想输入 <b>" + suggestion.split("@")[1] + "</b>？ <button type=\"button\">点击修正</button>";
+    box.style.display = "block";
+    box.querySelector("button").onclick = function(){ $("regEmail").value = suggestion; box.style.display = "none"; };
+  }
+
+  function ensureIndustryCombobox(){
+    var input = $("regIndustry");
+    if(!input) return;
+    if(!$("authIndustryPanel")){
+      var panel = document.createElement("div");
+      panel.id = "authIndustryPanel";
+      document.body.appendChild(panel);
+    }
+    if(input.dataset.industryComboBound === "1") return;
+    input.dataset.industryComboBound = "1";
+    input.setAttribute("role","combobox");
+    input.setAttribute("aria-controls","authIndustryPanel");
+    input.addEventListener("input", renderIndustryPanel);
+    input.addEventListener("focus", renderIndustryPanel);
+    input.addEventListener("keydown", function(e){
+      var panel = $("authIndustryPanel");
+      var buttons = panel ? Array.from(panel.querySelectorAll("button")) : [];
+      if(e.key === "ArrowDown"){ e.preventDefault(); industryActiveIndex = Math.min(buttons.length - 1, industryActiveIndex + 1); markIndustryActive(buttons); }
+      if(e.key === "ArrowUp"){ e.preventDefault(); industryActiveIndex = Math.max(0, industryActiveIndex - 1); markIndustryActive(buttons); }
+      if(e.key === "Enter" && buttons[industryActiveIndex]){ e.preventDefault(); input.value = buttons[industryActiveIndex].textContent || ""; hideIndustryPanel(); }
+      if(e.key === "Escape"){ hideIndustryPanel(); }
+    });
+    document.addEventListener("click", function(e){ if(e.target !== input && !$("authIndustryPanel")?.contains(e.target)) hideIndustryPanel(); });
+  }
+  function renderIndustryPanel(){
+    var input = $("regIndustry");
+    var panel = $("authIndustryPanel");
+    if(!input || !panel) return;
+    var q = input.value.trim();
+    var matches = industryOptions.filter(function(x){ return !q || x.toLowerCase().includes(q.toLowerCase()) || q.includes(x); }).slice(0,8);
+    industryActiveIndex = -1;
+    panel.innerHTML = matches.map(function(x){ return '<button type="button">'+x+'</button>'; }).join("");
+    var rect = input.getBoundingClientRect();
+    panel.style.left = rect.left + window.scrollX + "px";
+    panel.style.top = rect.bottom + window.scrollY + 6 + "px";
+    panel.style.width = rect.width + "px";
+    panel.style.display = matches.length ? "block" : "none";
+    Array.from(panel.querySelectorAll("button")).forEach(function(btn){ btn.onclick = function(){ input.value = btn.textContent || ""; hideIndustryPanel(); }; });
+  }
+  function markIndustryActive(buttons){ buttons.forEach(function(btn,i){ btn.classList.toggle("active", i === industryActiveIndex); }); }
+  function hideIndustryPanel(){ var panel = $("authIndustryPanel"); if(panel) panel.style.display = "none"; }
+
+  function ensureInviteTooltip(){
+    var invite = $("regInvite");
+    if(!invite || $("inviteTooltip")) return;
+    var label = invite.closest(".field") && invite.closest(".field").querySelector("label");
+    if(label) label.insertAdjacentHTML("beforeend", '<i id="inviteTooltip">ℹ️<span>如果您有邀请码，填写后可获得额外权益</span></i>');
+  }
+  function showForgotPasswordDoc01(){
+    var forgot = $("forgotPasswordFinal");
+    if(forgot){ forgot.style.display = ""; forgot.removeAttribute("aria-hidden"); forgot.onclick = function(){ if(window.forgotPassword) window.forgotPassword(); }; }
+  }
+  function ensureClearAccountButtonDoc01(){
+    var account = $("regName");
+    if(!account) return;
+    var clear = $("clearAccountBtn");
+    if(!clear){
+      clear = document.createElement("button");
+      clear.id = "clearAccountBtn";
+      clear.type = "button";
+      clear.className = "auth-clear";
+      clear.textContent = "✕ 一键清空";
+      account.insertAdjacentElement("afterend", clear);
+    }
+    clear.onclick = function(){ account.value = ""; clear.style.display = "none"; account.focus(); };
+    clear.style.display = account.value ? "" : "none";
+    if(account.dataset.clearDoc01 !== "1"){
+      account.dataset.clearDoc01 = "1";
+      account.addEventListener("input", function(){ clear.style.display = account.value ? "" : "none"; });
+    }
+  }
+
+  function passwordDoc01State(password){
+    var v = String(password || "");
+    if(v.length < 8) return { width:"0%", color:"#EF4444", text:"密码至少需要8个字符" };
+    var hasLetter = /[A-Za-z]/.test(v), hasNumber = /\d/.test(v), hasSymbol = /[^A-Za-z0-9]/.test(v);
+    var groups = [hasLetter, hasNumber, hasSymbol].filter(Boolean).length;
+    if(groups < 2) return { width:"30%", color:"#EF4444", text:"密码强度：弱 — 建议使用字母、数字和符号的组合" };
+    if(groups === 2) return { width:"60%", color:"#F59E0B", text:"密码强度：中 — 建议增加特殊符号更安全" };
+    if(v.length < 10) return { width:"70%", color:"#F59E0B", text:"密码强度：中 — 建议使用更长的密码" };
+    return { width:"100%", color:"#10B981", text:"密码强度：强 ✅" };
+  }
+  function updatePasswordStrengthDoc01(){
+    var pwd = rawValue("regPassword");
+    var confirm = rawValue("regPasswordConfirm");
+    var state = passwordDoc01State(pwd);
+    var bar = $("passwordStrengthBar");
+    var tip = $("passwordStrengthText");
+    var cbar = $("confirmStrengthBar");
+    var ctip = $("confirmStrengthText");
+    if(bar){ bar.style.width = state.width; bar.style.background = state.color; }
+    if(tip){ tip.textContent = state.text; }
+    if(cbar){ cbar.style.width = confirm ? (confirm === pwd ? state.width : "45%") : "0%"; cbar.style.background = confirm === pwd ? state.color : "#EF4444"; }
+    if(ctip){ ctip.textContent = !confirm ? "请再次输入密码" : confirm === pwd ? "密码一致 ✅" : "两次输入的密码不一致"; }
+  }
+  window.updatePasswordStrength = updatePasswordStrengthDoc01;
+  try{ updatePasswordStrength = updatePasswordStrengthDoc01; }catch(e){}
+
+  async function doc01AuthApi(path, body, timeoutMs){
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ controller.abort(); }, timeoutMs || 15000);
+    try{
+      var headers = {"Content-Type":"application/json"};
+      if(window.S && S.api && S.api.token) headers.Authorization = "Bearer " + S.api.token;
+      var res = await fetch(((window.S && S.api && S.api.base) || "https://citeox-geo.onrender.com") + path, { method:"POST", credentials:"include", headers:headers, body:JSON.stringify(body || {}), signal:controller.signal });
+      var data = await res.json().catch(function(){ return {}; });
+      if(!res.ok){
+        var err = new Error((data.error && data.error.message) || data.message || "服务繁忙，请稍后重试");
+        err.status = res.status;
+        err.code = data.error && data.error.code;
+        throw err;
+      }
+      return data;
+    }catch(e){
+      if(e.name === "AbortError") throw new Error("网络连接超时，请检查网络后重试");
+      throw e;
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+  function focusDoc01(id, message){
+    var el = $(id);
+    if(el){ el.scrollIntoView({ behavior:"smooth", block:"center" }); el.focus(); }
+    if(message) toastDoc01(message,"error");
+    return false;
+  }
+  function validateDoc01Register(){
+    var username = value("regName");
+    var usernameError = validateUsernameLocal(username);
+    if(usernameError) return focusDoc01("regName", usernameError);
+    if(!value("regEmail")) return focusDoc01("regEmail","请输入邮箱地址");
+    if(!validEmail(value("regEmail"))) return focusDoc01("regEmail","邮箱格式不正确，请输入有效的邮箱地址（如 example@qq.com）");
+    if(!value("regPhone")) return focusDoc01("regPhone","手机号为必填项，请输入手机号");
+    if(!validPhone(value("regPhone"))) return focusDoc01("regPhone","请输入正确的11位手机号码");
+    if(rawValue("regPassword").length < 8) return focusDoc01("regPassword","密码至少需要8个字符");
+    if(rawValue("regPassword") !== rawValue("regPasswordConfirm")) return focusDoc01("regPasswordConfirm","两次输入的密码不一致");
+    if(!value("regIndustry")) return focusDoc01("regIndustry","请选择或输入您的行业");
+    if(!/^\d{6}$/.test(value("smsCode"))) return focusDoc01("registerCodeBoxes","请输入邮箱验证码");
+    var legal = $("legalAgree");
+    if(legal && !legal.checked){
+      var wrap = legal.closest(".legal");
+      if(wrap){ wrap.classList.add("shake"); setTimeout(function(){ wrap.classList.remove("shake"); }, 3000); }
+      return focusDoc01("legalAgree","请先勾选用户协议和隐私政策");
+    }
+    return true;
+  }
+  window.registerAndLogin = async function(){
+    ensureDoc01StrictAuth();
+    if(!validateDoc01Register()) return;
+    var btn = $("registerBtn");
+    var old = btn ? btn.textContent : "";
+    if(btn){ btn.disabled = true; btn.textContent = "注册中... 🌀"; }
+    try{
+      var data = await doc01AuthApi("/api/v1/auth/register", {
+        name:value("regName"),
+        username:value("regName"),
+        email:value("regEmail"),
+        phone:normalizePhone(value("regPhone")),
+        password:rawValue("regPassword"),
+        confirmPassword:rawValue("regPasswordConfirm"),
+        industry:value("regIndustry"),
+        inviteCode:value("regInvite") || undefined,
+        accountType:"personal",
+        legalConsentVersion:"v1.0.0",
+        smsCode:value("smsCode"),
+        verifyCode:value("smsCode")
+      }, 15000);
+      localStorage.removeItem("citeox_register_draft");
+      toastDoc01("注册成功，欢迎加入 Citeox！🎉","success");
+      setTimeout(function(){
+        if(window.applyBackendAuth) applyBackendAuth(data, "注册成功，欢迎加入 Citeox！🎉", "brandCreate");
+        else if(/^https?:/.test(location.protocol)) location.href = "/brand/create";
+      }, 1500);
+    }catch(e){
+      toastDoc01(e.message || "服务繁忙，请稍后重试","error");
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = old || "注册"; }
+    }
+  };
+  try{ registerAndLogin = window.registerAndLogin; }catch(e){}
+
+  function bindDoc01(){
+    ensureDoc01StrictAuth();
+    ["regPassword","regPasswordConfirm"].forEach(function(id){ var el=$(id); if(el && el.dataset.doc01Pwd !== "1"){ el.dataset.doc01Pwd = "1"; el.addEventListener("input", updatePasswordStrengthDoc01); el.addEventListener("blur", updatePasswordStrengthDoc01); } });
+    var name = $("regName");
+    if(name && name.dataset.doc01Username !== "1"){ name.dataset.doc01Username = "1"; name.addEventListener("input", debounce(checkUsernameStrict,300)); name.addEventListener("blur", checkUsernameStrict); }
+    var email = $("regEmail");
+    if(email && email.dataset.doc01Email !== "1"){ email.dataset.doc01Email = "1"; email.addEventListener("blur", checkEmailCorrection); email.addEventListener("input", debounce(checkEmailCorrection,300)); }
+    var phone = $("regPhone");
+    if(phone && phone.dataset.doc01Phone !== "1"){ phone.dataset.doc01Phone = "1"; phone.addEventListener("input", function(){ var digits=normalizePhone(phone.value).slice(0,11); phone.value=digits.replace(/^(\d{3})(\d{0,4})(\d{0,4}).*/, function(_,a,b,c){ return [a,b,c].filter(Boolean).join(" "); }); }); }
+    updatePasswordStrengthDoc01();
+  }
+  var previousShowLoginDoc01 = window.showLogin;
+  if(previousShowLoginDoc01 && previousShowLoginDoc01.__doc01StrictWrapped !== true){
+    var wrappedShowLoginDoc01 = function(){
+      var result = previousShowLoginDoc01.apply(this, arguments);
+      setTimeout(bindDoc01,0);
+      return result;
+    };
+    wrappedShowLoginDoc01.__doc01StrictWrapped = true;
+    window.showLogin = wrappedShowLoginDoc01;
+    try{ showLogin = wrappedShowLoginDoc01; }catch(e){}
+  }
+  var previousSetAuthVariantDoc01 = window.setAuthVariant;
+  if(previousSetAuthVariantDoc01 && previousSetAuthVariantDoc01.__doc01StrictWrapped !== true){
+    var wrappedSetAuthVariantDoc01 = function(){
+      var result = previousSetAuthVariantDoc01.apply(this, arguments);
+      setTimeout(function(){ ensureAuthLabels(); bindDoc01(); },0);
+      return result;
+    };
+    wrappedSetAuthVariantDoc01.__doc01StrictWrapped = true;
+    window.setAuthVariant = wrappedSetAuthVariantDoc01;
+    try{ setAuthVariant = wrappedSetAuthVariantDoc01; }catch(e){}
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bindDoc01);
+  else bindDoc01();
+  setTimeout(bindDoc01,250);
+  setTimeout(bindDoc01,800);
 })();
 </script>
 
@@ -2356,7 +2796,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       ".doc03-qr{border:1px dashed #bcc8d8;border-radius:8px;min-height:132px;display:grid;place-items:center;background:#fbfcff;color:#40506a;text-align:center;padding:12px;word-break:break-all}",
       ".trend-bars{display:grid;grid-template-columns:repeat(14,1fr);gap:8px;align-items:end;height:150px}.trend-bars i{display:block;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#5969f3,#20aa8a);min-height:8px}.trend-bars span{display:block;font-size:11px;color:#7a8699;margin-top:5px;text-align:center}",
       ".doc03-refresh-button.is-loading{position:relative;padding-left:34px}.doc03-refresh-button.is-loading:before{content:'';position:absolute;left:12px;top:50%;width:13px;height:13px;margin-top:-7px;border:2px solid #c7d2fe;border-top-color:#5969f3;border-radius:50%;animation:doc03Spin .75s linear infinite}.doc03-sync-text{font-size:13px}.doc03-plan .row,.doc03-metric{transition:border-color .18s ease,background .18s ease}",
-      "body.doc03-account-view .content>.hero,body.doc03-account-view .content>.stats{display:none}body.doc03-account-view .title>.btn.dark{display:none}body.doc03-account-view .top .btn[onclick='refreshRealtime()'],body.doc03-account-view .top .btn[onclick='syncProjectsFromServer()'],body.doc03-account-view .top .btn[onclick='syncQuestionsFromServer()'],body.doc03-account-view .top .btn[onclick='runAll()'],body.doc03-account-view .top .btn[onclick=\"openSection('accountPlan')\"]{display:none}body.doc03-account-view .tabs{margin-top:0}@media(max-width:720px){body.doc03-account-view .side{max-height:34vh}}",
+      "body.admin-full-access.doc03-account-view .login,body.admin-full-access.doc03-account-view .landing{display:none!important}body.admin-full-access.doc03-account-view .app{display:grid!important}body.doc03-account-view .content>.hero,body.doc03-account-view .content>.stats{display:none}body.doc03-account-view .title>.btn.dark{display:none}body.doc03-account-view .top .btn[onclick='refreshRealtime()'],body.doc03-account-view .top .btn[onclick='syncProjectsFromServer()'],body.doc03-account-view .top .btn[onclick='syncQuestionsFromServer()'],body.doc03-account-view .top .btn[onclick='runAll()'],body.doc03-account-view .top .btn[onclick=\"openSection('accountPlan')\"]{display:none}body.doc03-account-view .tabs{margin-top:0}@media(max-width:720px){body.doc03-account-view .side{max-height:34vh}}",
       "@keyframes doc03Spin{to{transform:rotate(360deg)}}",
       ".count-up{color:#15866d;transition:color .25s ease,transform .25s ease}.count-up.bump{transform:scale(1.04)}",
       "@media(max-width:1100px){.doc03-hero,.doc03-plan-grid{grid-template-columns:1fr 1fr}}@media(max-width:720px){.doc03-hero,.doc03-plan-grid,.doc03-amounts{grid-template-columns:1fr}.doc03-plan{min-height:auto}.trend-bars{grid-template-columns:repeat(7,1fr);height:auto}}"
@@ -2735,6 +3175,15 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   function bootDoc03Route(){
     var target = sectionFromDoc03Path();
     if(!target) return;
+    var q = new URLSearchParams(location.search);
+    if(q.get("entry") === "admin" && q.get("admin") === "1"){
+      if(window.unlockAdmin) unlockAdmin();
+      if(S && S.session) S.session.logged = true;
+      document.body.classList.add("logged-in");
+      document.body.classList.remove("show-auth");
+      setTimeout(function(){ if(window.openSection) openSection(target); }, 0);
+      return;
+    }
     if(S && S.session && S.session.logged){
       setTimeout(function(){ if(window.openSection) openSection(target); }, 0);
     }else{
@@ -2850,6 +3299,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   var draftTimer = null;
   var validationTimer = null;
   var diagnosisPoller = null;
+  var diagnosisSocket = null;
   var doc02PlatformLimits = { free: 1, personal: 2, pro: 4, enterprise: Infinity };
   var platformPrices = { doubao:.15, deepseek:.50, wenxin:.80, zhipu:.40, yuanbao:.60, tongyi:.30, kimi:.50, metaso:.25, ai360:.20, xinghuo:.35 };
   var doc02Industries = ["餐饮美食","零售电商","教育培训","医疗健康","本地生活","酒店旅游","房地产","汽车服务","金融服务","法律服务","企业服务","软件科技","工业制造","建筑工程","农业食品","个人IP","其他"];
@@ -2864,12 +3314,25 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     ["competitive","🏆","压制竞品声量","在 AI 推荐中超越竞争对手"],
     ["all","⭐","全部目标","品牌曝光+流量+信任+竞品超越全面提升"]
   ];
+  doc02Industries = ["餐饮美食","零售电商","教育培训","医疗健康","本地生活","酒店旅游","房地产","汽车服务","金融服务","法律服务","企业服务","软件科技","工业制造","建筑工程","农业食品","母婴亲子","美妆个护","服饰鞋包","运动健身","文化娱乐","媒体传播","家居家装","物流运输","能源环保","政务公共","招聘就业","财税会计","跨境出海","游戏动漫","宠物服务","老年养老","婚庆服务","摄影影像","珠宝钟表","酒水饮料","生鲜商超","连锁加盟","知识付费","心理咨询","公益慈善","艺术收藏","票务会展","安防消防","印刷包装","仪器仪表","通信电子","交通出行","家电维修","办公文具","健康管理","个人IP","其他"];
+  doc02Platforms = [
+    ["doubao","豆包"],["deepseek","DeepSeek"],["wenxin","文心一言"],["zhipu","智谱清言"],["yuanbao","腾讯元宝"],
+    ["tongyi","通义千问"],["kimi","Kimi"],["metaso","秘塔 AI 搜索"],["ai360","360智脑"],["xinghuo","讯飞星火"]
+  ];
+  doc02Goals = [
+    ["exposure","🎯","增加品牌曝光","让更多用户在 AI 问答中看到我的品牌"],
+    ["traffic","🚀","带来用户流量","通过 AI 推荐引导用户访问我的网站/店铺"],
+    ["trust","🛡️","提升品牌信任","让 AI 更准确、正面地介绍我的品牌"],
+    ["competitive","🏆","压制竞品声量","在 AI 推荐中超越竞争对手"],
+    ["all","⭐","全部目标","品牌曝光+流量+信任+竞品超越全面提升"]
+  ];
   var citeoxBrandWizard = window.citeoxBrandWizard || {
     brandWizardStep: 1,
     guideStep: 0,
     dirty: false,
     submitting: false,
     categories: [],
+    categoryQuery: "",
     limit: { planCode:"free", platformLimit:1, used:0, limit:1, canCreate:true },
     balance: 0,
     data: {
@@ -2912,6 +3375,36 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       b = Number(state && state.credits && state.credits.balance && state.credits.balance.amount || b || 0);
     }catch(e){}
     return Number.isFinite(Number(b)) ? Number(b) : 0;
+  }
+  function shouldOpenDoc02WizardForCurrentLocation(){
+    var path = String(location.pathname || "").toLowerCase();
+    return path.indexOf("/brand/create") === 0 || location.protocol === "file:" || location.search.indexOf("doc02=1") >= 0;
+  }
+  function isDoc02LocalPreview(){
+    return location.protocol === "file:";
+  }
+  function fallbackDoc02Categories(industry){
+    var map = {
+      "餐饮美食":["中餐厅","西餐厅","快餐","咖啡厅","奶茶店","烘焙店","小吃店","火锅店","烧烤","其他"],
+      "零售电商":["服装店","鞋店","美妆店","数码店","家居店","超市","便利店","母婴店","跨境电商","其他"],
+      "教育培训":["语言培训","K12辅导","职业技能","艺术培训","留学咨询","早教","在线课程","训练营","其他"],
+      "医疗健康":["综合医院","专科诊所","牙科","中医","美容整形","体检中心","健康管理","康复护理","其他"],
+      "软件科技":["AI软件","数据分析","网络安全","低代码","云服务","协同办公","开发工具","SaaS软件","其他"],
+      "其他":["综合服务","新兴行业","区域品牌","个人品牌","线下门店","线上业务","其他"]
+    };
+    return map[industry] || ["综合服务","线上业务","线下门店","本地服务","品牌营销","咨询服务","产品销售","客户支持","其他"];
+  }
+  function updateDoc02CategoryQuery(value){
+    citeoxBrandWizard.categoryQuery = String(value || "");
+    renderBrandCreateWizard();
+  }
+  function clearDoc02Industry(){
+    citeoxBrandWizard.data.industry = "";
+    citeoxBrandWizard.data.subIndustry = "";
+    citeoxBrandWizard.categories = [];
+    citeoxBrandWizard.categoryQuery = "";
+    markDoc02Dirty();
+    renderBrandCreateWizard();
   }
   function brandPlaceholder(){
     var industry = citeoxBrandWizard.data.industry;
@@ -2989,6 +3482,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     markDoc02Dirty();
     if(field === "industry"){
       citeoxBrandWizard.data.subIndustry = "";
+      citeoxBrandWizard.categoryQuery = "";
       loadDoc02IndustryCategories(value);
       return;
     }
@@ -2997,12 +3491,18 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
   async function loadDoc02IndustryCategories(industry){
     citeoxBrandWizard.categories = [];
     if(!industry){ renderBrandCreateWizard(); return; }
+    if(isDoc02LocalPreview()){
+      citeoxBrandWizard.categories = fallbackDoc02Categories(industry);
+      renderBrandCreateWizard();
+      return;
+    }
     try{
       var res = await apiRequest("/api/v1/industry/categories?industry="+encodeURIComponent(industry));
       citeoxBrandWizard.categories = res && res.data && Array.isArray(res.data.categories) ? res.data.categories : [];
     }catch(e){
       citeoxBrandWizard.categories = industry === "餐饮美食" ? ["中餐厅","西餐厅","快餐","咖啡厅","奶茶店","烘焙店","其他"] : ["综合服务","线上业务","线下门店","其他"];
     }
+    if(!citeoxBrandWizard.categories.length) citeoxBrandWizard.categories = fallbackDoc02Categories(industry);
     renderBrandCreateWizard();
   }
   function normalizeDoc02Website(){
@@ -3120,6 +3620,55 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       '<div class="doc02-summary"><h2>🎯 竞品与关键词</h2>'+summaryRow("竞品列表",(d.competitors||[]).filter(Boolean).join("、")||"未填写",2)+summaryRow("关键词标签",(d.keywords||[]).join("、")||"未填写",2)+'</div></div>';
   }
   function summaryRow(label,value,step){ return '<div class="doc02-summary-row"><span>'+escDoc02(label)+'</span><b>'+escDoc02(value||"未填写")+'</b><button type="button" onclick="setDoc02Step('+step+')">修改</button></div>'; }
+  function renderStepProgress(){
+    var steps = [["品牌信息","第一步"],["竞品关键词","第二步"],["确认提交","第三步"]];
+    return '<div class="doc02-step-progress">'+steps.map(function(s,i){
+      var n=i+1, cls=n<citeoxBrandWizard.brandWizardStep?"done":n===citeoxBrandWizard.brandWizardStep?"current":"todo";
+      return '<div class="doc02-step '+cls+'"><span class="dot '+(cls==="current"?"pulse-brand-step":"")+'">'+(cls==="done"?"✓":n)+'</span><b>'+s[1]+'</b><small>'+s[0]+'</small></div>';
+    }).join('<span class="doc02-line"></span>')+'</div>';
+  }
+  function renderStepOne(){
+    var d = citeoxBrandWizard.data, limit = doc02PlatformLimit();
+    var allCategories = citeoxBrandWizard.categories.length ? citeoxBrandWizard.categories : (d.industry ? fallbackDoc02Categories(d.industry) : []);
+    var query = citeoxBrandWizard.categoryQuery || "";
+    var categories = query ? allCategories.filter(function(x){ return String(x).toLowerCase().indexOf(query.toLowerCase()) >= 0; }) : allCategories;
+    var isOtherIndustry = d.industry === "其他";
+    var chip = d.industry ? '<button type="button" class="doc02-industry-chip" onclick="clearDoc02Industry()">'+escDoc02(d.industry)+' ×</button>' : "";
+    var categorySearch = allCategories.length >= 10 ? '<input id="doc02-category-search" class="doc02-category-search" value="'+escDoc02(query)+'" placeholder="搜索品类" oninput="updateDoc02CategoryQuery(this.value)">' : "";
+    var categoryControl = isOtherIndustry
+      ? '<input id="doc02-subIndustry" class="doc02-cascade-secondary" value="'+escDoc02(d.subIndustry)+'" placeholder="请输入二级细分" oninput="updateDoc02Field(\'subIndustry\',this.value)" onblur="validateBrandWizardField(\'industry\')">'
+      : '<div class="doc02-category-picker">'+categorySearch+'<select id="doc02-subIndustry" class="doc02-cascade-secondary" onchange="updateDoc02Field(\'subIndustry\',this.value)"><option value="">请选择具体品类</option>'+categories.map(function(x){ return '<option '+(d.subIndustry===x?'selected':'')+'>'+escDoc02(x)+'</option>'; }).join("")+'</select></div>';
+    return '<div class="doc02-form"><h1>第一步：告诉我们您的品牌</h1><p class="doc02-sub">我们将根据这些信息在各大 AI 平台监测您品牌的表现。请务必真实填写，信息提交后将不可自行修改。</p>'+
+      '<div class="doc02-grid doc02-grid-2"><label>行业选择 <em>*</em>'+chip+'<select id="doc02-industry" class="doc02-cascade-primary" onchange="updateDoc02Field(\'industry\',this.value)"><option value="">选择一级行业</option>'+doc02Industries.map(function(x){ return '<option '+(d.industry===x?'selected':'')+'>'+escDoc02(x)+'</option>'; }).join("")+'</select><small>选择与您品牌最匹配的行业，这将影响 AI 对您品牌的识别准确度</small><span id="doc02-error-industry" class="doc02-error"></span></label>'+
+      '<label class="doc02-slideDown">品牌类型/品类 <em>*</em>'+categoryControl+'<small>选择您的具体经营品类，帮助 AI 更精准地定位您的业务</small><span id="doc02-error-subIndustry" class="doc02-error"></span></label></div>'+
+      '<label>品牌名称 <em>*</em><div class="doc02-input-wrap"><input id="doc02-brandName" value="'+escDoc02(d.brandName)+'" maxlength="30" placeholder="'+escDoc02(brandPlaceholder())+'" oninput="updateDoc02Field(\'brandName\',this.value)" onblur="validateBrandWizardField(\'brandName\')"><span id="doc02-brand-count">'+(d.brandName||"").length+'/30</span></div><small>填写品牌全称，这将是 AI 识别您品牌的核心关键词。请使用真实品牌名称。</small><span id="doc02-error-brandName" class="doc02-error"></span></label>'+
+      '<label>品牌网址（选填） <span class="doc02-tip">?<span class="doc02-tip-bubble">实体店铺如无网站可跳过，系统仍可监测品牌</span></span><input id="doc02-website" value="'+escDoc02(d.website)+'" placeholder="如：https://www.yourbrand.com" oninput="updateDoc02Field(\'website\',this.value)" onblur="normalizeDoc02Website()"><span id="doc02-error-website" class="doc02-error"></span></label>'+
+      '<div><div class="doc02-label">品牌目标 <em>*</em></div><div class="doc02-goal-grid">'+doc02Goals.map(function(g){ var on=d.goal===g[0]; return '<button type="button" class="doc02-goal '+(on?'selected':'')+'" onclick="selectDoc02Goal(\''+g[0]+'\')"><i>'+g[1]+'</i><b>'+g[2]+'</b><span>'+g[3]+'</span>'+(on?'<strong>✓</strong>':'')+'</button>'; }).join("")+'</div><span id="doc02-error-goal" class="doc02-error"></span></div>'+
+      '<div class="doc02-platform-block"><div class="doc02-warning">⚠️ 注意：每增加一个监测平台将消耗更多 API 调用费用（从您的余额中扣除）。建议先选择最关注的平台。当前余额：'+moneyDoc02(getDoc02Balance())+'（注册后请先充值）</div><div class="doc02-label">目标 AI 平台 <em>*</em><small>已选 '+d.platforms.length+'/'+(limit===Infinity?"不限":limit)+' 个</small></div><div class="doc02-platform-grid">'+doc02Platforms.map(function(p){ var on=d.platforms.indexOf(p[0])>=0, disabled=!on&&d.platforms.length>=limit; return '<button type="button" title="'+(disabled?'升级套餐可解锁更多平台':'')+'" class="doc02-platform '+(on?'selected':'')+' '+(disabled?'disabled':'')+'" onclick="toggleDoc02Platform(\''+p[0]+'\')"><span>'+(disabled?'🔒':'')+'</span><b>'+p[1]+'</b>'+(on?'<i>✓</i>':'')+'</button>'; }).join("")+'</div><span id="doc02-error-platforms" class="doc02-error"></span></div></div>';
+  }
+  function renderStepTwo(){
+    var d = citeoxBrandWizard.data, comps = d.competitors && d.competitors.length ? d.competitors : [""];
+    return '<div class="doc02-form"><h1>第二步：设置竞品对标与关键词</h1><p class="doc02-sub">以下均为选填，可在后续在品牌项目（DOC-05）中补充。</p>'+
+      '<div class="doc02-important"><b>⚠️ 重要提示</b><p>• 新用户仅可创建 1个品牌，品牌核心信息提交后不可自行修改（如需修改请联系客服：support@citeox.com）</p><p>• 品牌诊断将调用AI平台API，费用从您的API余额中扣除 当前余额：'+moneyDoc02(getDoc02Balance())+'（注册完成后请先充值）</p><p>• 首次诊断预计耗时 3-5 分钟，请耐心等待</p><p>• 填写的所有内容将直接影响AI对您品牌的识别和分析结果，请务必保证信息真实、准确、完整</p></div>'+
+      '<div class="doc02-panel"><div class="doc02-head"><div><h2>竞品品牌名称</h2><p>填写您的主要竞品品牌名称，系统将对比您与竞品在各 AI 平台上的表现差异。</p></div><button type="button" class="doc02-link" '+(comps.length>=5?'disabled':'')+' onclick="addDoc02Competitor()">'+(comps.length>=5?'最多添加5个竞品':'+ 添加竞品')+'</button></div>'+comps.map(function(v,i){ return '<div class="doc02-competitor-row"><input data-doc02-competitor value="'+escDoc02(v)+'" placeholder="如：XX 面馆、YY 拉面" oninput="markDoc02Dirty()"><button type="button" onclick="removeDoc02Competitor('+i+')">×</button></div>'; }).join("")+'</div>'+
+      '<div class="doc02-panel"><h2>核心关键词</h2><p>添加品牌核心关键词，用于精准监测。建议添加3-5个最核心的词。</p><div class="doc02-tags">'+d.keywords.map(function(k,i){ return '<span>'+escDoc02(k)+'<button type="button" onclick="removeDoc02Keyword('+i+')">×</button></span>'; }).join("")+'</div><input id="doc02-keyword-input" '+(d.keywords.length>=10?'disabled':'')+' placeholder="'+(d.keywords.length>=10?'最多10个关键词':'输入关键词后按回车添加，如：GEO 优化、AI 搜索')+'" onkeydown="handleDoc02KeywordKey(event)" onblur="addDoc02Keyword(this.value)"></div></div>';
+  }
+  function renderStepThree(){
+    collectDoc02Fields();
+    var d = citeoxBrandWizard.data;
+    var goal = (doc02Goals.find(function(x){return x[0]===d.goal;})||[])[2] || "未填写";
+    var platformNames = d.platforms.map(function(key){ var p=doc02Platforms.find(function(x){return x[0]===key;}); return p?p[1]:key; });
+    return '<div class="doc02-form"><h1>第三步：确认提交</h1><p class="doc02-sub">请最后核对品牌核心信息。提交后将立即启动诊断，并从 API 余额扣费。</p>'+
+      '<div class="doc02-summary"><h2>📋 品牌基本信息</h2>'+summaryRow("行业 > 品类",d.industry+" > "+d.subIndustry,1)+summaryRow("品牌名称",d.brandName,1)+summaryRow("网址",d.website||"未填写",1)+summaryRow("品牌目标",goal,1)+summaryRow("监测平台",platformNames.join("、"),1)+'</div>'+
+      '<div class="doc02-summary"><h2>🎯 竞品与关键词</h2>'+summaryRow("竞品列表",(d.competitors||[]).filter(Boolean).join("、")||"未填写",2)+summaryRow("关键词标签",(d.keywords||[]).join("、")||"未填写",2)+'</div></div>';
+  }
+  function summaryRow(label,value,step){ return '<div class="doc02-summary-row"><span>'+escDoc02(label)+'</span><b>'+escDoc02(value||"未填写")+'</b><button type="button" onclick="setDoc02Step('+step+')">修改</button></div>'; }
+  function handleDoc02KeywordKey(event){
+    if(event.key === "Enter" || event.key === "," || event.key === "，"){
+      event.preventDefault();
+      addDoc02Keyword(event.target.value);
+    }
+  }
   function renderBottomActions(){
     return '<div class="doc02-bottom-actions">'+(citeoxBrandWizard.brandWizardStep>1?'<button type="button" class="doc02-secondary" onclick="setDoc02Step('+(citeoxBrandWizard.brandWizardStep-1)+')">← 上一步</button>':'<span></span>')+'<button type="button" class="doc02-primary" onclick="'+(citeoxBrandWizard.brandWizardStep<3?'setDoc02Step('+(citeoxBrandWizard.brandWizardStep+1)+')':'openDoc02ConfirmModal()')+'">'+(citeoxBrandWizard.brandWizardStep<3?'下一步 →':'确认提交')+'</button></div>';
   }
@@ -3133,6 +3682,7 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }
     old.innerHTML = renderStepProgress()+'<main class="doc02-card">'+(citeoxBrandWizard.brandWizardStep===1?renderStepOne():citeoxBrandWizard.brandWizardStep===2?renderStepTwo():renderStepThree())+'</main>'+renderBottomActions();
     document.body.classList.add("doc02-active");
+    document.documentElement.classList.remove("doc02-boot-lock");
     renderDoc02Errors();
     if(citeoxBrandWizard.brandWizardStep === 1 && citeoxBrandWizard.data.industry && !citeoxBrandWizard.categories.length) loadDoc02IndustryCategories(citeoxBrandWizard.data.industry);
     if(!localStorage.getItem(guideKey)) openDoc02GuideModal(false);
@@ -3206,7 +3756,36 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       citeoxBrandWizard.submitting = false;
     }
   }
+  function buildDoc02DiagnosisWsUrl(taskId){
+    var base = String(S && S.api && S.api.base || location.origin || "");
+    var url = new URL("/api/v1/diagnosis/ws", base);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.searchParams.set("diagnosisTaskId", taskId);
+    url.searchParams.set("token", S && S.api && S.api.token || "");
+    return url.toString();
+  }
+  function startDoc02DiagnosisWebSocket(taskId){
+    if(isDoc02LocalPreview() || !("WebSocket" in window) || !(S && S.api && S.api.token)) return;
+    try{
+      if(diagnosisSocket) diagnosisSocket.close();
+      diagnosisSocket = new WebSocket(buildDoc02DiagnosisWsUrl(taskId));
+      diagnosisSocket.onmessage = function(event){
+        try{
+          var message = JSON.parse(event.data || "{}");
+          if(message.type !== "diagnosis.progress") return;
+          showDoc02Progress(message.progress || 0, message.currentStep || "正在启动数据采集...");
+          if(message.status === "completed" || Number(message.progress || 0) >= 100){
+            diagnosisSocket.close();
+            diagnosisSocket = null;
+          }
+        }catch(e){}
+      };
+      diagnosisSocket.onerror = function(){};
+      diagnosisSocket.onclose = function(){ diagnosisSocket = null; };
+    }catch(e){}
+  }
   function startDoc02DiagnosisPolling(taskId){
+    startDoc02DiagnosisWebSocket(taskId);
     if(diagnosisPoller) clearInterval(diagnosisPoller);
     diagnosisPoller = setInterval(async function(){
       try{
@@ -3219,6 +3798,11 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }, 3000);
   }
   async function loadDoc02AccountContext(){
+    if(isDoc02LocalPreview()){
+      citeoxBrandWizard.limit = { planCode:"free", platformLimit:1, used:0, limit:1, canCreate:true };
+      citeoxBrandWizard.balance = 0;
+      return;
+    }
     try{
       var limit = await apiRequest("/api/v1/brands/check-limit");
       if(limit && limit.data) citeoxBrandWizard.limit = limit.data;
@@ -3229,9 +3813,15 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     }catch(e){}
   }
   async function bootDoc02Route(){
-    if(location.pathname.toLowerCase().indexOf("/brand/create") !== 0) return;
+    if(!shouldOpenDoc02WizardForCurrentLocation()) return;
+    var localPreview = isDoc02LocalPreview();
+    citeoxBrandWizard.preview = localPreview;
+    document.documentElement.classList.toggle("doc02-local-preview", localPreview);
     restoreBrandWizardDraft();
-    if(!(S && S.session && S.session.logged)){
+    if(localPreview && S && S.session){
+      S.session.logged = true;
+    }
+    if(!localPreview && !(S && S.session && S.session.logged)){
       S.doc02AfterLogin = true;
       if(window.save) save();
       if(window.showLogin) showLogin("personal","login");
@@ -3259,7 +3849,18 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
       ".doc02-summary-row{display:grid;grid-template-columns:130px 1fr 48px;gap:10px;align-items:center;border-top:1px solid #eef2f7;padding:12px 0}.doc02-summary-row span{color:#6b7280}.doc02-summary-row button{border:0;background:transparent;color:#2563eb;font-weight:700}",
       ".doc02-bottom-actions{position:fixed;left:0;right:0;bottom:0;z-index:55;background:#fff;box-shadow:0 -4px 12px rgba(0,0,0,.05);padding:16px 24px;display:flex;justify-content:space-between}.doc02-primary,.doc02-secondary,.doc02-bottom-actions button{min-width:120px;height:44px;border-radius:8px;padding:0 16px;font-weight:700}.doc02-primary{background:#3b82f6;color:#fff;border:1px solid #3b82f6}.doc02-secondary{background:#fff;color:#374151;border:1px solid #d1d5db}",
       ".doc02-guide-modal,.doc02-modal{position:fixed;inset:0;z-index:70;background:rgba(15,23,42,.36);display:grid;place-items:center;padding:24px}.doc02-guide-modal>div,.doc02-modal-card{max-width:460px;width:100%;background:#fff;border-radius:8px;box-shadow:0 20px 60px rgba(15,23,42,.2);padding:24px}.doc02-guide-logo{font-weight:800;color:#1d4ed8;margin-bottom:8px}.doc02-guide-progress{display:flex;gap:6px;margin:18px 0}.doc02-guide-progress span{height:6px;flex:1;border-radius:999px;background:#e5e7eb}.doc02-guide-progress span.on{background:#3b82f6}.doc02-guide-actions,.doc02-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.doc02-guide-actions button,.doc02-modal-actions button{height:40px;border-radius:8px;border:1px solid #d1d5db;padding:0 14px;background:#fff}.doc02-cost{border-radius:8px;background:#f8fafc;padding:14px;margin-top:12px}.doc02-cost b{color:#dc2626}.doc02-progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}.doc02-progress span{display:block;height:100%;background:#3b82f6;transition:width 300ms ease}",
-      "@media(max-width:900px){.doc02-grid-2{grid-template-columns:1fr}.doc02-goal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.doc02-platform-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.doc02-step-progress{grid-template-columns:1fr 30px 1fr 30px 1fr}.doc02-line{width:30px}}@media(max-width:560px){.doc02-wizard-overlay{padding:22px 14px 96px}.doc02-goal-grid{grid-template-columns:1fr}.doc02-summary-row{grid-template-columns:1fr}.doc02-bottom-actions{padding:12px}.doc02-bottom-actions button{min-width:104px}}"
+      ".doc02-wizard-overlay{position:fixed;inset:0;z-index:50;background:#fff;color:#172033;overflow:auto;padding:24px 24px 0}",
+      ".doc02-card{max-width:1120px;margin:28px auto 0;padding-bottom:24px}",
+      ".doc02-step-progress{position:sticky;top:40px;z-index:52;max-width:720px;margin:16px auto 0;display:grid;grid-template-columns:1fr 80px 1fr 80px 1fr;align-items:center;text-align:center;background:#fff;padding:8px 0}",
+      ".doc02-step{display:grid;gap:5px;justify-items:center;color:#6B7280}.doc02-step b{font-size:13px}.doc02-step small{font-size:12px}.doc02-step.current{color:#3B82F6;font-weight:700}.doc02-step .dot{width:30px;height:30px;border-radius:999px;border:2px solid #D1D5DB;display:grid;place-items:center;background:#fff}.doc02-step.done .dot{background:#3B82F6;border-color:#3B82F6;color:#fff}.doc02-step.current .dot{border-color:#3B82F6;color:#3B82F6}.doc02-line{height:2px;background:#D1D5DB}.doc02-step.done+.doc02-line{background:#3B82F6}@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.6}}.pulse-brand-step{animation:pulse 1.5s infinite}",
+      ".doc02-cascade-primary{width:200px}.doc02-cascade-secondary{width:220px}.doc02-category-picker{display:grid;gap:8px;max-width:260px}.doc02-category-search{position:sticky;top:0;z-index:1}.doc02-industry-chip{justify-self:start;border:1px solid #BFDBFE;background:#EFF6FF;color:#1D4ED8;border-radius:999px;padding:4px 10px;font-size:12px}",
+      ".doc02-tip{position:relative;display:inline-grid;place-items:center;width:18px;height:18px;border-radius:999px;background:#EEF2FF;color:#1D4ED8;font-size:12px}.doc02-tip-bubble{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);min-width:220px;background:#fff;color:#374151;border:1px solid #E5E7EB;box-shadow:0 8px 24px rgba(15,23,42,.12);border-radius:8px;padding:8px 10px;opacity:0;pointer-events:none;transition:opacity 160ms ease,transform 160ms ease;transition-delay:300ms}.doc02-tip:hover .doc02-tip-bubble{opacity:1;transform:translateX(-50%) translateY(-2px)}",
+      ".doc02-goal-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.doc02-goal.selected{border:2px solid #3B82F6;background:#EFF6FF}.doc02-goal:hover{border-color:#3B82F6;box-shadow:0 4px 12px rgba(59,130,246,.15)}",
+      ".doc02-warning{background:#FFFBEB;border:1px solid #F59E0B;border-radius:8px;padding:10px 14px;margin:8px 0 14px;color:#92400E}.doc02-important{border:2px solid #F59E0B;background:#FFF7ED;border-radius:8px;padding:16px;margin-bottom:18px}.doc02-platform-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.doc02-platform.disabled{opacity:.5;cursor:not-allowed}",
+      ".doc02-competitor-row{transition:opacity 200ms ease,transform 200ms ease}.doc02-tags span{background:#EFF6FF;color:#1D4ED8;border-radius:6px;padding:5px 8px;transition:opacity 200ms ease,transform 200ms ease}.doc02-tags span:active{transform:scale(.98)}",
+      ".doc02-bottom-actions{position:sticky;bottom:0;background:#fff;box-shadow:0 -4px 12px rgba(0,0,0,.05);padding:16px 24px;display:flex;justify-content:space-between;gap:16px;z-index:55}.doc02-primary,.doc02-secondary,.doc02-bottom-actions button{min-width:120px;height:44px;border-radius:8px;padding:0 16px;font-weight:700}.doc02-primary{background:#3B82F6;color:#fff;border:1px solid #3B82F6}.doc02-secondary{background:#fff;color:#374151;border:1px solid #D1D5DB}",
+      ".doc02-guide-modal>div,.doc02-modal-card{opacity:0;transform:scale(.96);transition:opacity 200ms ease,transform 200ms ease;animation:doc02-modal-in 200ms ease forwards}@keyframes doc02-modal-in{to{opacity:1;transform:scale(1)}}",
+      "@media(max-width:900px){.doc02-grid-2{grid-template-columns:1fr}.doc02-goal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.doc02-platform-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.doc02-step-progress{grid-template-columns:1fr 30px 1fr 30px 1fr}.doc02-line{width:30px}}@media(max-width:560px){.doc02-wizard-overlay{padding:22px 14px 0}.doc02-goal-grid{grid-template-columns:1fr}.doc02-summary-row{grid-template-columns:1fr}.doc02-bottom-actions{padding:12px}.doc02-bottom-actions button{min-width:104px}}"
     ].join("");
     document.head.appendChild(style);
   }
@@ -3282,6 +3883,9 @@ renderSub();setLoginMode(S.loginMode||"personal");applyEntryFromUrl();if(!docume
     validateBrandWizardField: validateBrandWizardField,
     debouncedBrandValidation: debouncedBrandValidation,
     loadDoc02IndustryCategories: loadDoc02IndustryCategories,
+    updateDoc02CategoryQuery: updateDoc02CategoryQuery,
+    clearDoc02Industry: clearDoc02Industry,
+    shouldOpenDoc02WizardForCurrentLocation: shouldOpenDoc02WizardForCurrentLocation,
     updateDoc02Field: updateDoc02Field,
     normalizeDoc02Website: normalizeDoc02Website,
     selectDoc02Goal: selectDoc02Goal,

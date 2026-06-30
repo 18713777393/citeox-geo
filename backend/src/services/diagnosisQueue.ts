@@ -1,6 +1,13 @@
+import { Queue, QueueEvents, Worker, type ConnectionOptions, type Job } from "bullmq";
+import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
+import { broadcastDiagnosisProgress } from "./diagnosisRealtime.js";
 
 export const diagnosisQueueName = "diagnosis-queue";
+
+type DiagnosisJob = {
+  taskId: string;
+};
 
 const progressSteps = [
   { progress: 15, currentStep: "正在保存品牌信息..." },
@@ -9,18 +16,86 @@ const progressSteps = [
   { progress: 100, currentStep: "品牌创建成功，诊断任务已启动。" }
 ];
 
+let diagnosisQueue: Queue<DiagnosisJob, void, "run-diagnosis"> | null = null;
+let diagnosisWorker: Worker<DiagnosisJob, void, "run-diagnosis"> | null = null;
+let diagnosisQueueEvents: QueueEvents | null = null;
+
+export function createRedisConnection(): ConnectionOptions | null {
+  if (!env.REDIS_URL) return null;
+  return {
+    url: env.REDIS_URL,
+    maxRetriesPerRequest: null
+  };
+}
+
 export async function enqueueDiagnosisTask(taskId: string) {
-  // Production hook: replace this inline fallback with BullMQ diagnosis-queue.
-  // Progress events should be pushed to the logged-in user through WebSocket.
-  setTimeout(() => {
+  const queue = getDiagnosisQueue();
+  if (!queue) {
     runInlineDiagnosisTask(taskId).catch((error) => {
       console.error("DOC-02 diagnosis fallback failed", error);
     });
-  }, 0);
+    return {
+      queueName: diagnosisQueueName,
+      transport: "inline-fallback"
+    };
+  }
+
+  await queue.add(
+    "run-diagnosis",
+    { taskId },
+    {
+      jobId: taskId,
+      removeOnComplete: true,
+      removeOnFail: 100
+    }
+  );
 
   return {
     queueName: diagnosisQueueName,
-    transport: "BullMQ-ready WebSocket-progress fallback"
+    transport: "BullMQ Redis WebSocket"
+  };
+}
+
+export function startDiagnosisWorker() {
+  if (diagnosisWorker) {
+    return {
+      queueName: diagnosisQueueName,
+      transport: "BullMQ worker already running"
+    };
+  }
+
+  const connection = createRedisConnection();
+  if (!connection) {
+    return {
+      queueName: diagnosisQueueName,
+      transport: "inline-fallback"
+    };
+  }
+
+  diagnosisQueueEvents = new QueueEvents(diagnosisQueueName, {
+    connection: createRedisConnection() ?? connection
+  });
+
+  diagnosisQueueEvents.on("failed", ({ jobId, failedReason }) => {
+    console.error(`DOC-02 diagnosis job ${jobId} failed: ${failedReason}`);
+  });
+
+  diagnosisWorker = new Worker<DiagnosisJob, void, "run-diagnosis">(
+    diagnosisQueueName,
+    processDiagnosisJob,
+    {
+      connection,
+      concurrency: 5
+    }
+  );
+
+  diagnosisWorker.on("failed", (job, error) => {
+    console.error(`DOC-02 diagnosis worker failed for ${job?.id ?? "unknown"}:`, error);
+  });
+
+  return {
+    queueName: diagnosisQueueName,
+    transport: "BullMQ Redis WebSocket"
   };
 }
 
@@ -35,11 +110,15 @@ export async function getDiagnosisTaskStatus(userId: string, taskId: string) {
   return task ? formatDiagnosisTask(task) : null;
 }
 
-async function runInlineDiagnosisTask(taskId: string) {
+export async function processDiagnosisJob(job: Job<DiagnosisJob, void, "run-diagnosis">) {
+  await runInlineDiagnosisTask(job.data.taskId);
+}
+
+export async function runInlineDiagnosisTask(taskId: string) {
   const existing = await prisma.diagnosisTask.findUnique({ where: { id: taskId } });
   if (!existing || existing.status === "completed") return;
 
-  await prisma.diagnosisTask.update({
+  const started = await prisma.diagnosisTask.update({
     where: { id: taskId },
     data: {
       status: "running",
@@ -48,10 +127,11 @@ async function runInlineDiagnosisTask(taskId: string) {
       currentStep: "正在保存品牌信息..."
     }
   });
+  publishDiagnosisProgress(started);
 
   for (const step of progressSteps) {
     await sleep(450);
-    await prisma.diagnosisTask.update({
+    const updated = await prisma.diagnosisTask.update({
       where: { id: taskId },
       data: {
         progress: step.progress,
@@ -64,7 +144,34 @@ async function runInlineDiagnosisTask(taskId: string) {
           : {})
       }
     });
+    publishDiagnosisProgress(updated);
   }
+}
+
+export function publishDiagnosisProgress(task: {
+  id: string;
+  brandProjectId: string;
+  status: string;
+  progress: number;
+  currentStep: string | null;
+}) {
+  broadcastDiagnosisProgress({
+    diagnosisTaskId: task.id,
+    brandProjectId: task.brandProjectId,
+    status: task.status,
+    progress: task.progress,
+    currentStep: task.currentStep
+  });
+}
+
+function getDiagnosisQueue() {
+  if (diagnosisQueue) return diagnosisQueue;
+  const connection = createRedisConnection();
+  if (!connection) return null;
+  diagnosisQueue = new Queue<DiagnosisJob, void, "run-diagnosis">(diagnosisQueueName, {
+    connection
+  });
+  return diagnosisQueue;
 }
 
 function formatDiagnosisTask(task: {

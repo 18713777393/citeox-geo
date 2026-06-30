@@ -583,12 +583,20 @@ export async function requestPasswordReset(input: {
   const user = await findUserByAccount(account);
 
   if (!user) {
-    return { sent: true, expiresInSeconds: env.PASSWORD_RESET_TTL_MINUTES * 60 };
+    return {
+      sent: true,
+      expiresInSeconds: env.PASSWORD_RESET_TTL_MINUTES * 60,
+      message: "重置链接已发送至注册邮箱，请查收邮件（30分钟内有效）。如未收到，请检查垃圾邮件箱。"
+    };
   }
 
   const email = decryptSensitive(user.email);
   if (!email || !email.includes("@")) {
-    return { sent: true, expiresInSeconds: env.PASSWORD_RESET_TTL_MINUTES * 60 };
+    return {
+      sent: true,
+      expiresInSeconds: env.PASSWORD_RESET_TTL_MINUTES * 60,
+      message: "重置链接已发送至注册邮箱，请查收邮件（30分钟内有效）。如未收到，请检查垃圾邮件箱。"
+    };
   }
 
   const code = createNumericCode();
@@ -628,6 +636,7 @@ export async function requestPasswordReset(input: {
   return {
     sent: true,
     expiresInSeconds: env.PASSWORD_RESET_TTL_MINUTES * 60,
+    message: "重置链接已发送至注册邮箱，请查收邮件（30分钟内有效）。如未收到，请检查垃圾邮件箱。",
     demoCode: env.NODE_ENV === "production" ? undefined : code,
     demoResetToken: env.NODE_ENV === "production" ? undefined : token
   };
@@ -1037,12 +1046,16 @@ async function sendVerificationEmail(input: {
   purpose: CodePurpose;
   expiresInMinutes: number;
 }) {
-  const purposeText = input.purpose === "password_reset" ? "找回密码" : "注册验证";
+  const purposeText = input.purpose === "password_reset" ? "找回密码" : "邮箱验证码";
+  const expiresText =
+    input.expiresInMinutes === 5
+      ? "验证码5分钟内有效，请勿泄露"
+      : `验证码${input.expiresInMinutes}分钟内有效，请勿泄露`;
   await sendEmail({
     to: input.to,
-    subject: `[Citeox] ${purposeText}验证码：${input.code}`,
-    text: `你的验证码是 ${input.code}，有效期 ${input.expiresInMinutes} 分钟。请勿泄露给他人。`,
-    html: `<div style="font-family:Arial,'Microsoft YaHei',sans-serif;line-height:1.7;color:#172033"><h2>Citeox ${purposeText}</h2><p>你的验证码是：</p><p style="font-size:32px;font-weight:800;letter-spacing:6px;background:#f5f7fb;padding:18px;text-align:center;border-radius:10px">${input.code}</p><p>验证码 ${input.expiresInMinutes} 分钟内有效，请勿泄露给他人。</p><p style="color:#64748b">如非本人操作，请忽略这封邮件。</p></div>`
+    subject: `[Citeox] 邮箱验证码：${input.code}`,
+    text: `你的验证码是 ${input.code}，${expiresText}。如非本人操作，请忽略此邮件。`,
+    html: `<div style="font-family:Arial,'Microsoft YaHei',sans-serif;line-height:1.7;color:#172033"><h2>Citeox ${purposeText}</h2><p>你的验证码是：</p><p style="font-size:48px;font-weight:800;letter-spacing:6px;background:#f5f7fb;padding:18px;text-align:center;border-radius:10px">${input.code}</p><p>${expiresText}。</p><p style="color:#64748b">如非本人操作，请忽略此邮件。</p></div>`
   });
 }
 
@@ -1062,7 +1075,7 @@ async function sendPasswordResetEmail(input: {
 }
 
 async function sendEmail(input: { to: string; subject: string; text: string; html: string }) {
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) {
+  if (!env.RESEND_API_KEY) {
     if (env.NODE_ENV === "production") {
       throw new HttpError(501, "EMAIL_NOT_CONFIGURED", "邮箱服务暂未配置，请联系管理员。");
     }

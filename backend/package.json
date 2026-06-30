@@ -12,9 +12,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:validate": "prisma validate --schema prisma/schema.prisma",
     "prisma:seed": "tsx prisma/seed.ts",
-    "test:doc01": "tsx tests/doc01AuthPublicRoutes.test.ts && tsx tests/doc01AuthHttpContract.test.ts && tsx tests/doc01FrontendContract.test.ts",
+    "test:doc01": "tsx tests/doc01AuthPublicRoutes.test.ts && tsx tests/doc01AuthHttpContract.test.ts && tsx tests/doc01FrontendContract.test.ts && tsx tests/doc01StrictBackendContract.test.ts && tsx tests/doc01StrictFrontendContract.test.ts",
     "test:doc03": "prisma generate --schema prisma/schema.prisma && tsx tests/doc03AccountContract.test.ts && tsx tests/doc03ProductionBillingContract.test.ts && tsx tests/doc03FrontendContract.test.ts",
-    "test:doc02": "prisma generate --schema prisma/schema.prisma && tsx tests/doc02BackendContract.test.ts && tsx tests/doc02FrontendContract.test.ts",
+    "test:doc02": "prisma generate --schema prisma/schema.prisma && tsx tests/doc02BackendContract.test.ts && tsx tests/doc02FrontendContract.test.ts && tsx tests/doc02StrictFrontendContract.test.ts && tsx tests/doc02RealtimeContract.test.ts",
     "test:source-hub": "tsx tests/sourceHubConfigPolicy.test.ts"
   },
   "prisma": {
@@ -22,7 +22,9 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/ws": "^8.18.1",
     "bcryptjs": "^2.4.3",
+    "bullmq": "^5.79.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -30,6 +32,7 @@
     "helmet": "^8.0.0",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.2",
+    "ws": "^8.21.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
