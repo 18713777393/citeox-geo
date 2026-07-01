@@ -322,6 +322,20 @@ assert.ok(
   "DOC-01 legal links must open safely in a new tab."
 );
 assert.ok(
+  html.includes("doc01-legal-copy") &&
+    html.includes("doc01-legal-links") &&
+    html.includes("doc01-legal-note"),
+  "DOC-01 legal consent must use a separated copy/links/note structure so it does not crowd on narrow widths."
+);
+assert.ok(
+  html.includes(".show-auth .loginCard>.legal .doc01-legal-links{display:flex!important;flex-wrap:wrap!important"),
+  "DOC-01 legal links must be flex-wrapped instead of inline text."
+);
+assert.ok(
+  html.includes(".show-auth .loginCard>.legal .doc01-legal-note{display:block!important"),
+  "DOC-01 legal consent note must be a block line below the links."
+);
+assert.ok(
   html.includes(".loginCard.login-mode > .legal{display:none!important}"),
   "DOC-01 login mode should not show register-only legal consent."
 );
