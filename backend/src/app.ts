@@ -19,6 +19,7 @@ import { billingRouter } from "./routes/billing.js";
 import { brandsRouter } from "./routes/brands.js";
 import { contentsRouter } from "./routes/contents.js";
 import { compatibilityRouter } from "./routes/compat.js";
+import { dashboardRouter } from "./routes/dashboard.js";
 import { diagnosisTasksRouter } from "./routes/diagnosis.js";
 import { gapsRouter } from "./routes/gaps.js";
 import { healthRouter } from "./routes/health.js";
@@ -62,6 +63,7 @@ export function createApp() {
   app.use("/api/v1/payment/callback", paymentCallbackRouter);
   app.use("/api/v1/system", systemRouter);
   app.use("/api/v1/brands", brandsRouter);
+  app.use("/api/v1/dashboard", dashboardRouter);
   app.use("/api/v1/industry", industryRouter);
   app.use("/api/v1/diagnosis/tasks", diagnosisTasksRouter);
   app.use("/api/projects", projectsRouter);
