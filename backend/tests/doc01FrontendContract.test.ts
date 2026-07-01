@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 const frontendPath = resolve(process.cwd(), "../frontend/GEOFlow-Integrated-Final-White.html");
 const html = readFileSync(frontendPath, "utf8");
+const promoHome = readFileSync(resolve(process.cwd(), "../frontend/index.html"), "utf8");
 const redirects = readFileSync(resolve(process.cwd(), "../frontend/_redirects"), "utf8");
 const doc01FinalQuickLoginBlock = blockBetween(
   html,
@@ -34,6 +35,22 @@ assert.ok(
 assert.ok(
   html.includes("function getResetTokenFromUrl()"),
   "DOC-01 reset password page must read token/resetToken from the URL."
+);
+assert.ok(
+  promoHome.includes("让品牌进入 AI 推荐答案") || promoHome.includes("璁╁搧鐗岃繘鍏?AI 鎺ㄨ崘绛旀"),
+  "Public root index.html must be the standalone promo homepage, not the product app landing."
+);
+assert.ok(
+  !promoHome.includes("GEO 自动优化系统") && !promoHome.includes("GEO 鑷姩浼樺寲绯荤粺"),
+  "Public root index.html must not be the legacy product-app landing page."
+);
+assert.ok(
+  redirects.includes("/ /index.html 200") && redirects.includes("/* /index.html 200"),
+  "Cloudflare redirects must keep / and unknown public paths on the standalone promo homepage."
+);
+assert.ok(
+  html.includes('location.replace("/index.html")') && html.includes("GEOFlow-Integrated-Final-White"),
+  "Product app must not expose its embedded fallback landing when / is accidentally served from the app file."
 );
 assert.ok(
   html.includes("applyResetTokenMode"),

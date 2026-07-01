@@ -29,6 +29,7 @@ assert.ok(
     bootRouteFn.indexOf("renderBrandCreateWizard();") < bootRouteFn.indexOf('loadDoc02IndustrySearch("")'),
   "DOC-02 local /brand/create preview must render the wizard before any slow industry API lookup."
 );
+assert.ok(html.includes("bootDoc02Route: bootDoc02Route"), "DOC-02 brand wizard boot function must be exposed for dashboard create-brand buttons.");
 
 const renderWizardFn = doc02Script.match(/function renderBrandCreateWizard\(\)\{([\s\S]*?)\n  \}/)?.[0] ?? "";
 assert.ok(renderWizardFn.includes('document.body.classList.add("logged-in")') && renderWizardFn.includes('document.body.classList.remove("show-auth","admin-entry")'), "DOC-02 wizard render must force the logged-in product shell so the public landing page cannot flash behind it.");

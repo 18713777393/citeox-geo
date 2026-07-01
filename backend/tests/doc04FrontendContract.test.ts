@@ -18,7 +18,8 @@ for (const fn of [
   "function confirmDoc04Refresh(",
   "function pollDoc04Refresh(",
   "function connectDoc04RefreshSocket(",
-  "function openDoc04UpgradeGuide("
+  "function openDoc04UpgradeGuide(",
+  "function openBrandCreateFromDoc04("
 ]) {
   assert.ok(html.includes(fn), `DOC-04 frontend must include ${fn}.`);
 }
@@ -88,6 +89,10 @@ assert.ok(html.includes("500ms ease"), "DOC-04 sentiment bars must animate for 5
 assert.ok(html.includes("grid-template-columns:repeat(8") && html.includes("grid-template-columns:repeat(4") && html.includes("grid-template-columns:repeat(2"), "DOC-04 8-step flow must support desktop/tablet/mobile grids.");
 assert.ok(html.includes("disabled") && html.includes("doc04-refresh-button"), "DOC-04 refresh button must disable during async refresh.");
 assert.ok(html.includes("WebSocket") && html.includes("setTimeout") && html.includes("3000"), "DOC-04 refresh progress must use WebSocket with polling fallback.");
+assert.ok(
+  html.includes('onclick="openBrandCreateFromDoc04()"') && html.includes("window.bootDoc02Route"),
+  "DOC-04 empty state create-brand button must open the DOC-02 wizard immediately, not only change location."
+);
 
 assert.ok(
   redirects.includes("/dashboard /GEOFlow-Integrated-Final-White"),
