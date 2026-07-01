@@ -10,9 +10,20 @@ const scriptMatch = html.match(
 );
 assert.ok(scriptMatch, "DOC-04 must include the commercial final dashboard renderer script.");
 
+const legacyScriptMatch = html.match(
+  /<script id="citeox-doc04-dashboard-final-20260701">([\s\S]*?)<\/script>/
+);
+assert.ok(legacyScriptMatch, "DOC-04 must keep the legacy dashboard renderer covered while the monolithic HTML is being hardened.");
+
+const legacyScript = legacyScriptMatch[1]!;
+assert.ok(legacyScript.includes("function isDoc04PreviewMode()") && legacyScript.includes("doc04-preview=1"), "DOC-04 legacy renderer must detect local preview mode before rendering.");
+assert.ok(legacyScript.includes("function seedDoc04PreviewState()") && legacyScript.includes('S.brand = "Citeox"'), "DOC-04 legacy renderer must seed preview brand data before empty-state checks.");
+assert.ok(legacyScript.includes("seedDoc04PreviewState();") && legacyScript.includes("if(!data.hasBrand && isDoc04PreviewMode())"), "DOC-04 legacy renderer must not let /dashboard?doc04-preview=1 render the no-brand empty state.");
+
 const script = scriptMatch[1]!;
 assert.ok(script.includes("window.__doc04RenderSnapshot"), "DOC-04 renderer must expose a render snapshot hook for real output tests.");
 assert.ok(script.includes("doc04-preview=1") && script.includes("127\\.0\\.0\\.1") && script.includes("localhost"), "DOC-04 local preview must be guarded to local development hosts only.");
+assert.ok(script.includes("function isDoc04LocalPreviewMode()") && script.includes("seedDoc04PreviewState(s)") && script.includes("doc04State().overview = null"), "DOC-04 commercial renderer must clear stale empty previews and seed full preview data.");
 assert.ok(script.includes("doc04-dashboard-view") && script.includes(".content>.stats"), "DOC-04 dashboard mode must hide the old dashboard stats shell.");
 assert.ok(script.includes(".content>.title") && script.includes("body.doc04-dashboard-view .tabs"), "DOC-04 dashboard mode must hide old title actions and legacy tabs so the document layout owns the page.");
 assert.ok(script.includes("refreshRealtime()") && script.includes("runAll()"), "DOC-04 dashboard mode must hide old top action buttons that duplicate the document refresh flow.");
