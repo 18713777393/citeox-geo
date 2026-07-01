@@ -16,6 +16,10 @@ assert.ok(script.includes("doc04-preview=1") && script.includes("127\\.0\\.0\\.1
 assert.ok(script.includes("doc04-dashboard-view") && script.includes(".content>.stats"), "DOC-04 dashboard mode must hide the old dashboard stats shell.");
 assert.ok(script.includes(".content>.title") && script.includes("body.doc04-dashboard-view .tabs"), "DOC-04 dashboard mode must hide old title actions and legacy tabs so the document layout owns the page.");
 assert.ok(script.includes("refreshRealtime()") && script.includes("runAll()"), "DOC-04 dashboard mode must hide old top action buttons that duplicate the document refresh flow.");
+assert.ok(script.includes("syncDoc04Route") && script.includes('history.replaceState(null,"","/dashboard")'), "DOC-04 dashboard mode must sync the address bar to /dashboard.");
+assert.ok(script.includes("isDoc02WizardOpen") && script.includes("canDoc04OwnCurrentView"), "DOC-04 route sync must be guarded so it cannot take over the DOC-02 brand-create wizard.");
+assert.ok(script.includes("if(isDoc02WizardOpen()) return false;"), "DOC-04 must not sync /brand/create to /dashboard while the brand wizard overlay is open.");
+assert.ok(script.includes("activateDoc04ShellForLocalDashboard") && script.includes('document.body.classList.add("logged-in")'), "DOC-04 local /dashboard preview must switch into the logged-in workspace shell instead of showing the landing page.");
 assert.ok(!script.includes("plaintext"), "DOC-04 final renderer must not include the document plaintext example label.");
 assert.ok(!/[┌├└│]/.test(script), "DOC-04 final renderer must not ship the plaintext wireframe box as UI.");
 

@@ -9,6 +9,26 @@ assert.ok(html.includes('id="citeox-doc02-brand-wizard"'), "DOC-02 frontend must
 assert.ok(html.includes("/brand/create"), "DOC-02 frontend must define /brand/create route.");
 assert.ok(redirects.includes("/brand/create /GEOFlow-Integrated-Final-White"), "DOC-02 Cloudflare redirects must serve /brand/create.");
 
+const doc02Script = html.match(/<script id="citeox-doc02-brand-wizard">([\s\S]*?)<\/script>/)?.[1] ?? "";
+assert.ok(doc02Script, "DOC-02 brand wizard script must be readable for route-level checks.");
+assert.ok(!doc02Script.includes("renderDoc04DashboardHtml") && !doc02Script.includes("buildDoc04LocalOverview"), "DOC-02 brand-create route must not depend on DOC-04 renderer globals.");
+const bootScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? "";
+assert.ok(bootScript.includes('location.pathname.toLowerCase().indexOf("/brand/create")===0') && bootScript.includes("doc02-boot-lock"), "DOC-02 /brand/create must use a boot lock to avoid flashing the legacy login page.");
+
+const localPreviewFn = doc02Script.match(/function isDoc02LocalPreview\(\)\{([\s\S]*?)\n  \}/)?.[0] ?? "";
+assert.ok(localPreviewFn.includes('path.indexOf("/brand/create") === 0') && localPreviewFn.includes('location.hostname === "127.0.0.1"'), "DOC-02 local /brand/create route must open the wizard preview without requiring login.");
+
+const bootRouteFn = doc02Script.match(/async function bootDoc02Route\(\)\{([\s\S]*?)\n  \}/)?.[0] ?? "";
+const loginFallbackIndex = bootRouteFn.indexOf('showLogin("personal","login")');
+const unlockBeforeLoginIndex = bootRouteFn.indexOf('document.documentElement.classList.remove("doc02-boot-lock")');
+assert.ok(unlockBeforeLoginIndex >= 0 && loginFallbackIndex >= 0 && unlockBeforeLoginIndex < loginFallbackIndex, "DOC-02 production login fallback must release the boot lock before showing login.");
+assert.ok(
+  bootRouteFn.includes("if(localPreview){") &&
+    bootRouteFn.includes("renderBrandCreateWizard();") &&
+    bootRouteFn.indexOf("renderBrandCreateWizard();") < bootRouteFn.indexOf('loadDoc02IndustrySearch("")'),
+  "DOC-02 local /brand/create preview must render the wizard before any slow industry API lookup."
+);
+
 for (const token of [
   "citeoxBrandWizard",
   "brandWizardStep",
