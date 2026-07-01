@@ -14,6 +14,7 @@ assert.ok(doc02Script, "DOC-02 brand wizard script must be readable for route-le
 assert.ok(!doc02Script.includes("renderDoc04DashboardHtml") && !doc02Script.includes("buildDoc04LocalOverview"), "DOC-02 brand-create route must not depend on DOC-04 renderer globals.");
 const bootScript = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] ?? "";
 assert.ok(bootScript.includes('location.pathname.toLowerCase().indexOf("/brand/create")===0') && bootScript.includes("doc02-boot-lock"), "DOC-02 /brand/create must use a boot lock to avoid flashing the legacy login page.");
+assert.ok(html.includes("body.doc02-active .landing") && html.includes("body.doc02-active .app{display:grid!important}"), "DOC-02 brand-create wizard must hide the public landing page and keep the product shell behind the wizard.");
 
 const localPreviewFn = doc02Script.match(/function isDoc02LocalPreview\(\)\{([\s\S]*?)\n  \}/)?.[0] ?? "";
 assert.ok(localPreviewFn.includes('path.indexOf("/brand/create") === 0') && localPreviewFn.includes('location.hostname === "127.0.0.1"'), "DOC-02 local /brand/create route must open the wizard preview without requiring login.");
@@ -28,6 +29,9 @@ assert.ok(
     bootRouteFn.indexOf("renderBrandCreateWizard();") < bootRouteFn.indexOf('loadDoc02IndustrySearch("")'),
   "DOC-02 local /brand/create preview must render the wizard before any slow industry API lookup."
 );
+
+const renderWizardFn = doc02Script.match(/function renderBrandCreateWizard\(\)\{([\s\S]*?)\n  \}/)?.[0] ?? "";
+assert.ok(renderWizardFn.includes('document.body.classList.add("logged-in")') && renderWizardFn.includes('document.body.classList.remove("show-auth","admin-entry")'), "DOC-02 wizard render must force the logged-in product shell so the public landing page cannot flash behind it.");
 
 for (const token of [
   "citeoxBrandWizard",
