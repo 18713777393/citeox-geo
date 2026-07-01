@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 const html = readFileSync(resolve(process.cwd(), "../frontend/GEOFlow-Integrated-Final-White.html"), "utf8");
 const redirects = readFileSync(resolve(process.cwd(), "../frontend/_redirects"), "utf8");
 
-assert.ok(html.includes("让你的品牌，被 AI 看见、理解、引用、推荐"), "DOC-04 must keep the existing main slogan card.");
+assert.ok(html.includes("让你的品牌，被AI看见、理解、引用、推荐"), "DOC-04 must keep the document main slogan card exactly.");
 
 for (const fn of [
   "function renderDoc04Dashboard(",
