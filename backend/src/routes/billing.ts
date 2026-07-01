@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
 import { HttpError } from "../middleware/error.js";
 import {
@@ -9,29 +8,11 @@ import {
   listPlans
 } from "../services/entitlements.js";
 import {
-  createBillingOrder,
-  listOrganizationOrders,
-  processPaymentCallback,
-  requestInvoicePlaceholder
+  listOrganizationOrders
 } from "../services/billing.js";
-import { asyncHandler, parseBody } from "./routeHelpers.js";
+import { asyncHandler } from "./routeHelpers.js";
 
 export const billingRouter = Router();
-
-const createOrderSchema = z.object({
-  planCode: z.string().trim().max(80).optional(),
-  plan: z.string().trim().max(120).optional(),
-  provider: z.string().trim().max(40).optional(),
-  channel: z.string().trim().max(40).optional()
-});
-
-const callbackSchema = z.record(z.unknown());
-
-const invoiceSchema = z.object({
-  title: z.string().trim().min(1).max(160),
-  amount: z.string().trim().max(80).optional(),
-  orderId: z.string().trim().max(80).optional()
-});
 
 billingRouter.get(
   "/plans",
@@ -48,13 +29,11 @@ billingRouter.post(
   "/callbacks/:provider",
   asyncHandler(async (req, res) => {
     const provider = req.params.provider;
-
     if (!provider) {
       throw new HttpError(400, "VALIDATION_ERROR", "Payment provider is required.");
     }
-
-    const body = parseBody(callbackSchema, req);
-    res.json(await processPaymentCallback({ provider, body }));
+    deprecatedBillingWrite("/api/v1/payment/callback");
+    res.status(410).end();
   })
 );
 
@@ -103,15 +82,23 @@ billingRouter.get(
 billingRouter.post(
   "/orders",
   asyncHandler(async (req, res) => {
-    const body = parseBody(createOrderSchema, req);
-    res.status(201).json(await createBillingOrder(req.auth!, body));
+    deprecatedBillingWrite("/api/v1/subscriptions/orders");
+    res.status(410).end();
   })
 );
 
 billingRouter.post(
   "/invoice",
   asyncHandler(async (req, res) => {
-    const body = parseBody(invoiceSchema, req);
-    res.status(201).json(await requestInvoicePlaceholder(req.auth!, body));
+    deprecatedBillingWrite("/api/v1/account/billing");
+    res.status(410).end();
   })
 );
+
+function deprecatedBillingWrite(targetRoute: string): never {
+  throw new HttpError(
+    410,
+    "BILLING_ROUTE_DEPRECATED",
+    `旧版 /api/billing 写接口已停用，请使用 ${targetRoute}。`
+  );
+}

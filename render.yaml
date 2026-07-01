@@ -27,6 +27,40 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      - key: PAYMENT_CALLBACK_BASE
+        sync: false
+      - key: ALIPAY_APP_ID
+        sync: false
+      - key: ALIPAY_PRIVATE_KEY
+        sync: false
+      - key: ALIPAY_PUBLIC_KEY
+        sync: false
+      - key: WECHAT_APP_ID
+        sync: false
+      - key: WECHAT_MCH_ID
+        sync: false
+      - key: WECHAT_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DOUBAO_API_KEY
+        sync: false
+      - key: TONGYI_API_KEY
+        sync: false
+      - key: YUANBAO_API_KEY
+        sync: false
+      - key: KIMI_API_KEY
+        sync: false
+      - key: QIANFAN_API_KEY
+        sync: false
+      - key: ZHIPU_API_KEY
+        sync: false
+      - key: PERPLEXITY_API_KEY
+        sync: false
+      - key: XUNFEI_API_KEY
+        sync: false
+      - key: AI360_API_KEY
+        sync: false
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_INITIAL_PASSWORD

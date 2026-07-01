@@ -30,6 +30,7 @@ import { reportsRouter } from "./routes/reports.js";
 import { scoresRouter } from "./routes/scores.js";
 import { sourceHubRouter } from "./routes/sourceHub.js";
 import { strategiesRouter } from "./routes/strategies.js";
+import { systemRouter } from "./routes/system.js";
 
 export function createApp() {
   const app = express();
@@ -59,6 +60,7 @@ export function createApp() {
   app.use("/api/v1/recharge", rechargeRouter);
   app.use("/api/v1/subscriptions", subscriptionsRouter);
   app.use("/api/v1/payment/callback", paymentCallbackRouter);
+  app.use("/api/v1/system", systemRouter);
   app.use("/api/v1/brands", brandsRouter);
   app.use("/api/v1/industry", industryRouter);
   app.use("/api/v1/diagnosis/tasks", diagnosisTasksRouter);

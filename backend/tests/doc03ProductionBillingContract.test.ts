@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 const credits = readFileSync(resolve(process.cwd(), "src/services/credits.ts"), "utf8");
 const accountRoutes = readFileSync(resolve(process.cwd(), "src/routes/account.ts"), "utf8");
+const legacyBillingRoutes = readFileSync(resolve(process.cwd(), "src/routes/billing.ts"), "utf8");
 const authMiddleware = readFileSync(resolve(process.cwd(), "src/middleware/auth.ts"), "utf8");
 const paymentProviders = readFileSync(resolve(process.cwd(), "src/services/paymentProviders.ts"), "utf8");
 const packageJson = readFileSync(resolve(process.cwd(), "package.json"), "utf8");
@@ -20,6 +21,10 @@ assert.ok(credits.includes("applySubscriptionPaid"), "Paid subscription orders m
 assert.ok(credits.includes("expireExistingSubscriptions"), "Subscription activation must retire prior active/trial subscriptions.");
 assert.ok(accountRoutes.includes('"/recharge/:provider"'), "Recharge callbacks must have a dedicated callback route.");
 assert.ok(accountRoutes.includes('"/subscription/:provider"'), "Subscription callbacks must have a dedicated callback route.");
+assert.ok(!legacyBillingRoutes.includes("createBillingOrder"), "Legacy /api/billing must not create placeholder subscription orders.");
+assert.ok(!legacyBillingRoutes.includes("requestInvoicePlaceholder"), "Legacy /api/billing must not create placeholder invoices.");
+assert.ok(legacyBillingRoutes.includes("BILLING_ROUTE_DEPRECATED"), "Legacy /api/billing write routes must return a clear deprecation error.");
+assert.ok(legacyBillingRoutes.includes("/api/v1/subscriptions/orders"), "Legacy billing errors must guide clients to the production subscription route.");
 assert.ok(authMiddleware.includes("requirePlanLevel"), "DOC-03 must expose a plan-level middleware alias.");
 assert.ok(authMiddleware.includes("checkUsageLimit"), "DOC-03 must expose a usage-limit middleware alias.");
 assert.ok(packageJson.includes("doc03ProductionBillingContract.test.ts"), "test:doc03 must run production billing contract.");

@@ -64,8 +64,9 @@ export async function createBrandProject(auth: AuthContext, input: BrandCreateIn
 
   assertPlatformLimit(limitDecision.planCode, validated.platforms);
   const cost = await estimateCost(validated.platforms, "brand_diagnosis");
+  const firstBrandTrial = limitDecision.used === 0;
   const enough = await checkBalance(auth.userId, cost.total);
-  if (!enough) {
+  if (!firstBrandTrial && !enough) {
     throw new HttpError(402, "INSUFFICIENT_BALANCE", `余额不足，首次诊断预计消耗 ${cost.totalFormatted}，请先充值。`);
   }
 
@@ -131,18 +132,20 @@ export async function createBrandProject(auth: AuthContext, input: BrandCreateIn
         status: "pending",
         progress: 0,
         currentStep: "正在保存品牌信息...",
-        totalCost: cost.total
+        totalCost: firstBrandTrial ? 0 : cost.total
       }
     });
 
-    await deductCreditsInTransaction(tx, {
+    if (!firstBrandTrial) {
+      await deductCreditsInTransaction(tx, {
       userId: auth.userId,
       amount: cost.total,
       models: validated.platforms,
       operation: "brand_diagnosis",
       operationId: diagnosisTask.id,
       description: "品牌首次诊断"
-    });
+      });
+    }
 
     await tx.user.update({
       where: { id: auth.userId },
@@ -159,7 +162,16 @@ export async function createBrandProject(auth: AuthContext, input: BrandCreateIn
     projectId: result.project.id,
     diagnosisTaskId: result.diagnosisTask.id,
     estimatedDuration: 300,
-    cost,
+    cost: firstBrandTrial
+      ? {
+          ...cost,
+          trialWaived: true,
+          payableTotal: 0,
+          payableFormatted: "¥0.00",
+          trialWaivedAmount: cost.total,
+          trialWaivedAmountFormatted: cost.totalFormatted
+        }
+      : cost,
     brand: await getBrandProject(auth.userId, result.brandProject.id)
   };
 }

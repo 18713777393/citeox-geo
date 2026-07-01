@@ -68,11 +68,10 @@ mustContain('href="/terms"', "User agreement link must open /terms.");
 mustContain('href="/privacy"', "Privacy policy link must open /privacy.");
 
 mustContain("forgotPasswordFinal", "Login form must include the forgot-password link.");
-mustContain("clearAccountBtn", "Login account input must include one-click clear.");
+mustContain("removeClearAccountButton", "Auth username field must remove the one-click clear button per latest UX feedback.");
 mustNotContain("#forgotPasswordFinal{display:none!important}", "Strict DOC-01 login must not hide the forgot-password link.");
-mustNotContain("#clearAccountBtn{display:none!important}", "Strict DOC-01 login must not hide the one-click clear button.");
+mustContain("#clearAccountBtn{display:none!important}", "Auth username field must hide any legacy clear button if an older layer recreates it.");
 mustNotContain("hideForgotPasswordShortcut", "Strict DOC-01 login must not remove the forgot-password shortcut.");
-mustNotContain("removeClearAccountButton", "Strict DOC-01 login must not remove the clear-account button.");
 
 mustContain("AbortController", "Register submit must enforce the documented 15 second timeout.");
 mustContain("网络连接超时，请检查网络后重试", "Register timeout must show the documented actionable Chinese copy.");

@@ -4,6 +4,16 @@ import { resolve } from "node:path";
 
 const html = readFileSync(resolve(process.cwd(), "../frontend/GEOFlow-Integrated-Final-White.html"), "utf8");
 const redirects = readFileSync(resolve(process.cwd(), "../frontend/_redirects"), "utf8");
+const legacyPaySelectedBlock = blockBetween(
+  html,
+  "async function paySelected(payMethod)",
+  "async function inviteUnlock()"
+);
+const legacyPaySelectedFailureBlock = blockBetween(
+  legacyPaySelectedBlock,
+  "}catch(err){",
+  "}save();toastMsg"
+);
 
 for (const id of [
   "account",
@@ -80,6 +90,10 @@ assert.ok(html.includes("PAYMENT_PROVIDER_NOT_CONFIGURED"), "DOC-03 frontend mus
 assert.ok(html.includes("支付商户参数未配置"), "DOC-03 frontend must show a clear payment config message.");
 assert.ok(!html.includes("Citeox DOC-03 placeholder payment"), "DOC-03 frontend must not fake recharge payment success with placeholder text.");
 assert.ok(!html.includes("Citeox DOC-03 placeholder subscription order"), "DOC-03 frontend must not fake subscription payment success with placeholder text.");
+assert.ok(
+  !legacyPaySelectedFailureBlock.includes("activatePlan"),
+  "DOC-03 legacy payment flow must not activate a plan when the billing API fails."
+);
 assert.ok(html.includes(".btn.green") && html.includes(".btn.gold") && html.includes(".btn.blue"), "DOC-03 plan CTAs must support distinct colors.");
 assert.ok(html.includes("doc03-amount-btn") && html.includes("data-amount") && html.includes("aria-pressed"), "DOC-03 recharge amount buttons must expose selected state.");
 assert.ok(html.includes("syncRechargeAmountFromInput(this.value)"), "DOC-03 custom recharge input must sync the selected preset state.");
@@ -107,3 +121,11 @@ for (const route of [
 }
 
 console.log("DOC-03 frontend contract checks passed.");
+
+function blockBetween(source: string, start: string, end: string) {
+  const startIndex = source.indexOf(start);
+  assert.ok(startIndex >= 0, `Expected source block start: ${start}`);
+  const endIndex = source.indexOf(end, startIndex);
+  assert.ok(endIndex > startIndex, `Expected source block end: ${end}`);
+  return source.slice(startIndex, endIndex);
+}

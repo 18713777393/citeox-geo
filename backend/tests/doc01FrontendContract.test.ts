@@ -5,6 +5,16 @@ import { resolve } from "node:path";
 const frontendPath = resolve(process.cwd(), "../frontend/GEOFlow-Integrated-Final-White.html");
 const html = readFileSync(frontendPath, "utf8");
 const redirects = readFileSync(resolve(process.cwd(), "../frontend/_redirects"), "utf8");
+const doc01FinalQuickLoginBlock = blockBetween(
+  html,
+  "window.quickLogin = async function()",
+  "try{ quickLogin = window.quickLogin; }catch(e){}"
+);
+const doc01FinalRegisterBlock = blockBetween(
+  html,
+  "window.registerAndLogin = async function()",
+  "try{ registerAndLogin = window.registerAndLogin; }catch(e){}"
+);
 
 assert.ok(
   !html.includes("/api/auth/"),
@@ -39,6 +49,14 @@ assert.ok(
 );
 assert.ok(html.includes("/brand/create"), "DOC-01 register success must route to /brand/create.");
 assert.ok(html.includes("/dashboard"), "DOC-01 login with an existing brand must route to /dashboard.");
+assert.ok(
+  !doc01FinalQuickLoginBlock.includes("finishAuth(") && !doc01FinalQuickLoginBlock.includes("S.session.logged=true"),
+  "DOC-01 final login must not enter the app when the real login API fails."
+);
+assert.ok(
+  !doc01FinalRegisterBlock.includes("finishAuth(") && !doc01FinalRegisterBlock.includes("S.session.logged=true"),
+  "DOC-01 final register must not enter the app when the real register API fails."
+);
 assert.ok(
   html.includes("authRouteForTarget"),
   "DOC-01 frontend must map internal auth success targets to browser routes."
@@ -244,12 +262,12 @@ assert.ok(
   "DOC-01 login page must not hide the visible forgot-password button."
 );
 assert.ok(
-  html.includes("function ensureClearAccountButton()"),
-  "DOC-01 auth form must keep the one-click clear-account button available."
+  html.includes("removeClearAccountButton"),
+  "DOC-01 auth form must remove the one-click clear-account button and rely on keyboard deletion."
 );
 assert.ok(
-  !html.includes("#clearAccountBtn{display:none!important}"),
-  "DOC-01 auth form must not globally hide the clear-account button."
+  html.includes("#clearAccountBtn{display:none!important}"),
+  "DOC-01 auth form must hide any legacy clear-account button recreated by older layers."
 );
 assert.ok(
   html.includes("function clearRegisterExperienceFields()"),
@@ -329,3 +347,11 @@ assert.ok(
 );
 
 console.log("DOC-01 frontend contract checks passed.");
+
+function blockBetween(source: string, start: string, end: string) {
+  const startIndex = source.indexOf(start);
+  assert.ok(startIndex >= 0, `Expected source block start: ${start}`);
+  const endIndex = source.indexOf(end, startIndex);
+  assert.ok(endIndex > startIndex, `Expected source block end: ${end}`);
+  return source.slice(startIndex, endIndex);
+}

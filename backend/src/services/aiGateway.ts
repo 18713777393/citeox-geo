@@ -35,7 +35,8 @@ type ProviderCode =
   | "qianfan"
   | "zhipu"
   | "yuanbao"
-  | "perplexity";
+  | "perplexity"
+  | "ai360";
 
 type ProviderApiStyle = "openai-compatible" | "gemini" | "claude";
 
@@ -91,7 +92,8 @@ const providerRegistry = [
   { code: "qianfan", name: "文心一言/千帆", envKey: "QIANFAN_API_KEY", modelEnvKey: "QIANFAN_MODEL", features: ["text"], apiStyle: "openai-compatible" },
   { code: "zhipu", name: "智谱清言", envKey: "ZHIPU_API_KEY", modelEnvKey: "ZHIPU_MODEL", features: ["text"], apiStyle: "openai-compatible" },
   { code: "yuanbao", name: "腾讯元宝/混元", envKey: "YUANBAO_API_KEY", modelEnvKey: "YUANBAO_MODEL", features: ["text"], apiStyle: "openai-compatible" },
-  { code: "perplexity", name: "Perplexity", envKey: "PERPLEXITY_API_KEY", modelEnvKey: "PERPLEXITY_MODEL", features: ["monitor", "research"], apiStyle: "openai-compatible" }
+  { code: "perplexity", name: "Perplexity", envKey: "PERPLEXITY_API_KEY", modelEnvKey: "PERPLEXITY_MODEL", features: ["monitor", "research"], apiStyle: "openai-compatible" },
+  { code: "ai360", name: "360 智脑", envKey: "AI360_API_KEY", modelEnvKey: "AI360_MODEL", features: ["text", "monitor"], apiStyle: "openai-compatible" }
 ] as const satisfies ReadonlyArray<{
   code: ProviderCode;
   name: string;
@@ -102,6 +104,26 @@ const providerRegistry = [
 }>;
 
 type ProviderDefinition = (typeof providerRegistry)[number];
+
+const selfSelectableProviders = [
+  "deepseek",
+  "doubao",
+  "tongyi",
+  "zhipu",
+  "qianfan",
+  "yuanbao",
+  "kimi",
+  "perplexity",
+  "xunfei",
+  "ai360"
+] as const satisfies ProviderCode[];
+
+const professionalProviders = [
+  "doubao",
+  "yuanbao",
+  "deepseek",
+  "tongyi"
+] as const satisfies ProviderCode[];
 
 interface CompletionResult {
   text: string;
@@ -127,30 +149,23 @@ export function listAiProviders(): AiProviderInfo[] {
 }
 
 export function allowedProvidersForPlan(planCode?: string): ProviderCode[] {
-  switch (planCode) {
-    case "admin":
-    case "enterprise":
-      return ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao"] satisfies ProviderCode[];
-    case "professional":
-      return ["deepseek", "doubao", "tongyi", "zhipu"] satisfies ProviderCode[];
-    case "starter":
-      return ["deepseek", "doubao"] satisfies ProviderCode[];
-    case "free_trial":
-    default:
-      return ["deepseek"] satisfies ProviderCode[];
-  }
+  const code = normalizePlanCode(planCode);
+  if (code.includes("admin") || code.includes("enterprise")) return [...selfSelectableProviders];
+  if (code.includes("pro") || code.includes("professional")) return [...professionalProviders];
+  return [...selfSelectableProviders];
 }
 
 export function providerLimitForPlan(planCode: string | undefined, featureKey: EntitlementKey) {
-  if (planCode === "admin" || planCode === "enterprise") return null;
+  const code = normalizePlanCode(planCode);
+  if (code.includes("admin") || code.includes("enterprise")) return null;
   if (featureKey === "content.generate") {
-    if (planCode === "professional") return 4;
-    if (planCode === "starter") return 2;
+    if (code.includes("pro") || code.includes("professional")) return 4;
+    if (code.includes("personal") || code.includes("starter")) return 2;
     return 1;
   }
   if (featureKey === "monitor.run") {
-    if (planCode === "professional") return 4;
-    if (planCode === "starter") return 2;
+    if (code.includes("pro") || code.includes("professional")) return 4;
+    if (code.includes("personal") || code.includes("starter")) return 2;
     return 1;
   }
   return null;
@@ -291,12 +306,12 @@ function selectProvider(input: AiGatewayInput, planCode?: string): ProviderDefin
 
 function preferredProviderOrder(operation: string): ProviderCode[] {
   if (/content|article|draft|creative|image|copy/i.test(operation)) {
-    return ["doubao", "zhipu", "tongyi", "deepseek", "qianfan", "yuanbao"];
+    return ["doubao", "zhipu", "tongyi", "deepseek", "qianfan", "yuanbao", "kimi", "ai360"];
   }
   if (/monitor|citation|search|research|source/i.test(operation)) {
-    return ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao"];
+    return ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao", "kimi", "perplexity", "xunfei", "ai360"];
   }
-  return ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao"];
+  return ["deepseek", "doubao", "tongyi", "zhipu", "qianfan", "yuanbao", "kimi", "perplexity", "xunfei", "ai360"];
 }
 
 async function upsertProvider(
@@ -598,6 +613,8 @@ function providerBaseUrl(definition: ProviderDefinition) {
       return "https://api.hunyuan.cloud.tencent.com/v1";
     case "perplexity":
       return "https://api.perplexity.ai";
+    case "ai360":
+      return "https://api.360.cn/v1";
   }
 }
 
@@ -630,7 +647,13 @@ function defaultModelFor(definition: ProviderDefinition) {
       return "hunyuan-lite";
     case "perplexity":
       return "sonar";
+    case "ai360":
+      return "360gpt-pro";
   }
+}
+
+function normalizePlanCode(planCode: string | undefined) {
+  return String(planCode ?? "free").trim().toLowerCase();
 }
 
 function hasProviderKey(envKey: string) {

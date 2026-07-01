@@ -46,6 +46,10 @@ for (const text of [
   assert.ok(html.includes(text), `DOC-02 frontend must show "${text}".`);
 }
 
+for (const trialText of ["首次体验诊断", "本次不扣费", "新手体验额度覆盖"]) {
+  assert.ok(html.includes(trialText), `DOC-02 frontend must show first-trial copy "${trialText}".`);
+}
+
 for (const endpoint of [
   "/api/v1/brands",
   "/api/v1/brands/check-limit",
